@@ -220,7 +220,36 @@ function DashboardPage() {
           <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
           Send email
         </button>
+        <Separator />
+        <button
+          type="button"
+          onClick={() => applyFormat({ highlight: true })}
+          title="Highlight cell yellow"
+          className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] hover:bg-muted"
+        >
+          <Highlighter className="h-4 w-4 text-yellow-500" />
+          Highlight
+        </button>
+        <button
+          type="button"
+          onClick={() => applyFormat({ error: true })}
+          title="Mark cell text red"
+          className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] hover:bg-muted"
+        >
+          <AlertTriangle className="h-4 w-4 text-red-500" />
+          Mark error
+        </button>
+        <button
+          type="button"
+          onClick={() => applyFormat(null)}
+          title="Clear formatting"
+          className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] hover:bg-muted"
+        >
+          <Eraser className="h-4 w-4 text-muted-foreground" />
+          Clear
+        </button>
       </div>
+
 
 
       {/* Formula bar */}
