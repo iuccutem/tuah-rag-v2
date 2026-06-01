@@ -1,4 +1,5 @@
 import { ExternalLink } from "lucide-react";
+import { Fragment } from "react";
 
 export function EmptyCell() {
   return <span className="text-muted-foreground">—</span>;
@@ -12,6 +13,47 @@ function isUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+// Match bare URLs (http/https). Trailing punctuation is trimmed below.
+const URL_REGEX = /(https?:\/\/[^\s<>()\[\]]+)/g;
+
+function renderWithLinks(text: string) {
+  const parts = text.split(URL_REGEX);
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      // Trim trailing punctuation that shouldn't be part of the URL
+      const match = part.match(/^(.*?)([.,;:!?)\]]*)$/);
+      const url = match?.[1] ?? part;
+      const tail = match?.[2] ?? "";
+      return (
+        <Fragment key={i}>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline-offset-2 hover:underline break-all"
+          >
+            {url}
+          </a>
+          {tail}
+        </Fragment>
+      );
+    }
+    return <Fragment key={i}>{part}</Fragment>;
+  });
+}
+
+/** Renders multi-line text, auto-linking any URLs found inside. */
+export function RichText({ value }: { value: unknown }) {
+  if (value === null || value === undefined) return <EmptyCell />;
+  const str = String(value);
+  if (!str.trim()) return <EmptyCell />;
+  return (
+    <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+      {renderWithLinks(str)}
+    </div>
+  );
 }
 
 export function LinkOrText({ value }: { value: unknown }) {
@@ -34,7 +76,7 @@ export function LinkOrText({ value }: { value: unknown }) {
     );
   }
 
-  return <span className="whitespace-pre-wrap break-words">{str}</span>;
+  return <RichText value={str} />;
 }
 
 export function DateCell({ value }: { value: unknown }) {
