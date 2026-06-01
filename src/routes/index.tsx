@@ -133,12 +133,12 @@ function DashboardPage() {
             </div>
             <Button
               variant="outline"
-              onClick={sendEmail}
+              onClick={openEmailDialog}
               disabled={sendingEmail}
               className="gap-2"
             >
               <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
-              {sendingEmail ? "Sending…" : "Send Email"}
+              Send Email
             </Button>
             <Button
               onClick={() => refetch()}
