@@ -1,55 +1,67 @@
-## Q&A Evaluation Dashboard (with Basic Auth proxy)
+## Goal
 
-Dashboard at `/` fetches Q&A rows from the n8n webhook via a server-side proxy that injects HTTP Basic auth. Credentials are stored as runtime secrets so they never reach the browser.
+Update the Q&A Evaluation Dashboard to match the real n8n schema, add a spreadsheet-like paste area for submitting questions to a second webhook, and add a Send Email button wired to a third webhook.
 
-### Secrets (runtime)
-Stored via Lovable Cloud secrets — never hardcoded, never in client bundle:
-- `N8N_WEBHOOK_USER` → `loveable`
-- `N8N_WEBHOOK_PASSWORD` → `patriot2026`
+## 1. Sync table columns to new schema
 
-I'll request them via the secret form after you approve the plan.
+The webhook now returns rows with these fields (53 items in the screenshot):
+`id`, `question`, `web`, `telegram_whatsapp`, `createdAt`, `updatedAt`.
 
-### Server route (proxy)
-`src/routes/api/n8n-qa.ts` — TanStack server route:
-- `GET` handler fetches `https://tuah.utem.edu.my/agent/webhook/911d5dbc-b215-4beb-8416-98098fa7d5d0`
-- Adds `Authorization: Basic <base64(user:password)>` header from `process.env`
-- Returns the JSON array to the client; on failure returns `{ data: [], error }` with a 200 so the UI can render a friendly error
-- Sets `Cache-Control: no-store`
+Update `QATable.tsx` and types:
 
-This keeps the webhook URL and credentials entirely server-side and sidesteps CORS.
-
-### Page
-`src/routes/index.tsx` — replace placeholder. Renders:
-- Header: title "Q&A Evaluation Dashboard", subtitle "University staff evaluation results"
-- Toolbar: last-updated timestamp + "Refresh Data" button (with spinning icon while loading)
-- Card containing the data table
-
-### Data layer
-- `useQuery({ queryKey: ['qa-rows'], queryFn: () => fetch('/api/n8n-qa').then(r => r.json()) })`
-- Refresh button calls `refetch()`; disabled + spinner while `isFetching`
-- States: loading skeleton rows, empty state, error state with retry, success table
-
-### Table columns (English headers)
-| n8n field | Column header | Rendering |
+| Field | Column header | Rendering |
 |---|---|---|
-| `bil` | No. | right-aligned, muted, monospace |
-| `soalan` | Question | wrapped text, max-w, leading-relaxed |
-| `tarikh_pengujian` | Test Date | `Intl.DateTimeFormat` if parseable, else raw |
-| `web_browser` | Web Browser | URL → truncated `<a target="_blank" rel="noopener">` with external-link icon; else text; empty → muted "—" |
-| `whatsapp_telegram` | WhatsApp / Telegram | same URL/text handling |
+| `id` | ID | right-aligned, mono, muted |
+| `question` | Question | wrapped text |
+| `web` | Web | wrapped text / URL detection |
+| `telegram_whatsapp` | Telegram / WhatsApp | wrapped text / URL detection |
+| `createdAt` | Created | `Intl.DateTimeFormat` en-GB |
+| `updatedAt` | Updated | `Intl.DateTimeFormat` en-GB |
 
-### Components
-1. `src/routes/api/n8n-qa.ts` — proxy server route
-2. `src/routes/index.tsx` — dashboard page
-3. `src/components/qa-dashboard/QATable.tsx` — table presentation
-4. `src/components/qa-dashboard/cell-renderers.tsx` — URL/date/empty helpers
+Drop the old `bil`, `soalan`, `tarikh_pengujian`, `web_browser`, `whatsapp_telegram` mappings. The proxy route `/api/n8n-qa` stays as-is (just forwards the JSON array).
 
-### Styling
-- shadcn `Table`, `Card`, `Button`, `Skeleton`
-- Only semantic tokens from `src/styles.css` (no hard-coded colors)
-- Sticky header, hover row highlight, rounded card, horizontal scroll on small screens (your current viewport is 478px wide)
+## 2. Google Sheets-style paste box (run questions)
 
-### Out of scope
-- No Supabase tables, no localStorage
-- No pagination, filtering, sorting (can add later)
-- No auth on the dashboard itself (open page, fetched data is read-only)
+Add a card above the results table:
+
+- A multi-line `Textarea` styled like a spreadsheet cell (mono font, grid lines, "Paste questions here — one per line").
+- "Run Questions" button below it.
+- On submit:
+  - Split textarea by newlines, trim, drop empty lines.
+  - For each non-empty question, POST to the second webhook (proxied server-side):
+    `https://tuah.utem.edu.my/agent/webhook/dfa18ba2-f8f8-4257-a8fd-646b2c002d95`
+    with basic auth (same `N8N_WEBHOOK_USER` / `N8N_WEBHOOK_PASSWORD`).
+  - Show a per-row status (pending / ok / failed) next to each question while running.
+  - After completion, auto-`refetch` the table so new rows appear.
+
+New server route: `src/routes/api/n8n-run.ts` — POST `{ question: string }`, proxies to webhook 2 with basic auth, returns `{ ok, data?, error? }`.
+
+Interpretation of requirement 3 ("if the questions column is not empty then call another webhook"): only non-empty lines are sent. Each line = one webhook call. If you meant something different (e.g. send the whole block as one payload, or only auto-trigger for existing rows where `question` is filled), say so and I'll adjust.
+
+## 3. Send Email button
+
+Top toolbar gets a second button "Send Email" next to "Refresh Data":
+
+- On click, POST to a new server route `src/routes/api/n8n-email.ts` which proxies to
+  `https://tuah.utem.edu.my/agent/webhook/8c131be7-21e7-4049-9dbb-4210b4ba5a79` with the same basic auth.
+- No body for now (empty `{}`); webhook just triggers the email pipeline.
+- Show a toast on success / error (use existing `sonner`).
+- Button disabled + spinner while in-flight.
+
+Open question: should the email send the currently visible rows as payload, or is the n8n flow self-contained? I'll default to self-contained (no payload) unless you say otherwise.
+
+## 4. Files touched
+
+- `src/components/qa-dashboard/QATable.tsx` — new columns, new `QARow` type
+- `src/components/qa-dashboard/cell-renderers.tsx` — keep, reuse for `web` / `telegram_whatsapp`
+- `src/components/qa-dashboard/QuestionPasteBox.tsx` — new
+- `src/routes/index.tsx` — paste box + Send Email button + toast
+- `src/routes/api/n8n-run.ts` — new proxy (POST)
+- `src/routes/api/n8n-email.ts` — new proxy (POST)
+
+No schema, no Supabase, no localStorage. Same basic-auth secrets reused.
+
+## Questions before I build
+
+1. Run-questions payload: send each line as a separate POST (`{ question }`), or one POST with `{ questions: string[] }`?
+2. Send Email button: trigger only (empty body), or include the current table rows in the payload?
