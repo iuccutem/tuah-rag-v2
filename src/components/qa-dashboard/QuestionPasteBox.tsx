@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Play, CheckCircle2, XCircle, Loader2, AlertTriangle, Trash2 } from "lucide-react";
+import { Play, CheckCircle2, XCircle, Loader2, AlertTriangle, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -17,10 +17,10 @@ type RunItem = { question: string; status: RunStatus; error?: string };
 export function QuestionPasteBox({
   onComplete,
   existingQuestions = [],
-  onDeleteDuplicates,
 }: {
   onComplete?: () => void;
   existingQuestions?: string[];
+  /** @deprecated kept for compatibility */
   onDeleteDuplicates?: (questions: string[]) => Promise<void> | void;
 }) {
   const [text, setText] = useState("");
@@ -130,17 +130,21 @@ export function QuestionPasteBox({
   };
 
 
-  const deleteDuplicates = async () => {
-    if (duplicates.length === 0 || !onDeleteDuplicates) return;
-    setDeleting(true);
-    try {
-      await onDeleteDuplicates(duplicates);
-    } finally {
-      setDeleting(false);
-    }
+  const removeDuplicatesFromText = () => {
+    if (duplicates.length === 0) return;
+    const lines = text.split(/\r?\n/);
+    const kept = lines.filter((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return true; // preserve blank lines
+      return !existingSet.has(trimmed.toLowerCase());
+    });
+    setText(kept.join("\n"));
+    toast.success(
+      `Removed ${duplicates.length} duplicate line${duplicates.length === 1 ? "" : "s"} from the list.`,
+    );
   };
 
-  const busy = running || processing || deleting;
+  const busy = running || processing;
 
   return (
     <Card>
@@ -181,22 +185,20 @@ export function QuestionPasteBox({
                   ) : null}
                 </ul>
                 <div className="text-xs text-yellow-900/80 dark:text-yellow-200/80">
-                  To re-insert these, delete them from the sheet first.
+                  Remove them from the list below, or delete the existing rows
+                  from the sheet (only if they have no answers yet) before
+                  re-inserting.
                 </div>
                 <div className="flex flex-wrap gap-2 pt-1">
                   <Button
                     size="sm"
-                    variant="destructive"
-                    onClick={deleteDuplicates}
-                    disabled={busy || !onDeleteDuplicates}
+                    variant="outline"
+                    onClick={removeDuplicatesFromText}
+                    disabled={busy}
                     className="gap-1.5"
                   >
-                    {deleting ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
-                    )}
-                    Delete duplicates from sheet
+                    <Scissors className="h-3.5 w-3.5" />
+                    Remove duplicates from list
                   </Button>
                 </div>
               </div>

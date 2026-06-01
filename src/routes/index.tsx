@@ -208,7 +208,13 @@ function DashboardPage() {
       toast.info("No duplicates found.");
       return;
     }
-    // Keep the latest occurrence of each group, delete the older ones.
+    // Keep the latest occurrence of each group, delete the older ones —
+    // but only delete rows that have NO answers (web + telegram_whatsapp empty).
+    const hasAnswer = (r: QARow) =>
+      ((r.web ?? "").trim().length > 0) ||
+      ((r.telegram_whatsapp ?? "").trim().length > 0);
+
+    let skippedWithAnswers = 0;
     const extras = duplicateGroups
       .flatMap((g) =>
         [...g]
@@ -217,15 +223,30 @@ function DashboardPage() {
             const tb = new Date(b.updatedAt ?? b.createdAt ?? 0).getTime();
             return tb - ta; // newest first
           })
-          .slice(1),
+          .slice(1)
+          .filter((r) => {
+            if (hasAnswer(r)) {
+              skippedWithAnswers++;
+              return false;
+            }
+            return true;
+          }),
       )
       .map((r) => (r.question ?? "").trim())
       .filter(Boolean);
     if (extras.length === 0) {
-      toast.error("Nothing to delete.");
+      toast.error(
+        skippedWithAnswers > 0
+          ? `All ${skippedWithAnswers} duplicate row${skippedWithAnswers === 1 ? "" : "s"} already have answers — not deleted.`
+          : "Nothing to delete.",
+      );
       return;
     }
-    if (!confirm(`Delete ${extras.length} duplicate row${extras.length === 1 ? "" : "s"}?`)) return;
+    const confirmMsg =
+      skippedWithAnswers > 0
+        ? `Delete ${extras.length} empty duplicate row${extras.length === 1 ? "" : "s"}? (${skippedWithAnswers} with answers will be kept)`
+        : `Delete ${extras.length} duplicate row${extras.length === 1 ? "" : "s"}?`;
+    if (!confirm(confirmMsg)) return;
     try {
       const json = await postDelete(extras);
       if (json.ok) {
@@ -386,9 +407,6 @@ function DashboardPage() {
             </DialogHeader>
             <QuestionPasteBox
               existingQuestions={existingQuestions}
-              onDeleteDuplicates={async (qs) => {
-                await deleteByQuestions(qs);
-              }}
               onComplete={() => {
                 setInsertOpen(false);
                 refetch();
