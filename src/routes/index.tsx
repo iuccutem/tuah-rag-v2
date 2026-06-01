@@ -1,17 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { RefreshCw, AlertCircle, Mail } from "lucide-react";
+import {
+  RefreshCw,
+  AlertCircle,
+  Mail,
+  Sheet as SheetIcon,
+  Star,
+  Folder,
+  Cloud,
+  Plus,
+  Search,
+  MessageSquare,
+  Video,
+  Share2,
+  Bold,
+  Italic,
+  Underline,
+  AlignLeft,
+  Filter,
+  ListPlus,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +31,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { QATable, type QARow } from "@/components/qa-dashboard/QATable";
@@ -27,17 +40,11 @@ import { QuestionPasteBox } from "@/components/qa-dashboard/QuestionPasteBox";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Q&A Evaluation Dashboard" },
+      { title: "Q&A Evaluation — Sheets" },
       {
         name: "description",
         content:
-          "University staff dashboard for monitoring Q&A testing results across web and messaging channels.",
-      },
-      { property: "og:title", content: "Q&A Evaluation Dashboard" },
-      {
-        property: "og:description",
-        content:
-          "University staff dashboard for monitoring Q&A testing results.",
+          "Spreadsheet-style dashboard for Q&A evaluation across web and messaging channels.",
       },
     ],
   }),
@@ -65,6 +72,7 @@ function DashboardPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailAddress, setEmailAddress] = useState("");
+  const [insertOpen, setInsertOpen] = useState(false);
 
   const rows = data?.data ?? [];
   const apiError =
@@ -75,7 +83,6 @@ function DashboardPage() {
       ? new Intl.DateTimeFormat("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
-          second: "2-digit",
         }).format(new Date(dataUpdatedAt))
       : "—";
 
@@ -112,114 +119,267 @@ function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              Q&amp;A Evaluation Dashboard
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              University staff evaluation results, fetched live from the
-              testing pipeline.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="text-right text-xs text-muted-foreground">
-              <div>Last updated</div>
-              <div className="font-medium text-foreground tabular-nums">
-                {lastUpdated}
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              onClick={openEmailDialog}
-              disabled={sendingEmail}
-              className="gap-2"
-            >
-              <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
-              Send Email
-            </Button>
-            <Button
-              onClick={() => refetch()}
-              disabled={isFetching}
-              className="gap-2"
-            >
-              <RefreshCw
-                className={
-                  isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"
-                }
-              />
-              {isFetching ? "Refreshing…" : "Refresh Data"}
-            </Button>
-          </div>
-        </header>
-
-        <div className="space-y-6">
-          <QuestionPasteBox onComplete={() => refetch()} />
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Evaluation records</CardTitle>
-              <CardDescription>
-                {rows.length}{" "}
-                {rows.length === 1 ? "record" : "records"} returned from the
-                webhook.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {apiError ? (
-                <div className="flex items-start gap-3 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <div>
-                    <div className="font-medium">Could not load data</div>
-                    <div className="mt-1 text-destructive/90">{apiError}</div>
-                  </div>
-                </div>
-              ) : null}
-
-              <QATable rows={rows} isLoading={isLoading} />
-            </CardContent>
-          </Card>
+    <div className="flex h-screen min-h-screen flex-col bg-[var(--sheets-toolbar-bg)] text-foreground">
+      {/* Top bar — file name + menu */}
+      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--sheets-grid)] bg-card px-3 pt-2 pb-1">
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
+          <SheetIcon className="h-5 w-5 text-primary" />
         </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="truncate text-[17px] font-medium leading-tight text-foreground">
+              Q&amp;A Evaluation
+            </h1>
+            <button
+              type="button"
+              className="rounded p-1 text-muted-foreground hover:bg-muted"
+              aria-label="Star"
+            >
+              <Star className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              className="rounded p-1 text-muted-foreground hover:bg-muted"
+              aria-label="Move"
+            >
+              <Folder className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              className="rounded p-1 text-muted-foreground hover:bg-muted"
+              aria-label="Saved"
+              title={`Last sync ${lastUpdated}`}
+            >
+              <Cloud className="h-4 w-4" />
+            </button>
+          </div>
+          <nav className="-ml-1 mt-0.5 flex flex-wrap items-center text-[13px] text-muted-foreground">
+            {["File", "Edit", "View", "Insert", "Format", "Data", "Tools", "Help"].map(
+              (m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className="rounded px-2 py-0.5 hover:bg-muted hover:text-foreground"
+                >
+                  {m}
+                </button>
+              ),
+            )}
+            <span className="ml-2 text-[12px] text-muted-foreground">
+              Last edit was at {lastUpdated}
+            </span>
+          </nav>
+        </div>
+        <div className="hidden items-center gap-2 sm:flex">
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MessageSquare className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Video className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            className="h-8 gap-2 rounded-md bg-primary px-3 text-primary-foreground hover:bg-primary/90"
+          >
+            <Share2 className="h-4 w-4" />
+            Share
+          </Button>
+        </div>
+      </div>
 
-        <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-          <DialogContent className="sm:max-w-md">
+      {/* Toolbar */}
+      <div className="flex shrink-0 items-center gap-1 border-b border-[var(--sheets-grid)] bg-card px-3 py-1.5">
+        <ToolbarButton
+          onClick={() => refetch()}
+          disabled={isFetching}
+          title="Refresh data"
+        >
+          <RefreshCw
+            className={isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"}
+          />
+        </ToolbarButton>
+        <Separator />
+        <Dialog open={insertOpen} onOpenChange={setInsertOpen}>
+          <DialogTrigger asChild>
+            <button
+              type="button"
+              className="flex h-8 items-center gap-1.5 rounded-md border border-transparent px-2 text-[13px] hover:bg-muted"
+            >
+              <ListPlus className="h-4 w-4 text-primary" />
+              Insert questions
+            </button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Send Email</DialogTitle>
+              <DialogTitle>Insert questions</DialogTitle>
               <DialogDescription>
-                Enter the recipient email address to send the evaluation report.
+                Paste one question per line. Each row is added to the sheet,
+                then the agent fills in the empty answers.
               </DialogDescription>
             </DialogHeader>
-            <div className="py-4">
-              <Input
-                type="email"
-                placeholder="recipient@example.com"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") sendEmail();
-                }}
-                disabled={sendingEmail}
-                autoFocus
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setEmailDialogOpen(false)}
-                disabled={sendingEmail}
-              >
-                Cancel
-              </Button>
-              <Button onClick={sendEmail} disabled={sendingEmail} className="gap-2">
-                <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
-                {sendingEmail ? "Sending…" : "Send"}
-              </Button>
-            </DialogFooter>
+            <QuestionPasteBox
+              onComplete={() => {
+                refetch();
+              }}
+            />
           </DialogContent>
         </Dialog>
+        <Separator />
+        <button
+          type="button"
+          onClick={openEmailDialog}
+          disabled={sendingEmail}
+          className="flex h-8 items-center gap-1.5 rounded-md border border-transparent px-2 text-[13px] hover:bg-muted disabled:opacity-50"
+        >
+          <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+          Send email
+        </button>
+        <Separator />
+        <ToolbarButton title="Filter (decorative)">
+          <Filter className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton title="Bold (decorative)">
+          <Bold className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton title="Italic (decorative)">
+          <Italic className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton title="Underline (decorative)">
+          <Underline className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton title="Align left (decorative)">
+          <AlignLeft className="h-4 w-4" />
+        </ToolbarButton>
+        <div className="ml-auto flex items-center gap-2">
+          <div className="relative hidden sm:block">
+            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search in sheet"
+              className="h-8 w-56 rounded-md border border-[var(--sheets-grid)] bg-muted/40 pl-7 pr-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+        </div>
       </div>
+
+      {/* Formula bar */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-2 py-1">
+        <div className="flex h-7 w-24 items-center justify-between rounded-sm border border-[var(--sheets-grid)] bg-card px-2 text-[12px] text-muted-foreground">
+          A1
+          <span className="text-[10px]">▾</span>
+        </div>
+        <span className="font-serif text-[14px] italic text-muted-foreground">
+          fx
+        </span>
+        <div className="flex-1 truncate text-[13px] text-muted-foreground">
+          {rows.length > 0
+            ? `${rows.length} row${rows.length === 1 ? "" : "s"} loaded`
+            : "—"}
+        </div>
+      </div>
+
+      {/* Error banner */}
+      {apiError ? (
+        <div className="flex shrink-0 items-start gap-2 border-b border-destructive/30 bg-destructive/5 px-3 py-2 text-[12px] text-destructive">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <div className="flex-1">{apiError}</div>
+        </div>
+      ) : null}
+
+      {/* Grid */}
+      <div className="flex-1 overflow-hidden">
+        <QATable rows={rows} isLoading={isLoading} />
+      </div>
+
+      {/* Sheet tabs */}
+      <div className="flex shrink-0 items-center gap-1 border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
+        <button
+          type="button"
+          className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-muted"
+          aria-label="Add sheet"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+        <div className="mx-1 h-5 w-px bg-[var(--sheets-grid)]" />
+        <div className="flex h-7 items-center gap-2 rounded-t-md border-t-2 border-primary bg-card px-3 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]">
+          Q&amp;A Evaluations
+        </div>
+        <button
+          type="button"
+          className="h-7 rounded px-3 text-[13px] text-muted-foreground hover:bg-muted"
+        >
+          Notes
+        </button>
+        <div className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+          {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
+        </div>
+      </div>
+
+      {/* Email dialog */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Email</DialogTitle>
+            <DialogDescription>
+              Enter the recipient email to send the evaluation report.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Input
+              type="email"
+              placeholder="recipient@example.com"
+              value={emailAddress}
+              onChange={(e) => setEmailAddress(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") sendEmail();
+              }}
+              disabled={sendingEmail}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEmailDialogOpen(false)}
+              disabled={sendingEmail}
+            >
+              Cancel
+            </Button>
+            <Button onClick={sendEmail} disabled={sendingEmail} className="gap-2">
+              <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+              {sendingEmail ? "Sending…" : "Send"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+function ToolbarButton({
+  children,
+  onClick,
+  disabled,
+  title,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/80 hover:bg-muted disabled:opacity-50"
+    >
+      {children}
+    </button>
+  );
+}
+
+function Separator() {
+  return <span className="mx-1 h-5 w-px bg-[var(--sheets-grid)]" />;
 }
