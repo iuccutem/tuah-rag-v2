@@ -86,10 +86,14 @@ export function QATable({
                   )}
                 </TableCell>
                 <TableCell className="max-w-[32rem] align-top">
-                  <LinkOrText value={row.web} />
+                  <div className="max-h-72 overflow-y-auto pr-2">
+                    <LinkOrText value={row.web} />
+                  </div>
                 </TableCell>
                 <TableCell className="max-w-[32rem] align-top">
-                  <LinkOrText value={row.telegram_whatsapp} />
+                  <div className="max-h-72 overflow-y-auto pr-2">
+                    <LinkOrText value={row.telegram_whatsapp} />
+                  </div>
                 </TableCell>
                 <TableCell className="align-top">
                   <DateCell value={row.createdAt} />
