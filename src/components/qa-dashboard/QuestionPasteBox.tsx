@@ -185,22 +185,20 @@ export function QuestionPasteBox({
                   ) : null}
                 </ul>
                 <div className="text-xs text-yellow-900/80 dark:text-yellow-200/80">
-                  To re-insert these, delete them from the sheet first.
+                  Remove them from the list below, or delete the existing rows
+                  from the sheet (only if they have no answers yet) before
+                  re-inserting.
                 </div>
                 <div className="flex flex-wrap gap-2 pt-1">
                   <Button
                     size="sm"
-                    variant="destructive"
-                    onClick={deleteDuplicates}
-                    disabled={busy || !onDeleteDuplicates}
+                    variant="outline"
+                    onClick={removeDuplicatesFromText}
+                    disabled={busy}
                     className="gap-1.5"
                   >
-                    {deleting ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
-                    )}
-                    Delete duplicates from sheet
+                    <Scissors className="h-3.5 w-3.5" />
+                    Remove duplicates from list
                   </Button>
                 </div>
               </div>
