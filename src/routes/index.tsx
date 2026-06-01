@@ -175,33 +175,8 @@ function DashboardPage() {
           <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
           Send email
         </button>
-        <Separator />
-        <ToolbarButton title="Filter (decorative)">
-          <Filter className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton title="Bold (decorative)">
-          <Bold className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton title="Italic (decorative)">
-          <Italic className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton title="Underline (decorative)">
-          <Underline className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton title="Align left (decorative)">
-          <AlignLeft className="h-4 w-4" />
-        </ToolbarButton>
-        <div className="ml-auto flex items-center gap-2">
-          <div className="relative hidden sm:block">
-            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search in sheet"
-              className="h-8 w-56 rounded-md border border-[var(--sheets-grid)] bg-muted/40 pl-7 pr-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-          </div>
-        </div>
       </div>
+
 
       {/* Formula bar */}
       <div className="flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-2 py-1">
