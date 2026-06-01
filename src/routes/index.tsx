@@ -82,6 +82,7 @@ function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(new Set());
   const [formats, setFormats] = useState<FormatsMap>(() => {
     if (typeof window === "undefined") return {};
     try {
