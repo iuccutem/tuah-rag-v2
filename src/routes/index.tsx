@@ -6,21 +6,9 @@ import {
   AlertCircle,
   Mail,
   Sheet as SheetIcon,
-  Star,
-  Folder,
-  Cloud,
-  Plus,
-  Search,
-  MessageSquare,
-  Video,
-  Share2,
-  Bold,
-  Italic,
-  Underline,
-  AlignLeft,
-  Filter,
   ListPlus,
 } from "lucide-react";
+
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -130,66 +118,15 @@ function DashboardPage() {
           <SheetIcon className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="truncate text-[17px] font-medium leading-tight text-foreground">
-              Q&amp;A Evaluation
-            </h1>
-            <button
-              type="button"
-              className="rounded p-1 text-muted-foreground hover:bg-muted"
-              aria-label="Star"
-            >
-              <Star className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              className="rounded p-1 text-muted-foreground hover:bg-muted"
-              aria-label="Move"
-            >
-              <Folder className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              className="rounded p-1 text-muted-foreground hover:bg-muted"
-              aria-label="Saved"
-              title={`Last sync ${lastUpdated}`}
-            >
-              <Cloud className="h-4 w-4" />
-            </button>
+          <h1 className="truncate text-[17px] font-medium leading-tight text-foreground">
+            Q&amp;A Evaluation
+          </h1>
+          <div className="mt-0.5 text-[12px] text-muted-foreground">
+            Last edit was at {lastUpdated}
           </div>
-          <nav className="-ml-1 mt-0.5 flex flex-wrap items-center text-[13px] text-muted-foreground">
-            {["File", "Edit", "View", "Insert", "Format", "Data", "Tools", "Help"].map(
-              (m) => (
-                <button
-                  key={m}
-                  type="button"
-                  className="rounded px-2 py-0.5 hover:bg-muted hover:text-foreground"
-                >
-                  {m}
-                </button>
-              ),
-            )}
-            <span className="ml-2 text-[12px] text-muted-foreground">
-              Last edit was at {lastUpdated}
-            </span>
-          </nav>
-        </div>
-        <div className="hidden items-center gap-2 sm:flex">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <MessageSquare className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Video className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            className="h-8 gap-2 rounded-md bg-primary px-3 text-primary-foreground hover:bg-primary/90"
-          >
-            <Share2 className="h-4 w-4" />
-            Share
-          </Button>
         </div>
       </div>
+
 
       {/* Toolbar */}
       <div className="flex shrink-0 items-center gap-1 border-b border-[var(--sheets-grid)] bg-card px-3 py-1.5">
@@ -238,33 +175,8 @@ function DashboardPage() {
           <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
           Send email
         </button>
-        <Separator />
-        <ToolbarButton title="Filter (decorative)">
-          <Filter className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton title="Bold (decorative)">
-          <Bold className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton title="Italic (decorative)">
-          <Italic className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton title="Underline (decorative)">
-          <Underline className="h-4 w-4" />
-        </ToolbarButton>
-        <ToolbarButton title="Align left (decorative)">
-          <AlignLeft className="h-4 w-4" />
-        </ToolbarButton>
-        <div className="ml-auto flex items-center gap-2">
-          <div className="relative hidden sm:block">
-            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search in sheet"
-              className="h-8 w-56 rounded-md border border-[var(--sheets-grid)] bg-muted/40 pl-7 pr-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-          </div>
-        </div>
       </div>
+
 
       {/* Formula bar */}
       <div className="flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-2 py-1">
@@ -313,24 +225,11 @@ function DashboardPage() {
 
       {/* Sheet tabs */}
       <div className="flex shrink-0 items-center gap-1 border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
-        <button
-          type="button"
-          className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-muted"
-          aria-label="Add sheet"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-        <div className="mx-1 h-5 w-px bg-[var(--sheets-grid)]" />
         <div className="flex h-7 items-center gap-2 rounded-t-md border-t-2 border-primary bg-card px-3 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]">
           Q&amp;A Evaluations
         </div>
-        <button
-          type="button"
-          className="h-7 rounded px-3 text-[13px] text-muted-foreground hover:bg-muted"
-        >
-          Notes
-        </button>
         <div className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+
           {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
         </div>
       </div>
