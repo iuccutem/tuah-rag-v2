@@ -342,6 +342,7 @@ function EmptySheetRow({ n }: { n: number }) {
   return (
     <tr>
       <RowNumberCell n={n} active={false} />
+      <td className="w-8 border-r border-b border-[var(--sheets-grid)] bg-card" />
       {QA_COLUMNS.map((c) => (
         <td
           key={c.key}
