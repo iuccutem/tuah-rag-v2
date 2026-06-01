@@ -52,23 +52,27 @@ export function QuestionPasteBox({
     [questions, existingSet],
   );
 
-  const runAll = async (onlyNew = false) => {
-    const target = onlyNew ? newOnes : questions;
-    if (target.length === 0) {
-      toast.error("Nothing to insert.");
+  const runAll = async () => {
+    if (questions.length === 0) {
+      toast.error("Paste at least one question.");
+      return;
+    }
+    if (newOnes.length === 0) {
+      toast.error("All pasted questions already exist. Delete them first to re-insert.");
       return;
     }
     setRunning(true);
-    const initial: RunItem[] = questions.map((q) => {
-      const dup = !onlyNew ? false : existingSet.has(q.toLowerCase());
-      return { question: q, status: dup ? "skipped" : "pending" };
-    });
+    // Duplicates are ALWAYS skipped — never sent to the insert webhook.
+    const initial: RunItem[] = questions.map((q) => ({
+      question: q,
+      status: existingSet.has(q.toLowerCase()) ? "skipped" : "pending",
+    }));
     setItems(initial);
 
     let okCount = 0;
     for (let i = 0; i < questions.length; i++) {
       const question = questions[i];
-      if (onlyNew && existingSet.has(question.toLowerCase())) continue;
+      if (existingSet.has(question.toLowerCase())) continue;
       try {
         const res = await fetch("/api/n8n-run", {
           method: "POST",
@@ -105,7 +109,11 @@ export function QuestionPasteBox({
       return;
     }
 
-    toast.success(`Inserted ${okCount}/${target.length} question${target.length === 1 ? "" : "s"}. Processing…`);
+    toast.success(
+      `Inserted ${okCount}/${newOnes.length} new question${newOnes.length === 1 ? "" : "s"}${
+        duplicates.length > 0 ? ` · ${duplicates.length} duplicate skipped` : ""
+      }. Processing…`,
+    );
 
     setProcessing(true);
     try {
@@ -120,6 +128,7 @@ export function QuestionPasteBox({
       onComplete?.();
     }
   };
+
 
   const deleteDuplicates = async () => {
     if (duplicates.length === 0 || !onDeleteDuplicates) return;
