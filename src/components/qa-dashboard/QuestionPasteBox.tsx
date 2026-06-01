@@ -169,7 +169,8 @@ export function QuestionPasteBox({
               <div className="flex-1 space-y-2">
                 <div className="font-medium text-yellow-900 dark:text-yellow-200">
                   {duplicates.length} duplicate question
-                  {duplicates.length === 1 ? "" : "s"} detected
+                  {duplicates.length === 1 ? "" : "s"} already in the table —
+                  will NOT be inserted
                 </div>
                 <ul className="list-disc space-y-0.5 pl-4 text-xs text-yellow-900/80 dark:text-yellow-200/80">
                   {duplicates.slice(0, 5).map((q, i) => (
@@ -179,6 +180,9 @@ export function QuestionPasteBox({
                     <li>…and {duplicates.length - 5} more</li>
                   ) : null}
                 </ul>
+                <div className="text-xs text-yellow-900/80 dark:text-yellow-200/80">
+                  To re-insert these, delete them from the sheet first.
+                </div>
                 <div className="flex flex-wrap gap-2 pt-1">
                   <Button
                     size="sm"
@@ -194,16 +198,6 @@ export function QuestionPasteBox({
                     )}
                     Delete duplicates from sheet
                   </Button>
-                  {newOnes.length > 0 ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => runAll(true)}
-                      disabled={busy}
-                    >
-                      Skip duplicates & insert {newOnes.length} new
-                    </Button>
-                  ) : null}
                 </div>
               </div>
             </div>
@@ -214,12 +208,12 @@ export function QuestionPasteBox({
           <span className="text-xs text-muted-foreground tabular-nums">
             {questions.length} question{questions.length === 1 ? "" : "s"} ready
             {duplicates.length > 0
-              ? ` · ${duplicates.length} duplicate${duplicates.length === 1 ? "" : "s"}`
+              ? ` · ${newOnes.length} new · ${duplicates.length} duplicate${duplicates.length === 1 ? "" : "s"} skipped`
               : ""}
           </span>
           <Button
-            onClick={() => runAll(false)}
-            disabled={busy || (duplicates.length > 0 && newOnes.length === 0)}
+            onClick={runAll}
+            disabled={busy || newOnes.length === 0}
             className="gap-2"
           >
             {busy ? (
