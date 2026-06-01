@@ -1,5 +1,6 @@
+import { useEffect, useRef } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DateCell, EmptyCell, LinkOrText } from "./cell-renderers";
+import { QA_COLUMNS, colLetter } from "./qa-columns";
 
 export type QARow = {
   id?: number | string | null;
@@ -10,130 +11,178 @@ export type QARow = {
   updatedAt?: string | null;
 };
 
-type Column = {
-  key: keyof QARow;
-  label: string;
-  width: string;
-  render: (row: QARow, idx: number) => React.ReactNode;
-};
-
-const COLUMNS: Column[] = [
-  {
-    key: "id",
-    label: "ID",
-    width: "w-20",
-    render: (row, idx) => (
-      <span className="font-mono text-[13px] text-muted-foreground">
-        {row.id ?? idx + 1}
-      </span>
-    ),
-  },
-  {
-    key: "question",
-    label: "Question",
-    width: "w-[22rem]",
-    render: (row) =>
-      row.question ? (
-        <span className="whitespace-pre-wrap break-words leading-snug">
-          {row.question}
-        </span>
-      ) : (
-        <EmptyCell />
-      ),
-  },
-  {
-    key: "web",
-    label: "Web",
-    width: "w-[26rem]",
-    render: (row) => (
-      <div className="max-h-56 overflow-y-auto pr-1">
-        <LinkOrText value={row.web} />
-      </div>
-    ),
-  },
-  {
-    key: "telegram_whatsapp",
-    label: "Telegram / WhatsApp",
-    width: "w-[26rem]",
-    render: (row) => (
-      <div className="max-h-56 overflow-y-auto pr-1">
-        <LinkOrText value={row.telegram_whatsapp} />
-      </div>
-    ),
-  },
-  {
-    key: "createdAt",
-    label: "Created",
-    width: "w-44",
-    render: (row) => <DateCell value={row.createdAt} />,
-  },
-  {
-    key: "updatedAt",
-    label: "Updated",
-    width: "w-44",
-    render: (row) => <DateCell value={row.updatedAt} />,
-  },
-];
-
-// A, B, C, ... Z, AA, AB, ...
-function colLetter(i: number) {
-  let s = "";
-  let n = i;
-  while (n >= 0) {
-    s = String.fromCharCode(65 + (n % 26)) + s;
-    n = Math.floor(n / 26) - 1;
-  }
-  return s;
-}
+export type Selection =
+  | { mode: "cell"; row: number; col: number }
+  | { mode: "row"; row: number }
+  | { mode: "col"; col: number };
 
 export function QATable({
   rows,
   isLoading,
+  selection,
+  onSelectionChange,
 }: {
   rows: QARow[];
   isLoading: boolean;
+  selection: Selection | null;
+  onSelectionChange: (s: Selection) => void;
 }) {
   const skeletonRows = Array.from({ length: 8 });
   const displayRows = isLoading && rows.length === 0 ? [] : rows;
-  const totalRows = displayRows.length || (isLoading ? skeletonRows.length : 12);
+  const colCount = QA_COLUMNS.length;
+  const rowCount = displayRows.length;
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cellRefs = useRef<Map<string, HTMLTableCellElement>>(new Map());
+  const cellKey = (r: number, c: number) => `${r}:${c}`;
+
+  const isCellSelected = (r: number, c: number) =>
+    selection?.mode === "cell" && selection.row === r && selection.col === c;
+  const isRowActive = (r: number) =>
+    (selection?.mode === "cell" && selection.row === r) ||
+    (selection?.mode === "row" && selection.row === r);
+  const isColActive = (c: number) =>
+    (selection?.mode === "cell" && selection.col === c) ||
+    (selection?.mode === "col" && selection.col === c);
+
+  // Scroll selected cell into view
+  useEffect(() => {
+    if (selection?.mode !== "cell") return;
+    const el = cellRefs.current.get(cellKey(selection.row, selection.col));
+    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [selection]);
+
+  // Auto-select A2 once data arrives
+  useEffect(() => {
+    if (!selection && rowCount > 0) {
+      onSelectionChange({ mode: "cell", row: 0, col: 0 });
+    }
+  }, [rowCount, selection, onSelectionChange]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (rowCount === 0) return;
+    const cur =
+      selection?.mode === "cell"
+        ? { row: selection.row, col: selection.col }
+        : selection?.mode === "row"
+          ? { row: selection.row, col: 0 }
+          : selection?.mode === "col"
+            ? { row: 0, col: selection.col }
+            : { row: 0, col: 0 };
+
+    let next: { row: number; col: number } | null = null;
+    switch (e.key) {
+      case "ArrowUp":
+        next = { row: Math.max(0, cur.row - 1), col: cur.col };
+        break;
+      case "ArrowDown":
+      case "Enter":
+        next = { row: Math.min(rowCount - 1, cur.row + 1), col: cur.col };
+        break;
+      case "ArrowLeft":
+        next = { row: cur.row, col: Math.max(0, cur.col - 1) };
+        break;
+      case "ArrowRight":
+        next = { row: cur.row, col: Math.min(colCount - 1, cur.col + 1) };
+        break;
+      case "Tab": {
+        const dir = e.shiftKey ? -1 : 1;
+        let r = cur.row;
+        let c = cur.col + dir;
+        if (c >= colCount) {
+          c = 0;
+          r = Math.min(rowCount - 1, r + 1);
+        } else if (c < 0) {
+          c = colCount - 1;
+          r = Math.max(0, r - 1);
+        }
+        next = { row: r, col: c };
+        break;
+      }
+      case "Home":
+        next = { row: cur.row, col: 0 };
+        break;
+      case "End":
+        next = { row: cur.row, col: colCount - 1 };
+        break;
+      case "PageUp":
+        next = { row: Math.max(0, cur.row - 10), col: cur.col };
+        break;
+      case "PageDown":
+        next = { row: Math.min(rowCount - 1, cur.row + 10), col: cur.col };
+        break;
+      default:
+        return;
+    }
+    e.preventDefault();
+    if (next) onSelectionChange({ mode: "cell", ...next });
+  };
 
   return (
-    <div className="overflow-auto bg-card">
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      className="h-full overflow-auto bg-card focus:outline-none"
+    >
       <table className="w-max min-w-full border-separate border-spacing-0 text-[13px]">
-        {/* Column letters row (A, B, C...) */}
         <thead className="sticky top-0 z-20">
+          {/* Column letters */}
           <tr>
-            <th className="sticky left-0 z-30 h-6 w-10 border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)]" />
-            {COLUMNS.map((c, i) => (
-              <th
-                key={`letter-${c.key}`}
-                className={`${c.width} h-6 border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)] text-center text-[11px] font-normal text-[var(--sheets-header-fg)]`}
-              >
-                {colLetter(i)}
-              </th>
-            ))}
+            <th
+              onClick={() => {
+                // select all → first cell
+                if (rowCount > 0)
+                  onSelectionChange({ mode: "cell", row: 0, col: 0 });
+              }}
+              className="sticky left-0 z-30 h-6 w-10 cursor-cell border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)]"
+            />
+            {QA_COLUMNS.map((c, i) => {
+              const active = isColActive(i);
+              return (
+                <th
+                  key={`letter-${c.key}`}
+                  onClick={() => onSelectionChange({ mode: "col", col: i })}
+                  className={`${c.width} h-6 cursor-pointer border-r border-b border-[var(--sheets-grid)] text-center text-[11px] font-normal ${
+                    active
+                      ? "bg-primary/15 text-primary"
+                      : "bg-[var(--sheets-header-bg)] text-[var(--sheets-header-fg)] hover:bg-muted"
+                  }`}
+                >
+                  {colLetter(i)}
+                </th>
+              );
+            })}
           </tr>
-          {/* Real header labels (row 1) */}
+          {/* Header labels (row 1) */}
           <tr>
             <th className="sticky left-0 z-30 h-8 w-10 border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)] text-center text-[11px] font-normal text-[var(--sheets-header-fg)]">
               1
             </th>
-            {COLUMNS.map((c) => (
-              <th
-                key={`label-${c.key}`}
-                className={`${c.width} h-8 border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)] px-3 text-left text-[12px] font-semibold text-foreground`}
-              >
-                {c.label}
-              </th>
-            ))}
+            {QA_COLUMNS.map((c, i) => {
+              const active = isColActive(i);
+              return (
+                <th
+                  key={`label-${c.key}`}
+                  onClick={() => onSelectionChange({ mode: "col", col: i })}
+                  className={`${c.width} h-8 cursor-pointer border-r border-b border-[var(--sheets-grid)] px-3 text-left text-[12px] font-semibold ${
+                    active
+                      ? "bg-primary/10 text-primary"
+                      : "bg-[var(--sheets-header-bg)] text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {c.label}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
           {isLoading && rows.length === 0 ? (
             skeletonRows.map((_, i) => (
-              <tr key={`s-${i}`} className="group">
-                <RowNumberCell n={i + 2} />
-                {COLUMNS.map((c) => (
+              <tr key={`s-${i}`}>
+                <RowNumberCell n={i + 2} active={false} />
+                {QA_COLUMNS.map((c) => (
                   <td
                     key={c.key}
                     className={`${c.width} border-r border-b border-[var(--sheets-grid)] bg-card px-3 py-2 align-top`}
@@ -146,43 +195,70 @@ export function QATable({
           ) : displayRows.length === 0 ? (
             <>
               <tr>
-                <RowNumberCell n={2} />
+                <RowNumberCell n={2} active={false} />
                 <td
-                  colSpan={COLUMNS.length}
+                  colSpan={colCount}
                   className="h-32 border-r border-b border-[var(--sheets-grid)] bg-card text-center text-muted-foreground"
                 >
                   No evaluation records yet.
                 </td>
               </tr>
               {Array.from({ length: 10 }).map((_, i) => (
-                <EmptySheetRow key={`empty-${i}`} n={i + 3} cols={COLUMNS} />
+                <EmptySheetRow key={`empty-${i}`} n={i + 3} />
               ))}
             </>
           ) : (
             <>
-              {displayRows.map((row, idx) => (
-                <tr
-                  key={`${row.id ?? idx}-${idx}`}
-                  className="group hover:bg-[var(--sheets-row-hover)]"
-                >
-                  <RowNumberCell n={idx + 2} />
-                  {COLUMNS.map((c) => (
-                    <td
-                      key={c.key}
-                      className={`${c.width} border-r border-b border-[var(--sheets-grid)] bg-card px-3 py-2 align-top group-hover:bg-[var(--sheets-row-hover)]`}
-                    >
-                      {c.render(row, idx)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-              {/* Trailing empty rows for the sheet feel */}
+              {displayRows.map((row, rIdx) => {
+                const rowActive = isRowActive(rIdx);
+                return (
+                  <tr key={`${row.id ?? rIdx}-${rIdx}`}>
+                    <RowNumberCell
+                      n={rIdx + 2}
+                      active={rowActive}
+                      onClick={() =>
+                        onSelectionChange({ mode: "row", row: rIdx })
+                      }
+                    />
+                    {QA_COLUMNS.map((c, cIdx) => {
+                      const selected = isCellSelected(rIdx, cIdx);
+                      const inSelectedRowOrCol =
+                        rowActive || isColActive(cIdx);
+                      return (
+                        <td
+                          key={c.key}
+                          ref={(el) => {
+                            const k = cellKey(rIdx, cIdx);
+                            if (el) cellRefs.current.set(k, el);
+                            else cellRefs.current.delete(k);
+                          }}
+                          onClick={() =>
+                            onSelectionChange({
+                              mode: "cell",
+                              row: rIdx,
+                              col: cIdx,
+                            })
+                          }
+                          className={`${c.width} relative cursor-cell border-r border-b border-[var(--sheets-grid)] px-3 py-2 align-top ${
+                            selected
+                              ? "bg-card outline outline-2 -outline-offset-2 outline-primary"
+                              : inSelectedRowOrCol
+                                ? "bg-primary/[0.04]"
+                                : "bg-card hover:bg-[var(--sheets-row-hover)]"
+                          }`}
+                        >
+                          {c.render(row, rIdx)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
               {Array.from({ length: Math.max(0, 14 - displayRows.length) }).map(
                 (_, i) => (
                   <EmptySheetRow
                     key={`pad-${i}`}
                     n={displayRows.length + 2 + i}
-                    cols={COLUMNS}
                   />
                 ),
               )}
@@ -195,22 +271,37 @@ export function QATable({
   );
 }
 
-function RowNumberCell({ n }: { n: number }) {
+function RowNumberCell({
+  n,
+  active,
+  onClick,
+}: {
+  n: number;
+  active: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <td className="sticky left-0 z-10 w-10 border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)] text-center text-[11px] font-normal text-[var(--sheets-header-fg)]">
+    <td
+      onClick={onClick}
+      className={`sticky left-0 z-10 w-10 cursor-pointer border-r border-b border-[var(--sheets-grid)] text-center text-[11px] font-normal ${
+        active
+          ? "bg-primary/15 text-primary"
+          : "bg-[var(--sheets-header-bg)] text-[var(--sheets-header-fg)] hover:bg-muted"
+      }`}
+    >
       {n}
     </td>
   );
 }
 
-function EmptySheetRow({ n, cols }: { n: number; cols: Column[] }) {
+function EmptySheetRow({ n }: { n: number }) {
   return (
-    <tr className="group hover:bg-[var(--sheets-row-hover)]">
-      <RowNumberCell n={n} />
-      {cols.map((c) => (
+    <tr>
+      <RowNumberCell n={n} active={false} />
+      {QA_COLUMNS.map((c) => (
         <td
           key={c.key}
-          className={`${c.width} h-8 border-r border-b border-[var(--sheets-grid)] bg-card group-hover:bg-[var(--sheets-row-hover)]`}
+          className={`${c.width} h-8 border-r border-b border-[var(--sheets-grid)] bg-card`}
         />
       ))}
     </tr>
