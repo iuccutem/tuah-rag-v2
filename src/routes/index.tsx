@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   RefreshCw,
   AlertCircle,
@@ -10,6 +10,7 @@ import {
   Highlighter,
   AlertTriangle,
   Eraser,
+  Search,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -75,6 +76,7 @@ function DashboardPage() {
   const [emailAddress, setEmailAddress] = useState("");
   const [insertOpen, setInsertOpen] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [formats, setFormats] = useState<FormatsMap>(() => {
     if (typeof window === "undefined") return {};
     try {
@@ -90,12 +92,19 @@ function DashboardPage() {
   }, [formats]);
 
   const rows = data?.data ?? [];
+
+  const filteredRows = useMemo(() => {
+    if (!searchQuery.trim()) return rows;
+    const q = searchQuery.toLowerCase();
+    return rows.filter((r) => (r.question ?? "").toLowerCase().includes(q));
+  }, [rows, searchQuery]);
+
   const applyFormat = (patch: CellFormat | null) => {
     if (selection?.mode !== "cell") {
       toast.error("Select a cell first.");
       return;
     }
-    const row = rows[selection.row];
+    const row = filteredRows[selection.row];
     if (!row) return;
     const col = QA_COLUMNS[selection.col];
     const key = formatKey(row.id ?? selection.row, col.key as string);
@@ -185,6 +194,27 @@ function DashboardPage() {
           />
         </ToolbarButton>
         <Separator />
+        <div className="flex items-center gap-1.5 rounded-md border border-[var(--sheets-grid)] bg-muted/40 px-2 py-1">
+          <Search className="h-3.5 w-3.5 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search questions…"
+            className="h-6 w-40 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+          />
+          {searchQuery ? (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="text-[10px] text-muted-foreground hover:text-foreground"
+              title="Clear search"
+            >
+              ✕
+            </button>
+          ) : null}
+        </div>
+        <Separator />
         <Dialog open={insertOpen} onOpenChange={setInsertOpen}>
           <DialogTrigger asChild>
             <button
@@ -269,13 +299,15 @@ function DashboardPage() {
           fx
         </span>
         <div className="flex-1 truncate text-[13px] text-foreground">
-          {selection?.mode === "cell" && rows[selection.row]
-            ? QA_COLUMNS[selection.col]?.raw(rows[selection.row]) || (
+          {selection?.mode === "cell" && filteredRows[selection.row]
+            ? QA_COLUMNS[selection.col]?.raw(filteredRows[selection.row]) || (
                 <span className="text-muted-foreground">empty</span>
               )
-            : rows.length > 0
-              ? `${rows.length} row${rows.length === 1 ? "" : "s"} loaded`
-              : "—"}
+            : searchQuery
+              ? `${filteredRows.length}/${rows.length} rows matching "${searchQuery}"`
+              : rows.length > 0
+                ? `${rows.length} row${rows.length === 1 ? "" : "s"} loaded`
+                : "—"}
         </div>
       </div>
 
@@ -290,12 +322,11 @@ function DashboardPage() {
       {/* Grid */}
       <div className="flex-1 overflow-hidden">
         <QATable
-          rows={rows}
+          rows={filteredRows}
           isLoading={isLoading}
           selection={selection}
           onSelectionChange={setSelection}
           formats={formats}
-
         />
       </div>
 
