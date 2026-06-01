@@ -27,12 +27,18 @@ export function QATable({
   selection,
   onSelectionChange,
   formats,
+  selectedRowIds,
+  onToggleRow,
+  onSelectAll,
 }: {
   rows: QARow[];
   isLoading: boolean;
   selection: Selection | null;
   onSelectionChange: (s: Selection) => void;
   formats: FormatsMap;
+  selectedRowIds: Set<string | number>;
+  onToggleRow: (id: string | number) => void;
+  onSelectAll: (select: boolean) => void;
 }) {
 
   const skeletonRows = Array.from({ length: 8 });
