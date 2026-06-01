@@ -12,6 +12,7 @@ import {
   Eraser,
   Search,
   Calendar,
+  Copy,
 } from "lucide-react";
 
 import { toast } from "sonner";
