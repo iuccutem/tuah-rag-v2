@@ -12,6 +12,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { QATable, type QARow } from "@/components/qa-dashboard/QATable";
 import { QuestionPasteBox } from "@/components/qa-dashboard/QuestionPasteBox";
 
@@ -54,6 +63,8 @@ function DashboardPage() {
     });
 
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailAddress, setEmailAddress] = useState("");
 
   const rows = data?.data ?? [];
   const apiError =
@@ -68,13 +79,31 @@ function DashboardPage() {
         }).format(new Date(dataUpdatedAt))
       : "—";
 
+  const openEmailDialog = () => {
+    setEmailAddress("");
+    setEmailDialogOpen(true);
+  };
+
   const sendEmail = async () => {
+    const email = emailAddress.trim();
+    if (!email) {
+      toast.error("Please enter an email address.");
+      return;
+    }
     setSendingEmail(true);
     try {
-      const res = await fetch("/api/n8n-email", { method: "POST" });
+      const res = await fetch("/api/n8n-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
       const json = (await res.json()) as { ok: boolean; error?: string };
-      if (json.ok) toast.success("Email pipeline triggered.");
-      else toast.error(json.error ?? "Failed to send email.");
+      if (json.ok) {
+        toast.success("Email pipeline triggered.");
+        setEmailDialogOpen(false);
+      } else {
+        toast.error(json.error ?? "Failed to send email.");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to send email.");
     } finally {
@@ -104,12 +133,12 @@ function DashboardPage() {
             </div>
             <Button
               variant="outline"
-              onClick={sendEmail}
+              onClick={openEmailDialog}
               disabled={sendingEmail}
               className="gap-2"
             >
               <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
-              {sendingEmail ? "Sending…" : "Send Email"}
+              Send Email
             </Button>
             <Button
               onClick={() => refetch()}
@@ -153,6 +182,43 @@ function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Send Email</DialogTitle>
+              <DialogDescription>
+                Enter the recipient email address to send the evaluation report.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                type="email"
+                placeholder="recipient@example.com"
+                value={emailAddress}
+                onChange={(e) => setEmailAddress(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") sendEmail();
+                }}
+                disabled={sendingEmail}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setEmailDialogOpen(false)}
+                disabled={sendingEmail}
+              >
+                Cancel
+              </Button>
+              <Button onClick={sendEmail} disabled={sendingEmail} className="gap-2">
+                <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+                {sendingEmail ? "Sending…" : "Send"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
