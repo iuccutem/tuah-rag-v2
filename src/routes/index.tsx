@@ -293,6 +293,8 @@ function DashboardPage() {
           isLoading={isLoading}
           selection={selection}
           onSelectionChange={setSelection}
+          formats={formats}
+
         />
       </div>
 
