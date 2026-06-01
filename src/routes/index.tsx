@@ -78,6 +78,8 @@ function DashboardPage() {
   const [insertOpen, setInsertOpen] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [formats, setFormats] = useState<FormatsMap>(() => {
     if (typeof window === "undefined") return {};
     try {
@@ -95,10 +97,29 @@ function DashboardPage() {
   const rows = data?.data ?? [];
 
   const filteredRows = useMemo(() => {
-    if (!searchQuery.trim()) return rows;
-    const q = searchQuery.toLowerCase();
-    return rows.filter((r) => (r.question ?? "").toLowerCase().includes(q));
-  }, [rows, searchQuery]);
+    let result = rows;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((r) => (r.question ?? "").toLowerCase().includes(q));
+    }
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      result = result.filter((r) => {
+        const d = r.createdAt ? new Date(r.createdAt) : null;
+        return d ? d >= from : false;
+      });
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      result = result.filter((r) => {
+        const d = r.createdAt ? new Date(r.createdAt) : null;
+        return d ? d <= to : false;
+      });
+    }
+    return result;
+  }, [rows, searchQuery, dateFrom, dateTo]);
 
   const applyFormat = (patch: CellFormat | null) => {
     if (selection?.mode !== "cell") {
