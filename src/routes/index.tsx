@@ -268,17 +268,27 @@ function DashboardPage() {
 
       {/* Formula bar */}
       <div className="flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-2 py-1">
-        <div className="flex h-7 w-24 items-center justify-between rounded-sm border border-[var(--sheets-grid)] bg-card px-2 text-[12px] text-muted-foreground">
-          A1
+        <div className="flex h-7 w-24 items-center justify-between rounded-sm border border-[var(--sheets-grid)] bg-card px-2 text-[12px] text-foreground">
+          {selection?.mode === "cell"
+            ? cellRef(selection.col, selection.row)
+            : selection?.mode === "col"
+              ? `${QA_COLUMNS[selection.col]?.label ?? ""}`
+              : selection?.mode === "row"
+                ? `Row ${selection.row + 2}`
+                : "A1"}
           <span className="text-[10px]">▾</span>
         </div>
         <span className="font-serif text-[14px] italic text-muted-foreground">
           fx
         </span>
-        <div className="flex-1 truncate text-[13px] text-muted-foreground">
-          {rows.length > 0
-            ? `${rows.length} row${rows.length === 1 ? "" : "s"} loaded`
-            : "—"}
+        <div className="flex-1 truncate text-[13px] text-foreground">
+          {selection?.mode === "cell" && rows[selection.row]
+            ? QA_COLUMNS[selection.col]?.raw(rows[selection.row]) || (
+                <span className="text-muted-foreground">empty</span>
+              )
+            : rows.length > 0
+              ? `${rows.length} row${rows.length === 1 ? "" : "s"} loaded`
+              : "—"}
         </div>
       </div>
 
@@ -292,8 +302,14 @@ function DashboardPage() {
 
       {/* Grid */}
       <div className="flex-1 overflow-hidden">
-        <QATable rows={rows} isLoading={isLoading} />
+        <QATable
+          rows={rows}
+          isLoading={isLoading}
+          selection={selection}
+          onSelectionChange={setSelection}
+        />
       </div>
+
 
       {/* Sheet tabs */}
       <div className="flex shrink-0 items-center gap-1 border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
