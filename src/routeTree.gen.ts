@@ -10,33 +10,43 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiN8nQaRouteImport } from './routes/api/n8n-qa'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiN8nQaRoute = ApiN8nQaRouteImport.update({
+  id: '/api/n8n-qa',
+  path: '/api/n8n-qa',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/n8n-qa': typeof ApiN8nQaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/n8n-qa': typeof ApiN8nQaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/n8n-qa': typeof ApiN8nQaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/api/n8n-qa'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/api/n8n-qa'
+  id: '__root__' | '/' | '/api/n8n-qa'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiN8nQaRoute: typeof ApiN8nQaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +58,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/n8n-qa': {
+      id: '/api/n8n-qa'
+      path: '/api/n8n-qa'
+      fullPath: '/api/n8n-qa'
+      preLoaderRoute: typeof ApiN8nQaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiN8nQaRoute: ApiN8nQaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
