@@ -75,6 +75,8 @@ function DashboardPage() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailAddress, setEmailAddress] = useState("");
   const [insertOpen, setInsertOpen] = useState(false);
+  const [selection, setSelection] = useState<Selection | null>(null);
+
 
   const rows = data?.data ?? [];
   const apiError =
