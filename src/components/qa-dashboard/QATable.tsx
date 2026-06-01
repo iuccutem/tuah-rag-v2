@@ -147,12 +147,22 @@ export function QATable({
           <tr>
             <th
               onClick={() => {
-                // select all → first cell
                 if (rowCount > 0)
                   onSelectionChange({ mode: "cell", row: 0, col: 0 });
               }}
               className="sticky left-0 z-30 h-6 w-10 cursor-cell border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)]"
             />
+            <th className="sticky left-[40px] z-30 h-6 w-8 border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)] text-center">
+              <input
+                type="checkbox"
+                className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected;
+                }}
+                onChange={(e) => onSelectAll(e.target.checked)}
+              />
+            </th>
             {QA_COLUMNS.map((c, i) => {
               const active = isColActive(i);
               return (
@@ -175,6 +185,7 @@ export function QATable({
             <th className="sticky left-0 z-30 h-8 w-10 border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)] text-center text-[11px] font-normal text-[var(--sheets-header-fg)]">
               1
             </th>
+            <th className="sticky left-[40px] z-30 h-8 w-8 border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)]" />
             {QA_COLUMNS.map((c, i) => {
               const active = isColActive(i);
               return (
