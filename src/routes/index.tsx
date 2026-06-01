@@ -372,6 +372,10 @@ function DashboardPage() {
               </DialogDescription>
             </DialogHeader>
             <QuestionPasteBox
+              existingQuestions={existingQuestions}
+              onDeleteDuplicates={async (qs) => {
+                await deleteByQuestions(qs);
+              }}
               onComplete={() => {
                 setInsertOpen(false);
                 refetch();
@@ -379,6 +383,26 @@ function DashboardPage() {
             />
           </DialogContent>
         </Dialog>
+        <Separator />
+        <button
+          type="button"
+          onClick={deleteDuplicates}
+          disabled={duplicateCount === 0}
+          title={
+            duplicateCount === 0
+              ? "No duplicate questions"
+              : `Delete ${duplicateCount} duplicate row${duplicateCount === 1 ? "" : "s"}`
+          }
+          className="flex h-8 items-center gap-1.5 rounded-md border border-transparent px-2 text-[13px] hover:bg-muted disabled:opacity-50"
+        >
+          <Copy className="h-4 w-4 text-destructive" />
+          Delete duplicates
+          {duplicateCount > 0 ? (
+            <span className="ml-1 rounded-sm bg-destructive/15 px-1 text-[11px] text-destructive tabular-nums">
+              {duplicateCount}
+            </span>
+          ) : null}
+        </button>
         <Separator />
         <button
           type="button"
