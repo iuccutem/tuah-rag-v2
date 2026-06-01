@@ -367,172 +367,165 @@ function DashboardPage() {
 
 
       {/* Toolbar */}
-      <div className="flex shrink-0 items-center gap-1 border-b border-[var(--sheets-grid)] bg-card px-3 py-1.5">
-        <ToolbarButton
-          onClick={() => refetch()}
-          disabled={isFetching}
-          title="Refresh data"
-        >
-          <RefreshCw
-            className={isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"}
-          />
-        </ToolbarButton>
-        <Separator />
-        <div className="flex items-center gap-1.5 rounded-md border border-[var(--sheets-grid)] bg-muted/40 px-2 py-1">
-          <Search className="h-3.5 w-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search questions…"
-            className="h-6 w-40 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
-          />
-          {searchQuery ? (
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="text-[10px] text-muted-foreground hover:text-foreground"
-              title="Clear search"
-            >
-              ✕
-            </button>
-          ) : null}
-        </div>
-        <Separator />
-        <div className="flex items-center gap-1.5">
-          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="h-6 w-32 rounded-sm border border-[var(--sheets-grid)] bg-card px-1 text-[12px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            title="From date"
-          />
-          <span className="text-[11px] text-muted-foreground">–</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="h-6 w-32 rounded-sm border border-[var(--sheets-grid)] bg-card px-1 text-[12px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            title="To date"
-          />
-          {(dateFrom || dateTo) && (
-            <button
-              type="button"
-              onClick={() => { setDateFrom(""); setDateTo(""); }}
-              className="text-[10px] text-muted-foreground hover:text-foreground"
-              title="Clear date filter"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-        <Separator />
-        <Dialog open={insertOpen} onOpenChange={setInsertOpen}>
-          <DialogTrigger asChild>
-            <button
-              type="button"
-              className="flex h-8 items-center gap-1.5 rounded-md border border-transparent px-2 text-[13px] hover:bg-muted"
-            >
-              <ListPlus className="h-4 w-4 text-primary" />
-              Insert questions
-            </button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Insert questions</DialogTitle>
-              <DialogDescription>
-                Paste one question per line. Each row is added to the sheet,
-                then the agent fills in the empty answers.
-              </DialogDescription>
-            </DialogHeader>
-            <QuestionPasteBox
-              existingQuestions={existingQuestions}
-              onComplete={() => {
-                setInsertOpen(false);
-                refetch();
-              }}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
+        {/* Group: data view */}
+        <ToolbarGroup>
+          <ToolbarButton
+            onClick={() => refetch()}
+            disabled={isFetching}
+            title="Refresh data"
+          >
+            <RefreshCw
+              className={isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"}
             />
-          </DialogContent>
-        </Dialog>
-        <Separator />
-        <button
-          type="button"
-          onClick={deleteDuplicates}
-          disabled={duplicateCount === 0}
-          title={
-            duplicateCount === 0
-              ? "No duplicate questions"
-              : `Delete ${duplicateCount} duplicate row${duplicateCount === 1 ? "" : "s"}`
-          }
-          className="flex h-8 items-center gap-1.5 rounded-md border border-transparent px-2 text-[13px] hover:bg-muted disabled:opacity-50"
-        >
-          <Copy className="h-4 w-4 text-destructive" />
-          Delete duplicates
-          {duplicateCount > 0 ? (
-            <span className="ml-1 rounded-sm bg-destructive/15 px-1 text-[11px] text-destructive tabular-nums">
-              {duplicateCount}
-            </span>
-          ) : null}
-        </button>
-        <Separator />
-        <button
-          type="button"
-          onClick={openEmailDialog}
-          disabled={sendingEmail}
-          className="flex h-8 items-center gap-1.5 rounded-md border border-transparent px-2 text-[13px] hover:bg-muted disabled:opacity-50"
-        >
-          <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
-          Send email
-        </button>
-        <Separator />
-        <button
-          type="button"
-          onClick={deleteSelectedRows}
-          disabled={selectedRowIds.size === 0}
-          title={
-            selectedRowIds.size === 0
-              ? "Select rows to delete"
-              : `Delete ${selectedRowIds.size} selected row${selectedRowIds.size === 1 ? "" : "s"}`
-          }
-          className="flex h-8 items-center gap-1.5 rounded-md border border-transparent px-2 text-[13px] hover:bg-muted disabled:opacity-50"
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-          Delete selected
-          {selectedRowIds.size > 0 ? (
-            <span className="ml-1 rounded-sm bg-destructive/15 px-1 text-[11px] text-destructive tabular-nums">
-              {selectedRowIds.size}
-            </span>
-          ) : null}
-        </button>
-        <Separator />
-        <button
-          type="button"
-          onClick={() => applyFormat({ highlight: true })}
-          title="Highlight cell yellow"
-          className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] hover:bg-muted"
-        >
-          <Highlighter className="h-4 w-4 text-yellow-500" />
-          Highlight
-        </button>
-        <button
-          type="button"
-          onClick={() => applyFormat({ error: true })}
-          title="Mark cell text red"
-          className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] hover:bg-muted"
-        >
-          <AlertTriangle className="h-4 w-4 text-red-500" />
-          Mark error
-        </button>
-        <button
-          type="button"
-          onClick={() => applyFormat(null)}
-          title="Clear formatting"
-          className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] hover:bg-muted"
-        >
-          <Eraser className="h-4 w-4 text-muted-foreground" />
-          Clear
-        </button>
+          </ToolbarButton>
+
+          <div className="flex h-8 items-center gap-1.5 rounded-md border border-[var(--sheets-grid)] bg-background px-2 focus-within:ring-1 focus-within:ring-primary">
+            <Search className="h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search questions…"
+              className="h-6 w-44 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="text-muted-foreground hover:text-foreground"
+                title="Clear search"
+              >
+                <span className="text-[11px]">✕</span>
+              </button>
+            ) : null}
+          </div>
+
+          <div className="flex h-8 items-center gap-1.5 rounded-md border border-[var(--sheets-grid)] bg-background px-2">
+            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="h-6 w-[120px] bg-transparent text-[12px] text-foreground focus:outline-none"
+              title="From date"
+            />
+            <span className="text-[11px] text-muted-foreground">–</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="h-6 w-[120px] bg-transparent text-[12px] text-foreground focus:outline-none"
+              title="To date"
+            />
+            {(dateFrom || dateTo) && (
+              <button
+                type="button"
+                onClick={() => { setDateFrom(""); setDateTo(""); }}
+                className="text-muted-foreground hover:text-foreground"
+                title="Clear date filter"
+              >
+                <span className="text-[11px]">✕</span>
+              </button>
+            )}
+          </div>
+        </ToolbarGroup>
+
+        <Divider />
+
+        {/* Group: data actions */}
+        <ToolbarGroup>
+          <Dialog open={insertOpen} onOpenChange={setInsertOpen}>
+            <DialogTrigger asChild>
+              <button
+                type="button"
+                className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-2.5 text-[13px] font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+              >
+                <ListPlus className="h-4 w-4" />
+                Insert
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Insert questions</DialogTitle>
+                <DialogDescription>
+                  Paste one question per line. Each row is added to the sheet,
+                  then the agent fills in the empty answers.
+                </DialogDescription>
+              </DialogHeader>
+              <QuestionPasteBox
+                existingQuestions={existingQuestions}
+                onComplete={() => {
+                  setInsertOpen(false);
+                  refetch();
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+
+          <ToolbarAction
+            onClick={deleteDuplicates}
+            disabled={duplicateCount === 0}
+            title={
+              duplicateCount === 0
+                ? "No duplicate questions"
+                : `Delete ${duplicateCount} duplicate row${duplicateCount === 1 ? "" : "s"}`
+            }
+            icon={<Copy className="h-4 w-4" />}
+            label="Duplicates"
+            badge={duplicateCount > 0 ? duplicateCount : undefined}
+            badgeTone="warning"
+          />
+
+          <ToolbarAction
+            onClick={deleteSelectedRows}
+            disabled={selectedRowIds.size === 0}
+            title={
+              selectedRowIds.size === 0
+                ? "Select rows to delete"
+                : `Delete ${selectedRowIds.size} selected row${selectedRowIds.size === 1 ? "" : "s"}`
+            }
+            icon={<Trash2 className="h-4 w-4 text-destructive" />}
+            label="Delete"
+            badge={selectedRowIds.size > 0 ? selectedRowIds.size : undefined}
+            badgeTone="danger"
+          />
+        </ToolbarGroup>
+
+        <Divider />
+
+        {/* Group: formatting */}
+        <ToolbarGroup>
+          <ToolbarAction
+            onClick={() => applyFormat({ highlight: true })}
+            title="Highlight cell yellow"
+            icon={<Highlighter className="h-4 w-4 text-yellow-500" />}
+            label="Highlight"
+          />
+          <ToolbarAction
+            onClick={() => applyFormat({ error: true })}
+            title="Mark cell text red"
+            icon={<AlertTriangle className="h-4 w-4 text-red-500" />}
+            label="Mark error"
+          />
+          <ToolbarAction
+            onClick={() => applyFormat(null)}
+            title="Clear formatting"
+            icon={<Eraser className="h-4 w-4 text-muted-foreground" />}
+            label="Clear"
+          />
+        </ToolbarGroup>
+
+        {/* Right side */}
+        <div className="ml-auto">
+          <ToolbarAction
+            onClick={openEmailDialog}
+            disabled={sendingEmail}
+            icon={<Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />}
+            label="Send email"
+            title="Send evaluation report by email"
+          />
+        </div>
       </div>
 
 
