@@ -168,25 +168,32 @@ function DashboardPage() {
     0,
   );
 
+  const postDelete = async (questions: string[]) => {
+    const res = await fetch("/api/n8n-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questions }),
+    });
+    return (await res.json()) as {
+      ok: boolean;
+      deleted?: number;
+      total?: number;
+      error?: string;
+    };
+  };
+
   const deleteByQuestions = async (questions: string[]) => {
-    const wanted = new Set(questions.map((q) => q.trim().toLowerCase()));
-    const ids = rows
-      .filter((r) => wanted.has((r.question ?? "").trim().toLowerCase()))
-      .map((r) => r.id)
-      .filter((v): v is string | number => v !== null && v !== undefined);
-    if (ids.length === 0) {
-      toast.error("No matching rows to delete.");
+    const cleaned = questions.map((q) => q.trim()).filter(Boolean);
+    if (cleaned.length === 0) {
+      toast.error("No questions to delete.");
       return;
     }
     try {
-      const res = await fetch("/api/n8n-delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids, questions }),
-      });
-      const json = (await res.json()) as { ok: boolean; error?: string };
+      const json = await postDelete(cleaned);
       if (json.ok) {
-        toast.success(`Deleted ${ids.length} row${ids.length === 1 ? "" : "s"}.`);
+        toast.success(
+          `Deleted ${json.deleted ?? cleaned.length}/${json.total ?? cleaned.length} question${cleaned.length === 1 ? "" : "s"}.`,
+        );
         refetch();
       } else {
         toast.error(json.error ?? "Failed to delete.");
@@ -202,24 +209,21 @@ function DashboardPage() {
       return;
     }
     // Keep first occurrence of each group, delete the rest.
-    const ids = duplicateGroups
+    const extras = duplicateGroups
       .flatMap((g) => g.slice(1))
-      .map((r) => r.id)
-      .filter((v): v is string | number => v !== null && v !== undefined);
-    if (ids.length === 0) {
-      toast.error("Duplicates found but rows have no id.");
+      .map((r) => (r.question ?? "").trim())
+      .filter(Boolean);
+    if (extras.length === 0) {
+      toast.error("Nothing to delete.");
       return;
     }
-    if (!confirm(`Delete ${ids.length} duplicate row${ids.length === 1 ? "" : "s"}?`)) return;
+    if (!confirm(`Delete ${extras.length} duplicate row${extras.length === 1 ? "" : "s"}?`)) return;
     try {
-      const res = await fetch("/api/n8n-delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
-      const json = (await res.json()) as { ok: boolean; error?: string };
+      const json = await postDelete(extras);
       if (json.ok) {
-        toast.success(`Deleted ${ids.length} duplicate${ids.length === 1 ? "" : "s"}.`);
+        toast.success(
+          `Deleted ${json.deleted ?? extras.length}/${json.total ?? extras.length} duplicate${extras.length === 1 ? "" : "s"}.`,
+        );
         refetch();
       } else {
         toast.error(json.error ?? "Failed to delete duplicates.");
@@ -228,6 +232,7 @@ function DashboardPage() {
       toast.error(e instanceof Error ? e.message : "Failed to delete duplicates.");
     }
   };
+
 
 
   const apiError =
