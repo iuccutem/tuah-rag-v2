@@ -354,8 +354,8 @@ function DashboardPage() {
             ? QA_COLUMNS[selection.col]?.raw(filteredRows[selection.row]) || (
                 <span className="text-muted-foreground">empty</span>
               )
-            : searchQuery
-              ? `${filteredRows.length}/${rows.length} rows matching "${searchQuery}"`
+            : searchQuery || dateFrom || dateTo
+              ? `${filteredRows.length}/${rows.length} rows filtered`
               : rows.length > 0
                 ? `${rows.length} row${rows.length === 1 ? "" : "s"} loaded`
                 : "—"}
