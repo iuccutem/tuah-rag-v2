@@ -209,6 +209,7 @@ export function QATable({
             skeletonRows.map((_, i) => (
               <tr key={`s-${i}`}>
                 <RowNumberCell n={i + 2} active={false} />
+                <td className="w-8 border-r border-b border-[var(--sheets-grid)] bg-card" />
                 {QA_COLUMNS.map((c) => (
                   <td
                     key={c.key}
@@ -223,6 +224,7 @@ export function QATable({
             <>
               <tr>
                 <RowNumberCell n={2} active={false} />
+                <td className="w-8 border-r border-b border-[var(--sheets-grid)] bg-card" />
                 <td
                   colSpan={colCount}
                   className="h-32 border-r border-b border-[var(--sheets-grid)] bg-card text-center text-muted-foreground"
