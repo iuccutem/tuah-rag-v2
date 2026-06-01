@@ -488,6 +488,26 @@ function DashboardPage() {
         <Separator />
         <button
           type="button"
+          onClick={deleteSelectedRows}
+          disabled={selectedRowIds.size === 0}
+          title={
+            selectedRowIds.size === 0
+              ? "Select rows to delete"
+              : `Delete ${selectedRowIds.size} selected row${selectedRowIds.size === 1 ? "" : "s"}`
+          }
+          className="flex h-8 items-center gap-1.5 rounded-md border border-transparent px-2 text-[13px] hover:bg-muted disabled:opacity-50"
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+          Delete selected
+          {selectedRowIds.size > 0 ? (
+            <span className="ml-1 rounded-sm bg-destructive/15 px-1 text-[11px] text-destructive tabular-nums">
+              {selectedRowIds.size}
+            </span>
+          ) : null}
+        </button>
+        <Separator />
+        <button
+          type="button"
           onClick={() => applyFormat({ highlight: true })}
           title="Highlight cell yellow"
           className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] hover:bg-muted"
