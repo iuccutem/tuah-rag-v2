@@ -17,6 +17,7 @@ type RunItem = { question: string; status: RunStatus; error?: string };
 export function QuestionPasteBox({ onComplete }: { onComplete?: () => void }) {
   const [text, setText] = useState("");
   const [running, setRunning] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [items, setItems] = useState<RunItem[]>([]);
 
   const questions = useMemo(
@@ -40,6 +41,7 @@ export function QuestionPasteBox({ onComplete }: { onComplete?: () => void }) {
     }));
     setItems(initial);
 
+    let okCount = 0;
     for (let i = 0; i < questions.length; i++) {
       const question = questions[i];
       try {
@@ -49,6 +51,7 @@ export function QuestionPasteBox({ onComplete }: { onComplete?: () => void }) {
           body: JSON.stringify({ question }),
         });
         const json = (await res.json()) as { ok: boolean; error?: string };
+        if (json.ok) okCount++;
         setItems((prev) =>
           prev.map((it, idx) =>
             idx === i
@@ -75,19 +78,46 @@ export function QuestionPasteBox({ onComplete }: { onComplete?: () => void }) {
         );
       }
     }
-
     setRunning(false);
-    toast.success("Finished running questions.");
-    onComplete?.();
+
+    if (okCount === 0) {
+      toast.error("No questions inserted. Skipping processing.");
+      return;
+    }
+
+    toast.success(
+      `Inserted ${okCount}/${questions.length} question${
+        questions.length === 1 ? "" : "s"
+      }. Processing…`,
+    );
+
+    setProcessing(true);
+    try {
+      const res = await fetch("/api/n8n-process", { method: "POST" });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (json.ok) {
+        toast.success("Processing pipeline triggered.");
+      } else {
+        toast.error(json.error ?? "Failed to trigger processing.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to trigger processing.");
+    } finally {
+      setProcessing(false);
+      onComplete?.();
+    }
   };
+
+  const busy = running || processing;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Run Questions</CardTitle>
         <CardDescription>
-          Paste one question per line, then run them through the testing
-          pipeline. Empty lines are ignored.
+          Paste one question per line. Each is inserted into the evaluation
+          table, then the agent processes any rows with empty answers. Empty
+          lines are ignored.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -97,20 +127,24 @@ export function QuestionPasteBox({ onComplete }: { onComplete?: () => void }) {
           placeholder={"apakah beza ftke dan ftkek?\nbila pendaftaran sem baru?"}
           rows={6}
           className="font-mono text-sm leading-relaxed bg-muted/30"
-          disabled={running}
+          disabled={busy}
         />
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs text-muted-foreground tabular-nums">
             {questions.length} question{questions.length === 1 ? "" : "s"}{" "}
             ready
           </span>
-          <Button onClick={runAll} disabled={running} className="gap-2">
-            {running ? (
+          <Button onClick={runAll} disabled={busy} className="gap-2">
+            {busy ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Play className="h-4 w-4" />
             )}
-            {running ? "Running…" : "Run Questions"}
+            {running
+              ? "Inserting…"
+              : processing
+                ? "Processing…"
+                : "Run Questions"}
           </Button>
         </div>
 
