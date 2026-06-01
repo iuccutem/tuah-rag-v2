@@ -1,12 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   RefreshCw,
   AlertCircle,
   Mail,
   Sheet as SheetIcon,
   ListPlus,
+  Highlighter,
+  AlertTriangle,
+  Eraser,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -22,9 +25,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { QATable, type QARow, type Selection } from "@/components/qa-dashboard/QATable";
+import {
+  QATable,
+  formatKey,
+  type CellFormat,
+  type FormatsMap,
+  type QARow,
+  type Selection,
+} from "@/components/qa-dashboard/QATable";
 import { QA_COLUMNS, cellRef } from "@/components/qa-dashboard/qa-columns";
 import { QuestionPasteBox } from "@/components/qa-dashboard/QuestionPasteBox";
+
 
 
 export const Route = createFileRoute("/")({
@@ -64,9 +75,43 @@ function DashboardPage() {
   const [emailAddress, setEmailAddress] = useState("");
   const [insertOpen, setInsertOpen] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [formats, setFormats] = useState<FormatsMap>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      return JSON.parse(localStorage.getItem("qa-formats") ?? "{}") as FormatsMap;
+    } catch {
+      return {};
+    }
+  });
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("qa-formats", JSON.stringify(formats));
+  }, [formats]);
 
   const rows = data?.data ?? [];
+  const applyFormat = (patch: CellFormat | null) => {
+    if (selection?.mode !== "cell") {
+      toast.error("Select a cell first.");
+      return;
+    }
+    const row = rows[selection.row];
+    if (!row) return;
+    const col = QA_COLUMNS[selection.col];
+    const key = formatKey(row.id ?? selection.row, col.key as string);
+    setFormats((prev) => {
+      const next = { ...prev };
+      if (patch === null) {
+        delete next[key];
+      } else {
+        next[key] = { ...next[key], ...patch };
+        if (!next[key].highlight && !next[key].error) delete next[key];
+      }
+      return next;
+    });
+  };
+
+
   const apiError =
     data?.error ?? (error instanceof Error ? error.message : null);
 
@@ -175,7 +220,36 @@ function DashboardPage() {
           <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
           Send email
         </button>
+        <Separator />
+        <button
+          type="button"
+          onClick={() => applyFormat({ highlight: true })}
+          title="Highlight cell yellow"
+          className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] hover:bg-muted"
+        >
+          <Highlighter className="h-4 w-4 text-yellow-500" />
+          Highlight
+        </button>
+        <button
+          type="button"
+          onClick={() => applyFormat({ error: true })}
+          title="Mark cell text red"
+          className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] hover:bg-muted"
+        >
+          <AlertTriangle className="h-4 w-4 text-red-500" />
+          Mark error
+        </button>
+        <button
+          type="button"
+          onClick={() => applyFormat(null)}
+          title="Clear formatting"
+          className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] hover:bg-muted"
+        >
+          <Eraser className="h-4 w-4 text-muted-foreground" />
+          Clear
+        </button>
       </div>
+
 
 
       {/* Formula bar */}
@@ -219,6 +293,8 @@ function DashboardPage() {
           isLoading={isLoading}
           selection={selection}
           onSelectionChange={setSelection}
+          formats={formats}
+
         />
       </div>
 

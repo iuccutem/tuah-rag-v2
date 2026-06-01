@@ -16,17 +16,25 @@ export type Selection =
   | { mode: "row"; row: number }
   | { mode: "col"; col: number };
 
+export type CellFormat = { highlight?: boolean; error?: boolean };
+export type FormatsMap = Record<string, CellFormat>;
+export const formatKey = (rowId: string | number, colKey: string) =>
+  `${rowId}::${colKey}`;
+
 export function QATable({
   rows,
   isLoading,
   selection,
   onSelectionChange,
+  formats,
 }: {
   rows: QARow[];
   isLoading: boolean;
   selection: Selection | null;
   onSelectionChange: (s: Selection) => void;
+  formats: FormatsMap;
 }) {
+
   const skeletonRows = Array.from({ length: 8 });
   const displayRows = isLoading && rows.length === 0 ? [] : rows;
   const colCount = QA_COLUMNS.length;
@@ -224,6 +232,10 @@ export function QATable({
                       const selected = isCellSelected(rIdx, cIdx);
                       const inSelectedRowOrCol =
                         rowActive || isColActive(cIdx);
+                      const fmt =
+                        formats[formatKey(row.id ?? rIdx, c.key as string)] ?? {};
+                      const fmtBg = fmt.highlight ? "!bg-yellow-200" : "";
+                      const fmtText = fmt.error ? "!text-red-600 font-medium" : "";
                       return (
                         <td
                           key={c.key}
@@ -245,12 +257,13 @@ export function QATable({
                               : inSelectedRowOrCol
                                 ? "bg-primary/[0.04]"
                                 : "bg-card hover:bg-[var(--sheets-row-hover)]"
-                          }`}
+                          } ${fmtBg} ${fmtText}`}
                         >
                           {c.render(row, rIdx)}
                         </td>
                       );
                     })}
+
                   </tr>
                 );
               })}
