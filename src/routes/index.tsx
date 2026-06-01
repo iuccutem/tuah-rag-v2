@@ -1,12 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   RefreshCw,
   AlertCircle,
   Mail,
   Sheet as SheetIcon,
   ListPlus,
+  Highlighter,
+  AlertTriangle,
+  Eraser,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -22,9 +25,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { QATable, type QARow, type Selection } from "@/components/qa-dashboard/QATable";
+import {
+  QATable,
+  formatKey,
+  type CellFormat,
+  type FormatsMap,
+  type QARow,
+  type Selection,
+} from "@/components/qa-dashboard/QATable";
 import { QA_COLUMNS, cellRef } from "@/components/qa-dashboard/qa-columns";
 import { QuestionPasteBox } from "@/components/qa-dashboard/QuestionPasteBox";
+
 
 
 export const Route = createFileRoute("/")({
