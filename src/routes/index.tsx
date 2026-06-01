@@ -89,13 +89,13 @@ function DashboardPage() {
     localStorage.setItem("qa-formats", JSON.stringify(formats));
   }, [formats]);
 
-  const rowsData = data?.data ?? [];
+  const rows = data?.data ?? [];
   const applyFormat = (patch: CellFormat | null) => {
     if (selection?.mode !== "cell") {
       toast.error("Select a cell first.");
       return;
     }
-    const row = rowsData[selection.row];
+    const row = rows[selection.row];
     if (!row) return;
     const col = QA_COLUMNS[selection.col];
     const key = formatKey(row.id ?? selection.row, col.key as string);
@@ -112,9 +112,6 @@ function DashboardPage() {
   };
 
 
-
-
-  const rows = data?.data ?? [];
   const apiError =
     data?.error ?? (error instanceof Error ? error.message : null);
 
