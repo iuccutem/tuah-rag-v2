@@ -11,7 +11,6 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { Toaster } from "sonner";
 
 function NotFoundComponent() {
   return (
@@ -79,13 +78,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { name: "description", content: "University Q&A Monitor displays testing Q&A evaluation data for university staff." },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:description", content: "University Q&A Monitor displays testing Q&A evaluation data for university staff." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Lovable App" },
+      { name: "twitter:description", content: "University Q&A Monitor displays testing Q&A evaluation data for university staff." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/25c390db-58e0-4237-a5f0-db1b26288898/id-preview-030238c7--3146e57f-8e47-4b3e-b98b-a2007fb2b2d3.lovable.app-1780299586665.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/25c390db-58e0-4237-a5f0-db1b26288898/id-preview-030238c7--3146e57f-8e47-4b3e-b98b-a2007fb2b2d3.lovable.app-1780299586665.png" },
     ],
     links: [
       {
@@ -121,7 +124,6 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
-      <Toaster richColors position="top-right" />
     </QueryClientProvider>
   );
 }
