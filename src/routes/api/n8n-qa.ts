@@ -41,11 +41,7 @@ export const Route = createFileRoute("/api/n8n-qa")({
           }
 
           const json = await res.json();
-          const data = Array.isArray(json)
-            ? json
-            : Array.isArray((json as { data?: unknown })?.data)
-              ? (json as { data: unknown[] }).data
-              : [];
+          const data = normalizeRows(json);
 
           return Response.json(
             { data, error: null },
