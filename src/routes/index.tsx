@@ -225,24 +225,11 @@ function DashboardPage() {
 
       {/* Sheet tabs */}
       <div className="flex shrink-0 items-center gap-1 border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
-        <button
-          type="button"
-          className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-muted"
-          aria-label="Add sheet"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-        <div className="mx-1 h-5 w-px bg-[var(--sheets-grid)]" />
         <div className="flex h-7 items-center gap-2 rounded-t-md border-t-2 border-primary bg-card px-3 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]">
           Q&amp;A Evaluations
         </div>
-        <button
-          type="button"
-          className="h-7 rounded px-3 text-[13px] text-muted-foreground hover:bg-muted"
-        >
-          Notes
-        </button>
         <div className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+
           {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
         </div>
       </div>
