@@ -14,6 +14,7 @@ import { Route as ApiN8nRunRouteImport } from './routes/api/n8n-run'
 import { Route as ApiN8nQaRouteImport } from './routes/api/n8n-qa'
 import { Route as ApiN8nProcessRouteImport } from './routes/api/n8n-process'
 import { Route as ApiN8nEmailRouteImport } from './routes/api/n8n-email'
+import { Route as ApiN8nDeleteRouteImport } from './routes/api/n8n-delete'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,9 +41,15 @@ const ApiN8nEmailRoute = ApiN8nEmailRouteImport.update({
   path: '/api/n8n-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiN8nDeleteRoute = ApiN8nDeleteRouteImport.update({
+  id: '/api/n8n-delete',
+  path: '/api/n8n-delete',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
@@ -67,6 +76,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/api/n8n-delete'
     | '/api/n8n-email'
     | '/api/n8n-process'
     | '/api/n8n-qa'
@@ -74,6 +84,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/api/n8n-delete'
     | '/api/n8n-email'
     | '/api/n8n-process'
     | '/api/n8n-qa'
@@ -81,6 +92,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/api/n8n-delete'
     | '/api/n8n-email'
     | '/api/n8n-process'
     | '/api/n8n-qa'
@@ -89,6 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiN8nDeleteRoute: typeof ApiN8nDeleteRoute
   ApiN8nEmailRoute: typeof ApiN8nEmailRoute
   ApiN8nProcessRoute: typeof ApiN8nProcessRoute
   ApiN8nQaRoute: typeof ApiN8nQaRoute
@@ -132,11 +145,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiN8nEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/n8n-delete': {
+      id: '/api/n8n-delete'
+      path: '/api/n8n-delete'
+      fullPath: '/api/n8n-delete'
+      preLoaderRoute: typeof ApiN8nDeleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiN8nDeleteRoute: ApiN8nDeleteRoute,
   ApiN8nEmailRoute: ApiN8nEmailRoute,
   ApiN8nProcessRoute: ApiN8nProcessRoute,
   ApiN8nQaRoute: ApiN8nQaRoute,
@@ -145,13 +166,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

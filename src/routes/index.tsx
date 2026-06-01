@@ -12,6 +12,7 @@ import {
   Eraser,
   Search,
   Calendar,
+  Copy,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -140,6 +141,92 @@ function DashboardPage() {
       }
       return next;
     });
+  };
+
+  const existingQuestions = useMemo(
+    () =>
+      rows
+        .map((r) => (r.question ?? "").trim())
+        .filter((q) => q.length > 0),
+    [rows],
+  );
+
+  const duplicateGroups = useMemo(() => {
+    const map = new Map<string, QARow[]>();
+    for (const r of rows) {
+      const q = (r.question ?? "").trim().toLowerCase();
+      if (!q) continue;
+      const arr = map.get(q) ?? [];
+      arr.push(r);
+      map.set(q, arr);
+    }
+    return Array.from(map.values()).filter((g) => g.length > 1);
+  }, [rows]);
+
+  const duplicateCount = duplicateGroups.reduce(
+    (n, g) => n + (g.length - 1),
+    0,
+  );
+
+  const deleteByQuestions = async (questions: string[]) => {
+    const wanted = new Set(questions.map((q) => q.trim().toLowerCase()));
+    const ids = rows
+      .filter((r) => wanted.has((r.question ?? "").trim().toLowerCase()))
+      .map((r) => r.id)
+      .filter((v): v is string | number => v !== null && v !== undefined);
+    if (ids.length === 0) {
+      toast.error("No matching rows to delete.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/n8n-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, questions }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (json.ok) {
+        toast.success(`Deleted ${ids.length} row${ids.length === 1 ? "" : "s"}.`);
+        refetch();
+      } else {
+        toast.error(json.error ?? "Failed to delete.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete.");
+    }
+  };
+
+  const deleteDuplicates = async () => {
+    if (duplicateGroups.length === 0) {
+      toast.info("No duplicates found.");
+      return;
+    }
+    // Keep first occurrence of each group, delete the rest.
+    const ids = duplicateGroups
+      .flatMap((g) => g.slice(1))
+      .map((r) => r.id)
+      .filter((v): v is string | number => v !== null && v !== undefined);
+    if (ids.length === 0) {
+      toast.error("Duplicates found but rows have no id.");
+      return;
+    }
+    if (!confirm(`Delete ${ids.length} duplicate row${ids.length === 1 ? "" : "s"}?`)) return;
+    try {
+      const res = await fetch("/api/n8n-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (json.ok) {
+        toast.success(`Deleted ${ids.length} duplicate${ids.length === 1 ? "" : "s"}.`);
+        refetch();
+      } else {
+        toast.error(json.error ?? "Failed to delete duplicates.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete duplicates.");
+    }
   };
 
 
@@ -285,6 +372,10 @@ function DashboardPage() {
               </DialogDescription>
             </DialogHeader>
             <QuestionPasteBox
+              existingQuestions={existingQuestions}
+              onDeleteDuplicates={async (qs) => {
+                await deleteByQuestions(qs);
+              }}
               onComplete={() => {
                 setInsertOpen(false);
                 refetch();
@@ -292,6 +383,26 @@ function DashboardPage() {
             />
           </DialogContent>
         </Dialog>
+        <Separator />
+        <button
+          type="button"
+          onClick={deleteDuplicates}
+          disabled={duplicateCount === 0}
+          title={
+            duplicateCount === 0
+              ? "No duplicate questions"
+              : `Delete ${duplicateCount} duplicate row${duplicateCount === 1 ? "" : "s"}`
+          }
+          className="flex h-8 items-center gap-1.5 rounded-md border border-transparent px-2 text-[13px] hover:bg-muted disabled:opacity-50"
+        >
+          <Copy className="h-4 w-4 text-destructive" />
+          Delete duplicates
+          {duplicateCount > 0 ? (
+            <span className="ml-1 rounded-sm bg-destructive/15 px-1 text-[11px] text-destructive tabular-nums">
+              {duplicateCount}
+            </span>
+          ) : null}
+        </button>
         <Separator />
         <button
           type="button"

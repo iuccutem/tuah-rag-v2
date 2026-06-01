@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Play, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Play, CheckCircle2, XCircle, Loader2, AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -11,14 +11,28 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 
-type RunStatus = "pending" | "ok" | "error";
+type RunStatus = "pending" | "ok" | "error" | "skipped";
 type RunItem = { question: string; status: RunStatus; error?: string };
 
-export function QuestionPasteBox({ onComplete }: { onComplete?: () => void }) {
+export function QuestionPasteBox({
+  onComplete,
+  existingQuestions = [],
+  onDeleteDuplicates,
+}: {
+  onComplete?: () => void;
+  existingQuestions?: string[];
+  onDeleteDuplicates?: (questions: string[]) => Promise<void> | void;
+}) {
   const [text, setText] = useState("");
   const [running, setRunning] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [items, setItems] = useState<RunItem[]>([]);
+
+  const existingSet = useMemo(
+    () => new Set(existingQuestions.map((q) => q.trim().toLowerCase())),
+    [existingQuestions],
+  );
 
   const questions = useMemo(
     () =>
@@ -29,21 +43,32 @@ export function QuestionPasteBox({ onComplete }: { onComplete?: () => void }) {
     [text],
   );
 
-  const runAll = async () => {
-    if (questions.length === 0) {
-      toast.error("Paste at least one question.");
+  const duplicates = useMemo(
+    () => questions.filter((q) => existingSet.has(q.toLowerCase())),
+    [questions, existingSet],
+  );
+  const newOnes = useMemo(
+    () => questions.filter((q) => !existingSet.has(q.toLowerCase())),
+    [questions, existingSet],
+  );
+
+  const runAll = async (onlyNew = false) => {
+    const target = onlyNew ? newOnes : questions;
+    if (target.length === 0) {
+      toast.error("Nothing to insert.");
       return;
     }
     setRunning(true);
-    const initial: RunItem[] = questions.map((q) => ({
-      question: q,
-      status: "pending",
-    }));
+    const initial: RunItem[] = questions.map((q) => {
+      const dup = !onlyNew ? false : existingSet.has(q.toLowerCase());
+      return { question: q, status: dup ? "skipped" : "pending" };
+    });
     setItems(initial);
 
     let okCount = 0;
     for (let i = 0; i < questions.length; i++) {
       const question = questions[i];
+      if (onlyNew && existingSet.has(question.toLowerCase())) continue;
       try {
         const res = await fetch("/api/n8n-run", {
           method: "POST",
@@ -55,11 +80,7 @@ export function QuestionPasteBox({ onComplete }: { onComplete?: () => void }) {
         setItems((prev) =>
           prev.map((it, idx) =>
             idx === i
-              ? {
-                  ...it,
-                  status: json.ok ? "ok" : "error",
-                  error: json.error,
-                }
+              ? { ...it, status: json.ok ? "ok" : "error", error: json.error }
               : it,
           ),
         );
@@ -70,8 +91,7 @@ export function QuestionPasteBox({ onComplete }: { onComplete?: () => void }) {
               ? {
                   ...it,
                   status: "error",
-                  error:
-                    error instanceof Error ? error.message : "Request failed",
+                  error: error instanceof Error ? error.message : "Request failed",
                 }
               : it,
           ),
@@ -85,21 +105,14 @@ export function QuestionPasteBox({ onComplete }: { onComplete?: () => void }) {
       return;
     }
 
-    toast.success(
-      `Inserted ${okCount}/${questions.length} question${
-        questions.length === 1 ? "" : "s"
-      }. Processing…`,
-    );
+    toast.success(`Inserted ${okCount}/${target.length} question${target.length === 1 ? "" : "s"}. Processing…`);
 
     setProcessing(true);
     try {
       const res = await fetch("/api/n8n-process", { method: "POST" });
       const json = (await res.json()) as { ok: boolean; error?: string };
-      if (json.ok) {
-        toast.success("Processing pipeline triggered.");
-      } else {
-        toast.error(json.error ?? "Failed to trigger processing.");
-      }
+      if (json.ok) toast.success("Processing pipeline triggered.");
+      else toast.error(json.error ?? "Failed to trigger processing.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to trigger processing.");
     } finally {
@@ -108,7 +121,17 @@ export function QuestionPasteBox({ onComplete }: { onComplete?: () => void }) {
     }
   };
 
-  const busy = running || processing;
+  const deleteDuplicates = async () => {
+    if (duplicates.length === 0 || !onDeleteDuplicates) return;
+    setDeleting(true);
+    try {
+      await onDeleteDuplicates(duplicates);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const busy = running || processing || deleting;
 
   return (
     <Card>
@@ -129,12 +152,67 @@ export function QuestionPasteBox({ onComplete }: { onComplete?: () => void }) {
           className="font-mono text-sm leading-relaxed bg-muted/30"
           disabled={busy}
         />
+
+        {duplicates.length > 0 ? (
+          <div className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />
+              <div className="flex-1 space-y-2">
+                <div className="font-medium text-yellow-900 dark:text-yellow-200">
+                  {duplicates.length} duplicate question
+                  {duplicates.length === 1 ? "" : "s"} detected
+                </div>
+                <ul className="list-disc space-y-0.5 pl-4 text-xs text-yellow-900/80 dark:text-yellow-200/80">
+                  {duplicates.slice(0, 5).map((q, i) => (
+                    <li key={i} className="break-words">{q}</li>
+                  ))}
+                  {duplicates.length > 5 ? (
+                    <li>…and {duplicates.length - 5} more</li>
+                  ) : null}
+                </ul>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={deleteDuplicates}
+                    disabled={busy || !onDeleteDuplicates}
+                    className="gap-1.5"
+                  >
+                    {deleting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    Delete duplicates from sheet
+                  </Button>
+                  {newOnes.length > 0 ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => runAll(true)}
+                      disabled={busy}
+                    >
+                      Skip duplicates & insert {newOnes.length} new
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs text-muted-foreground tabular-nums">
-            {questions.length} question{questions.length === 1 ? "" : "s"}{" "}
-            ready
+            {questions.length} question{questions.length === 1 ? "" : "s"} ready
+            {duplicates.length > 0
+              ? ` · ${duplicates.length} duplicate${duplicates.length === 1 ? "" : "s"}`
+              : ""}
           </span>
-          <Button onClick={runAll} disabled={busy} className="gap-2">
+          <Button
+            onClick={() => runAll(false)}
+            disabled={busy || (duplicates.length > 0 && newOnes.length === 0)}
+            className="gap-2"
+          >
             {busy ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -151,17 +229,15 @@ export function QuestionPasteBox({ onComplete }: { onComplete?: () => void }) {
         {items.length > 0 ? (
           <ul className="divide-y rounded-md border bg-card">
             {items.map((it, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-3 p-3 text-sm"
-              >
+              <li key={i} className="flex items-start gap-3 p-3 text-sm">
                 <StatusIcon status={it.status} />
                 <div className="flex-1 min-w-0">
                   <div className="break-words">{it.question}</div>
                   {it.error ? (
-                    <div className="mt-1 text-xs text-destructive">
-                      {it.error}
-                    </div>
+                    <div className="mt-1 text-xs text-destructive">{it.error}</div>
+                  ) : null}
+                  {it.status === "skipped" ? (
+                    <div className="mt-1 text-xs text-yellow-600">Skipped (duplicate)</div>
                   ) : null}
                 </div>
               </li>
@@ -180,5 +256,7 @@ function StatusIcon({ status }: { status: RunStatus }) {
     );
   if (status === "ok")
     return <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />;
+  if (status === "skipped")
+    return <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />;
   return <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />;
 }
