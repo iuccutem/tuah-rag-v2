@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   Eraser,
   Search,
+  Calendar,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -77,6 +78,8 @@ function DashboardPage() {
   const [insertOpen, setInsertOpen] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [formats, setFormats] = useState<FormatsMap>(() => {
     if (typeof window === "undefined") return {};
     try {
@@ -94,10 +97,29 @@ function DashboardPage() {
   const rows = data?.data ?? [];
 
   const filteredRows = useMemo(() => {
-    if (!searchQuery.trim()) return rows;
-    const q = searchQuery.toLowerCase();
-    return rows.filter((r) => (r.question ?? "").toLowerCase().includes(q));
-  }, [rows, searchQuery]);
+    let result = rows;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((r) => (r.question ?? "").toLowerCase().includes(q));
+    }
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      result = result.filter((r) => {
+        const d = r.createdAt ? new Date(r.createdAt) : null;
+        return d ? d >= from : false;
+      });
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      result = result.filter((r) => {
+        const d = r.createdAt ? new Date(r.createdAt) : null;
+        return d ? d <= to : false;
+      });
+    }
+    return result;
+  }, [rows, searchQuery, dateFrom, dateTo]);
 
   const applyFormat = (patch: CellFormat | null) => {
     if (selection?.mode !== "cell") {
@@ -215,6 +237,35 @@ function DashboardPage() {
           ) : null}
         </div>
         <Separator />
+        <div className="flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="h-6 w-32 rounded-sm border border-[var(--sheets-grid)] bg-card px-1 text-[12px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            title="From date"
+          />
+          <span className="text-[11px] text-muted-foreground">–</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="h-6 w-32 rounded-sm border border-[var(--sheets-grid)] bg-card px-1 text-[12px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            title="To date"
+          />
+          {(dateFrom || dateTo) && (
+            <button
+              type="button"
+              onClick={() => { setDateFrom(""); setDateTo(""); }}
+              className="text-[10px] text-muted-foreground hover:text-foreground"
+              title="Clear date filter"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        <Separator />
         <Dialog open={insertOpen} onOpenChange={setInsertOpen}>
           <DialogTrigger asChild>
             <button
@@ -303,8 +354,8 @@ function DashboardPage() {
             ? QA_COLUMNS[selection.col]?.raw(filteredRows[selection.row]) || (
                 <span className="text-muted-foreground">empty</span>
               )
-            : searchQuery
-              ? `${filteredRows.length}/${rows.length} rows matching "${searchQuery}"`
+            : searchQuery || dateFrom || dateTo
+              ? `${filteredRows.length}/${rows.length} rows filtered`
               : rows.length > 0
                 ? `${rows.length} row${rows.length === 1 ? "" : "s"} loaded`
                 : "—"}
