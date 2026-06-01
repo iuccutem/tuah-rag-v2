@@ -130,17 +130,21 @@ export function QuestionPasteBox({
   };
 
 
-  const deleteDuplicates = async () => {
-    if (duplicates.length === 0 || !onDeleteDuplicates) return;
-    setDeleting(true);
-    try {
-      await onDeleteDuplicates(duplicates);
-    } finally {
-      setDeleting(false);
-    }
+  const removeDuplicatesFromText = () => {
+    if (duplicates.length === 0) return;
+    const lines = text.split(/\r?\n/);
+    const kept = lines.filter((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return true; // preserve blank lines
+      return !existingSet.has(trimmed.toLowerCase());
+    });
+    setText(kept.join("\n"));
+    toast.success(
+      `Removed ${duplicates.length} duplicate line${duplicates.length === 1 ? "" : "s"} from the list.`,
+    );
   };
 
-  const busy = running || processing || deleting;
+  const busy = running || processing;
 
   return (
     <Card>
