@@ -660,3 +660,53 @@ function ToolbarButton({
 function Separator() {
   return <span className="mx-1 h-5 w-px bg-[var(--sheets-grid)]" />;
 }
+
+function Divider() {
+  return <span className="mx-0.5 h-6 w-px bg-[var(--sheets-grid)]" />;
+}
+
+function ToolbarGroup({ children }: { children: React.ReactNode }) {
+  return <div className="flex items-center gap-1">{children}</div>;
+}
+
+function ToolbarAction({
+  onClick,
+  disabled,
+  title,
+  icon,
+  label,
+  badge,
+  badgeTone,
+}: {
+  onClick?: () => void;
+  disabled?: boolean;
+  title?: string;
+  icon: React.ReactNode;
+  label: string;
+  badge?: number;
+  badgeTone?: "warning" | "danger";
+}) {
+  const toneClass =
+    badgeTone === "danger"
+      ? "bg-destructive/15 text-destructive"
+      : badgeTone === "warning"
+        ? "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400"
+        : "bg-muted text-muted-foreground";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/90 hover:bg-muted disabled:opacity-50 disabled:hover:bg-transparent"
+    >
+      {icon}
+      <span>{label}</span>
+      {typeof badge === "number" ? (
+        <span className={`ml-0.5 rounded-full px-1.5 text-[10px] font-semibold tabular-nums ${toneClass}`}>
+          {badge}
+        </span>
+      ) : null}
+    </button>
+  );
+}
