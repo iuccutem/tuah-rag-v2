@@ -240,6 +240,8 @@ export function QATable({
             <>
               {displayRows.map((row, rIdx) => {
                 const rowActive = isRowActive(rIdx);
+                const rowId = row.id ?? row.question ?? "";
+                const checked = selectedRowIds.has(rowId);
                 return (
                   <tr key={`${row.id ?? rIdx}-${rIdx}`}>
                     <RowNumberCell
@@ -249,6 +251,15 @@ export function QATable({
                         onSelectionChange({ mode: "row", row: rIdx })
                       }
                     />
+                    <td className="sticky left-[40px] z-10 w-8 cursor-pointer border-r border-b border-[var(--sheets-grid)] bg-card text-center">
+                      <input
+                        type="checkbox"
+                        className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                        checked={checked}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={() => onToggleRow(rowId)}
+                      />
+                    </td>
                     {QA_COLUMNS.map((c, cIdx) => {
                       const selected = isCellSelected(rIdx, cIdx);
                       const inSelectedRowOrCol =
@@ -284,7 +295,6 @@ export function QATable({
                         </td>
                       );
                     })}
-
                   </tr>
                 );
               })}
