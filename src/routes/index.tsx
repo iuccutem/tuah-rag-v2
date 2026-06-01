@@ -63,6 +63,8 @@ function DashboardPage() {
     });
 
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailAddress, setEmailAddress] = useState("");
 
   const rows = data?.data ?? [];
   const apiError =
@@ -77,13 +79,31 @@ function DashboardPage() {
         }).format(new Date(dataUpdatedAt))
       : "—";
 
+  const openEmailDialog = () => {
+    setEmailAddress("");
+    setEmailDialogOpen(true);
+  };
+
   const sendEmail = async () => {
+    const email = emailAddress.trim();
+    if (!email) {
+      toast.error("Please enter an email address.");
+      return;
+    }
     setSendingEmail(true);
     try {
-      const res = await fetch("/api/n8n-email", { method: "POST" });
+      const res = await fetch("/api/n8n-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
       const json = (await res.json()) as { ok: boolean; error?: string };
-      if (json.ok) toast.success("Email pipeline triggered.");
-      else toast.error(json.error ?? "Failed to send email.");
+      if (json.ok) {
+        toast.success("Email pipeline triggered.");
+        setEmailDialogOpen(false);
+      } else {
+        toast.error(json.error ?? "Failed to send email.");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to send email.");
     } finally {
