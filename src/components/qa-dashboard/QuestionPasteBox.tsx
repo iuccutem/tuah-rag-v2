@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Play, CheckCircle2, XCircle, Loader2, AlertTriangle, Trash2 } from "lucide-react";
+import { Play, CheckCircle2, XCircle, Loader2, AlertTriangle, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
