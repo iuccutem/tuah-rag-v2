@@ -182,6 +182,43 @@ function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Send Email</DialogTitle>
+              <DialogDescription>
+                Enter the recipient email address to send the evaluation report.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                type="email"
+                placeholder="recipient@example.com"
+                value={emailAddress}
+                onChange={(e) => setEmailAddress(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") sendEmail();
+                }}
+                disabled={sendingEmail}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setEmailDialogOpen(false)}
+                disabled={sendingEmail}
+              >
+                Cancel
+              </Button>
+              <Button onClick={sendEmail} disabled={sendingEmail} className="gap-2">
+                <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+                {sendingEmail ? "Sending…" : "Send"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
