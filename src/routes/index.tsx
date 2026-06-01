@@ -581,6 +581,9 @@ function DashboardPage() {
           selection={selection}
           onSelectionChange={setSelection}
           formats={formats}
+          selectedRowIds={selectedRowIds}
+          onToggleRow={toggleRow}
+          onSelectAll={selectAllRows}
         />
       </div>
 
