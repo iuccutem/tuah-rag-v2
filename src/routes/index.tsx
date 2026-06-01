@@ -75,6 +75,43 @@ function DashboardPage() {
   const [emailAddress, setEmailAddress] = useState("");
   const [insertOpen, setInsertOpen] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [formats, setFormats] = useState<FormatsMap>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      return JSON.parse(localStorage.getItem("qa-formats") ?? "{}") as FormatsMap;
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("qa-formats", JSON.stringify(formats));
+  }, [formats]);
+
+  const rowsData = data?.data ?? [];
+  const applyFormat = (patch: CellFormat | null) => {
+    if (selection?.mode !== "cell") {
+      toast.error("Select a cell first.");
+      return;
+    }
+    const row = rowsData[selection.row];
+    if (!row) return;
+    const col = QA_COLUMNS[selection.col];
+    const key = formatKey(row.id ?? selection.row, col.key as string);
+    setFormats((prev) => {
+      const next = { ...prev };
+      if (patch === null) {
+        delete next[key];
+      } else {
+        next[key] = { ...next[key], ...patch };
+        if (!next[key].highlight && !next[key].error) delete next[key];
+      }
+      return next;
+    });
+  };
+
+
 
 
   const rows = data?.data ?? [];
