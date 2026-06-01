@@ -205,6 +205,7 @@ function DashboardPage() {
             </DialogHeader>
             <QuestionPasteBox
               onComplete={() => {
+                setInsertOpen(false);
                 refetch();
               }}
             />
