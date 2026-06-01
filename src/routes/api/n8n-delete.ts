@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/n8n-delete")({
           );
         }
 
-        let body: { ids?: Array<string | number>; questions?: string[] } = {};
+        let body: { questions?: string[] } = {};
         try {
           body = await request.json();
         } catch {
@@ -26,52 +26,63 @@ export const Route = createFileRoute("/api/n8n-delete")({
           );
         }
 
-        const ids = Array.isArray(body.ids) ? body.ids : [];
-        const questions = Array.isArray(body.questions) ? body.questions : [];
-        if (ids.length === 0 && questions.length === 0) {
+        const questions = Array.isArray(body.questions)
+          ? body.questions.map((q) => String(q).trim()).filter(Boolean)
+          : [];
+        if (questions.length === 0) {
           return Response.json(
-            { ok: false, error: "Nothing to delete." },
+            { ok: false, error: "No questions to delete." },
             { status: 200 },
           );
         }
 
         const auth = Buffer.from(`${user}:${password}`).toString("base64");
-        try {
-          const res = await fetch(WEBHOOK_URL, {
-            method: "POST",
-            headers: {
-              Authorization: `Basic ${auth}`,
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            body: JSON.stringify({ ids, questions }),
-          });
-          const text = await res.text();
-          let data: unknown = null;
+        const results: Array<{ question: string; ok: boolean; error?: string }> = [];
+
+        for (const question of questions) {
           try {
-            data = text ? JSON.parse(text) : null;
-          } catch {
-            data = text;
-          }
-          if (!res.ok) {
-            return Response.json(
-              { ok: false, error: `Webhook returned ${res.status}`, data },
-              { status: 200 },
-            );
-          }
-          return Response.json({ ok: true, data }, { status: 200 });
-        } catch (error) {
-          return Response.json(
-            {
+            const res = await fetch(WEBHOOK_URL, {
+              method: "POST",
+              headers: {
+                Authorization: `Basic ${auth}`,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              },
+              body: JSON.stringify({ question }),
+            });
+            if (!res.ok) {
+              results.push({
+                question,
+                ok: false,
+                error: `Webhook returned ${res.status}`,
+              });
+            } else {
+              results.push({ question, ok: true });
+            }
+          } catch (error) {
+            results.push({
+              question,
               ok: false,
               error:
-                error instanceof Error
-                  ? error.message
-                  : "Failed to reach webhook.",
-            },
-            { status: 200 },
-          );
+                error instanceof Error ? error.message : "Failed to reach webhook.",
+            });
+          }
         }
+
+        const okCount = results.filter((r) => r.ok).length;
+        return Response.json(
+          {
+            ok: okCount > 0,
+            deleted: okCount,
+            total: questions.length,
+            results,
+            error:
+              okCount === 0
+                ? results[0]?.error ?? "All delete requests failed."
+                : undefined,
+          },
+          { status: 200 },
+        );
       },
     },
   },
