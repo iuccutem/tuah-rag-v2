@@ -27,18 +27,26 @@ export function QATable({
   selection,
   onSelectionChange,
   formats,
+  selectedRowIds,
+  onToggleRow,
+  onSelectAll,
 }: {
   rows: QARow[];
   isLoading: boolean;
   selection: Selection | null;
   onSelectionChange: (s: Selection) => void;
   formats: FormatsMap;
+  selectedRowIds: Set<string | number>;
+  onToggleRow: (id: string | number) => void;
+  onSelectAll: (select: boolean) => void;
 }) {
 
   const skeletonRows = Array.from({ length: 8 });
   const displayRows = isLoading && rows.length === 0 ? [] : rows;
   const colCount = QA_COLUMNS.length;
   const rowCount = displayRows.length;
+  const allSelected = rowCount > 0 && displayRows.every((r) => selectedRowIds.has(r.id ?? r.question ?? ""));
+  const someSelected = !allSelected && displayRows.some((r) => selectedRowIds.has(r.id ?? r.question ?? ""));
 
   const containerRef = useRef<HTMLDivElement>(null);
   const cellRefs = useRef<Map<string, HTMLTableCellElement>>(new Map());
@@ -139,12 +147,22 @@ export function QATable({
           <tr>
             <th
               onClick={() => {
-                // select all → first cell
                 if (rowCount > 0)
                   onSelectionChange({ mode: "cell", row: 0, col: 0 });
               }}
               className="sticky left-0 z-30 h-6 w-10 cursor-cell border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)]"
             />
+            <th className="sticky left-[40px] z-30 h-6 w-8 border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)] text-center">
+              <input
+                type="checkbox"
+                className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected;
+                }}
+                onChange={(e) => onSelectAll(e.target.checked)}
+              />
+            </th>
             {QA_COLUMNS.map((c, i) => {
               const active = isColActive(i);
               return (
@@ -167,6 +185,7 @@ export function QATable({
             <th className="sticky left-0 z-30 h-8 w-10 border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)] text-center text-[11px] font-normal text-[var(--sheets-header-fg)]">
               1
             </th>
+            <th className="sticky left-[40px] z-30 h-8 w-8 border-r border-b border-[var(--sheets-grid)] bg-[var(--sheets-header-bg)]" />
             {QA_COLUMNS.map((c, i) => {
               const active = isColActive(i);
               return (
@@ -190,6 +209,7 @@ export function QATable({
             skeletonRows.map((_, i) => (
               <tr key={`s-${i}`}>
                 <RowNumberCell n={i + 2} active={false} />
+                <td className="w-8 border-r border-b border-[var(--sheets-grid)] bg-card" />
                 {QA_COLUMNS.map((c) => (
                   <td
                     key={c.key}
@@ -204,6 +224,7 @@ export function QATable({
             <>
               <tr>
                 <RowNumberCell n={2} active={false} />
+                <td className="w-8 border-r border-b border-[var(--sheets-grid)] bg-card" />
                 <td
                   colSpan={colCount}
                   className="h-32 border-r border-b border-[var(--sheets-grid)] bg-card text-center text-muted-foreground"
@@ -219,6 +240,8 @@ export function QATable({
             <>
               {displayRows.map((row, rIdx) => {
                 const rowActive = isRowActive(rIdx);
+                const rowId = row.id ?? row.question ?? "";
+                const checked = selectedRowIds.has(rowId);
                 return (
                   <tr key={`${row.id ?? rIdx}-${rIdx}`}>
                     <RowNumberCell
@@ -228,6 +251,15 @@ export function QATable({
                         onSelectionChange({ mode: "row", row: rIdx })
                       }
                     />
+                    <td className="sticky left-[40px] z-10 w-8 cursor-pointer border-r border-b border-[var(--sheets-grid)] bg-card text-center">
+                      <input
+                        type="checkbox"
+                        className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                        checked={checked}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={() => onToggleRow(rowId)}
+                      />
+                    </td>
                     {QA_COLUMNS.map((c, cIdx) => {
                       const selected = isCellSelected(rIdx, cIdx);
                       const inSelectedRowOrCol =
@@ -263,7 +295,6 @@ export function QATable({
                         </td>
                       );
                     })}
-
                   </tr>
                 );
               })}
@@ -311,6 +342,7 @@ function EmptySheetRow({ n }: { n: number }) {
   return (
     <tr>
       <RowNumberCell n={n} active={false} />
+      <td className="w-8 border-r border-b border-[var(--sheets-grid)] bg-card" />
       {QA_COLUMNS.map((c) => (
         <td
           key={c.key}

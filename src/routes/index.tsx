@@ -13,6 +13,7 @@ import {
   Search,
   Calendar,
   Copy,
+  Trash2,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -81,6 +82,7 @@ function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(new Set());
   const [formats, setFormats] = useState<FormatsMap>(() => {
     if (typeof window === "undefined") return {};
     try {
@@ -150,6 +152,45 @@ function DashboardPage() {
         .filter((q) => q.length > 0),
     [rows],
   );
+
+  const toggleRow = (id: string | number) => {
+    setSelectedRowIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllRows = (select: boolean) => {
+    if (select) {
+      setSelectedRowIds(new Set(filteredRows.map((r) => r.id ?? r.question ?? "")));
+    } else {
+      setSelectedRowIds(new Set());
+    }
+  };
+
+  const deleteSelectedRows = async () => {
+    if (selectedRowIds.size === 0) {
+      toast.error("No rows selected.");
+      return;
+    }
+    const questions: string[] = [];
+    for (const row of filteredRows) {
+      const id = row.id ?? row.question ?? "";
+      if (selectedRowIds.has(id)) {
+        const q = (row.question ?? "").trim();
+        if (q) questions.push(q);
+      }
+    }
+    if (questions.length === 0) {
+      toast.error("Selected rows have no questions to delete.");
+      return;
+    }
+    if (!confirm(`Delete ${questions.length} selected question${questions.length === 1 ? "" : "s"}?`)) return;
+    await deleteByQuestions(questions);
+    setSelectedRowIds(new Set());
+  };
 
   const duplicateGroups = useMemo(() => {
     const map = new Map<string, QARow[]>();
@@ -447,6 +488,26 @@ function DashboardPage() {
         <Separator />
         <button
           type="button"
+          onClick={deleteSelectedRows}
+          disabled={selectedRowIds.size === 0}
+          title={
+            selectedRowIds.size === 0
+              ? "Select rows to delete"
+              : `Delete ${selectedRowIds.size} selected row${selectedRowIds.size === 1 ? "" : "s"}`
+          }
+          className="flex h-8 items-center gap-1.5 rounded-md border border-transparent px-2 text-[13px] hover:bg-muted disabled:opacity-50"
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+          Delete selected
+          {selectedRowIds.size > 0 ? (
+            <span className="ml-1 rounded-sm bg-destructive/15 px-1 text-[11px] text-destructive tabular-nums">
+              {selectedRowIds.size}
+            </span>
+          ) : null}
+        </button>
+        <Separator />
+        <button
+          type="button"
           onClick={() => applyFormat({ highlight: true })}
           title="Highlight cell yellow"
           className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] hover:bg-muted"
@@ -520,6 +581,9 @@ function DashboardPage() {
           selection={selection}
           onSelectionChange={setSelection}
           formats={formats}
+          selectedRowIds={selectedRowIds}
+          onToggleRow={toggleRow}
+          onSelectAll={selectAllRows}
         />
       </div>
 
