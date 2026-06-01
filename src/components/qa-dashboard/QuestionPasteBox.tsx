@@ -17,10 +17,10 @@ type RunItem = { question: string; status: RunStatus; error?: string };
 export function QuestionPasteBox({
   onComplete,
   existingQuestions = [],
-  onDeleteDuplicates,
 }: {
   onComplete?: () => void;
   existingQuestions?: string[];
+  /** @deprecated kept for compatibility */
   onDeleteDuplicates?: (questions: string[]) => Promise<void> | void;
 }) {
   const [text, setText] = useState("");
