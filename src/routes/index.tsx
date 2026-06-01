@@ -208,9 +208,17 @@ function DashboardPage() {
       toast.info("No duplicates found.");
       return;
     }
-    // Keep first occurrence of each group, delete the rest.
+    // Keep the latest occurrence of each group, delete the older ones.
     const extras = duplicateGroups
-      .flatMap((g) => g.slice(1))
+      .flatMap((g) =>
+        [...g]
+          .sort((a, b) => {
+            const ta = new Date(a.updatedAt ?? a.createdAt ?? 0).getTime();
+            const tb = new Date(b.updatedAt ?? b.createdAt ?? 0).getTime();
+            return tb - ta; // newest first
+          })
+          .slice(1),
+      )
       .map((r) => (r.question ?? "").trim())
       .filter(Boolean);
     if (extras.length === 0) {
