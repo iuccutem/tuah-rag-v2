@@ -6,7 +6,15 @@ const WEBHOOK_URL =
 export const Route = createFileRoute("/api/n8n-email")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        const body = (await request.json()) as { email?: string };
+        const email = body?.email?.trim();
+        if (!email) {
+          return Response.json(
+            { ok: false, error: "Email is required." },
+            { status: 200 },
+          );
+        }
         const user = process.env.N8N_WEBHOOK_USER;
         const password = process.env.N8N_WEBHOOK_PASSWORD;
         if (!user || !password) {
@@ -24,7 +32,7 @@ export const Route = createFileRoute("/api/n8n-email")({
               "Content-Type": "application/json",
               Accept: "application/json",
             },
-            body: JSON.stringify({}),
+            body: JSON.stringify({ email }),
           });
           const text = await res.text();
           let data: unknown = null;
