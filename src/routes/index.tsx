@@ -386,9 +386,6 @@ function DashboardPage() {
             </DialogHeader>
             <QuestionPasteBox
               existingQuestions={existingQuestions}
-              onDeleteDuplicates={async (qs) => {
-                await deleteByQuestions(qs);
-              }}
               onComplete={() => {
                 setInsertOpen(false);
                 refetch();
