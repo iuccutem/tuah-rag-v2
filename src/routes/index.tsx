@@ -153,6 +153,45 @@ function DashboardPage() {
     [rows],
   );
 
+  const toggleRow = (id: string | number) => {
+    setSelectedRowIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllRows = (select: boolean) => {
+    if (select) {
+      setSelectedRowIds(new Set(filteredRows.map((r) => r.id ?? r.question ?? "")));
+    } else {
+      setSelectedRowIds(new Set());
+    }
+  };
+
+  const deleteSelectedRows = async () => {
+    if (selectedRowIds.size === 0) {
+      toast.error("No rows selected.");
+      return;
+    }
+    const questions: string[] = [];
+    for (const row of filteredRows) {
+      const id = row.id ?? row.question ?? "";
+      if (selectedRowIds.has(id)) {
+        const q = (row.question ?? "").trim();
+        if (q) questions.push(q);
+      }
+    }
+    if (questions.length === 0) {
+      toast.error("Selected rows have no questions to delete.");
+      return;
+    }
+    if (!confirm(`Delete ${questions.length} selected question${questions.length === 1 ? "" : "s"}?`)) return;
+    await deleteByQuestions(questions);
+    setSelectedRowIds(new Set());
+  };
+
   const duplicateGroups = useMemo(() => {
     const map = new Map<string, QARow[]>();
     for (const r of rows) {
