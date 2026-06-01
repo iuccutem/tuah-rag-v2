@@ -237,6 +237,35 @@ function DashboardPage() {
           ) : null}
         </div>
         <Separator />
+        <div className="flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="h-6 w-32 rounded-sm border border-[var(--sheets-grid)] bg-card px-1 text-[12px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            title="From date"
+          />
+          <span className="text-[11px] text-muted-foreground">–</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="h-6 w-32 rounded-sm border border-[var(--sheets-grid)] bg-card px-1 text-[12px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            title="To date"
+          />
+          {(dateFrom || dateTo) && (
+            <button
+              type="button"
+              onClick={() => { setDateFrom(""); setDateTo(""); }}
+              className="text-[10px] text-muted-foreground hover:text-foreground"
+              title="Clear date filter"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        <Separator />
         <Dialog open={insertOpen} onOpenChange={setInsertOpen}>
           <DialogTrigger asChild>
             <button
