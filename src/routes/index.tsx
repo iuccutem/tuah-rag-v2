@@ -19,41 +19,6 @@ import {
   Layers,
   Loader2,
 } from "lucide-react";
-  const postDelete = async (questions: string[]) => {
-    const res = await fetch("/api/n8n-delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questions }),
-    });
-    return (await res.json()) as {
-      ok: boolean;
-      deleted?: number;
-      total?: number;
-      error?: string;
-    };
-  };
-
-  const deleteByQuestions = async (questions: string[]) => {
-    const cleaned = questions.map((q) => q.trim()).filter(Boolean);
-    if (cleaned.length === 0) {
-      toast.error("No questions to delete.");
-      return;
-    }
-    try {
-      const json = await postDelete(cleaned);
-      if (json.ok) {
-        toast.success(
-          `Deleted ${json.deleted ?? cleaned.length}/${json.total ?? cleaned.length} question${cleaned.length === 1 ? "" : "s"}.`,
-        );
-        refetch();
-      } else {
-        toast.error(json.error ?? "Failed to delete.");
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete.");
-    }
-  };
-
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
