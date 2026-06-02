@@ -461,18 +461,17 @@ function DashboardPage() {
 
         <Divider />
 
-        {/* Group: run processing — show only channels whose answer is missing in the selected rows */}
+        {/* Group: run processing — show only when rows are selected and only the channels whose answer is missing */}
         {(() => {
           const hasSelection = selectedRowIds.size > 0;
-          let needsWeb = !hasSelection;
-          let needsTg = !hasSelection;
-          if (hasSelection) {
-            for (const row of filteredRows) {
-              const id = row.id ?? row.question ?? "";
-              if (!selectedRowIds.has(id)) continue;
-              if (!(row.web ?? "").toString().trim()) needsWeb = true;
-              if (!(row.telegram_whatsapp ?? "").toString().trim()) needsTg = true;
-            }
+          if (!hasSelection) return null;
+          let needsWeb = false;
+          let needsTg = false;
+          for (const row of filteredRows) {
+            const id = row.id ?? row.question ?? "";
+            if (!selectedRowIds.has(id)) continue;
+            if (!(row.web ?? "").toString().trim()) needsWeb = true;
+            if (!(row.telegram_whatsapp ?? "").toString().trim()) needsTg = true;
           }
           if (!needsWeb && !needsTg) return null;
           return (
@@ -482,11 +481,7 @@ function DashboardPage() {
                   <ToolbarAction
                     onClick={() => runChannel("web")}
                     disabled={runningChannel !== null}
-                    title={
-                      hasSelection
-                        ? `Run Web Chat agent (${selectedRowIds.size} selected · missing web answer)`
-                        : "Run Web Chat agent"
-                    }
+                    title={`Run Web Chat agent (${selectedRowIds.size} selected · missing web answer)`}
                     icon={
                       runningChannel === "web" ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -495,18 +490,14 @@ function DashboardPage() {
                       )
                     }
                     label="Run Web"
-                    badge={hasSelection ? selectedRowIds.size : undefined}
+                    badge={selectedRowIds.size}
                   />
                 ) : null}
                 {needsTg ? (
                   <ToolbarAction
                     onClick={() => runChannel("telegram_whatsapp")}
                     disabled={runningChannel !== null}
-                    title={
-                      hasSelection
-                        ? `Run Telegram/WhatsApp agent (${selectedRowIds.size} selected · missing TG/WA answer)`
-                        : "Run Telegram/WhatsApp agent"
-                    }
+                    title={`Run Telegram/WhatsApp agent (${selectedRowIds.size} selected · missing TG/WA answer)`}
                     icon={
                       runningChannel === "telegram_whatsapp" ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -515,7 +506,7 @@ function DashboardPage() {
                       )
                     }
                     label="Run WA/TG"
-                    badge={hasSelection ? selectedRowIds.size : undefined}
+                    badge={selectedRowIds.size}
                   />
                 ) : null}
                 {needsWeb && needsTg ? (
