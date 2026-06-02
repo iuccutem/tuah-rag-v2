@@ -15,6 +15,10 @@ import {
   Copy,
   Trash2,
   ExternalLink,
+  Globe,
+  MessageSquare,
+  Layers,
+  Loader2,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -76,6 +80,7 @@ function DashboardPage() {
     });
 
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailAddress, setEmailAddress] = useState("");
   const [insertOpen, setInsertOpen] = useState(false);
@@ -306,6 +311,47 @@ function DashboardPage() {
 
 
 
+  const runChannel = async (channel: "web" | "telegram_whatsapp" | "both") => {
+    setRunningChannel(channel);
+    const channels: Array<"web" | "telegram_whatsapp"> =
+      channel === "both" ? ["web", "telegram_whatsapp"] : [channel];
+    const selectedCount = selectedRowIds.size;
+    const label =
+      channel === "web"
+        ? "Web Chat"
+        : channel === "telegram_whatsapp"
+          ? "Telegram/WhatsApp"
+          : "both channels";
+    try {
+      const results = await Promise.all(
+        channels.map(async (ch) => {
+          const res = await fetch("/api/n8n-process", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ channel: ch }),
+          });
+          const json = (await res.json()) as { ok: boolean; error?: string };
+          return { ch, ok: json.ok, error: json.error };
+        }),
+      );
+      const okAll = results.every((r) => r.ok);
+      if (okAll) {
+        toast.success(
+          `Triggered ${label}${selectedCount > 0 ? ` (${selectedCount} row${selectedCount === 1 ? "" : "s"} selected)` : ""}.`,
+        );
+      } else {
+        for (const r of results) {
+          const name = r.ch === "web" ? "Web Chat" : "Telegram/WhatsApp";
+          if (!r.ok) toast.error(`${name}: ${r.error ?? "Failed to trigger."}`);
+        }
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to trigger.");
+    } finally {
+      setRunningChannel(null);
+    }
+  };
+
   const apiError =
     data?.error ?? (error instanceof Error ? error.message : null);
 
@@ -505,6 +551,62 @@ function DashboardPage() {
         </ToolbarGroup>
 
         <Divider />
+
+        {/* Group: run processing (per channel) */}
+        <ToolbarGroup>
+          <ToolbarAction
+            onClick={() => runChannel("web")}
+            disabled={runningChannel !== null}
+            title={
+              selectedRowIds.size > 0
+                ? `Run Web Chat agent (${selectedRowIds.size} selected)`
+                : "Run Web Chat agent"
+            }
+            icon={
+              runningChannel === "web" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Globe className="h-4 w-4 text-primary" />
+              )
+            }
+            label="Run Web"
+            badge={selectedRowIds.size > 0 ? selectedRowIds.size : undefined}
+          />
+          <ToolbarAction
+            onClick={() => runChannel("telegram_whatsapp")}
+            disabled={runningChannel !== null}
+            title={
+              selectedRowIds.size > 0
+                ? `Run Telegram/WhatsApp agent (${selectedRowIds.size} selected)`
+                : "Run Telegram/WhatsApp agent"
+            }
+            icon={
+              runningChannel === "telegram_whatsapp" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageSquare className="h-4 w-4 text-primary" />
+              )
+            }
+            label="Run WA/TG"
+            badge={selectedRowIds.size > 0 ? selectedRowIds.size : undefined}
+          />
+          <ToolbarAction
+            onClick={() => runChannel("both")}
+            disabled={runningChannel !== null}
+            title="Run both Web Chat and Telegram/WhatsApp agents"
+            icon={
+              runningChannel === "both" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Layers className="h-4 w-4 text-primary" />
+              )
+            }
+            label="Run Both"
+          />
+        </ToolbarGroup>
+
+        <Divider />
+
 
         {/* Group: formatting */}
         <ToolbarGroup>
