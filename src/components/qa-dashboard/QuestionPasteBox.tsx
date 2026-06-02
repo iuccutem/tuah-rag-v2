@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Play, CheckCircle2, XCircle, Loader2, AlertTriangle, Scissors } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, AlertTriangle, Scissors, MessageSquare, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -52,7 +52,9 @@ export function QuestionPasteBox({
     [questions, existingSet],
   );
 
-  const runAll = async () => {
+  const [activeChannel, setActiveChannel] = useState<"web" | "telegram_whatsapp" | null>(null);
+
+  const runAll = async (channel: "web" | "telegram_whatsapp") => {
     if (questions.length === 0) {
       toast.error("Paste at least one question.");
       return;
@@ -62,6 +64,7 @@ export function QuestionPasteBox({
       return;
     }
     setRunning(true);
+    setActiveChannel(channel);
     // Duplicates are ALWAYS skipped — never sent to the insert webhook.
     const initial: RunItem[] = questions.map((q) => ({
       question: q,
@@ -117,14 +120,19 @@ export function QuestionPasteBox({
 
     setProcessing(true);
     try {
-      const res = await fetch("/api/n8n-process", { method: "POST" });
+      const res = await fetch("/api/n8n-process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel }),
+      });
       const json = (await res.json()) as { ok: boolean; error?: string };
-      if (json.ok) toast.success("Processing pipeline triggered.");
+      if (json.ok) toast.success(`Processing triggered (${channel === "web" ? "Web Chat" : "Telegram/WhatsApp"}).`);
       else toast.error(json.error ?? "Failed to trigger processing.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to trigger processing.");
     } finally {
       setProcessing(false);
+      setActiveChannel(null);
       onComplete?.();
     }
   };
@@ -213,22 +221,45 @@ export function QuestionPasteBox({
               ? ` · ${newOnes.length} new · ${duplicates.length} duplicate${duplicates.length === 1 ? "" : "s"} skipped`
               : ""}
           </span>
-          <Button
-            onClick={runAll}
-            disabled={busy || newOnes.length === 0}
-            className="gap-2"
-          >
-            {busy ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Play className="h-4 w-4" />
-            )}
-            {running
-              ? "Inserting…"
-              : processing
-                ? "Processing…"
-                : "Run Questions"}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => runAll("telegram_whatsapp")}
+              disabled={busy || newOnes.length === 0}
+              variant="outline"
+              className="gap-2"
+            >
+              {busy && activeChannel === "telegram_whatsapp" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageSquare className="h-4 w-4" />
+              )}
+              {activeChannel === "telegram_whatsapp"
+                ? running
+                  ? "Inserting…"
+                  : processing
+                    ? "Processing…"
+                    : "Telegram / WhatsApp"
+                : "Telegram / WhatsApp"}
+            </Button>
+            <Button
+              onClick={() => runAll("web")}
+              disabled={busy || newOnes.length === 0}
+              className="gap-2"
+            >
+              {busy && activeChannel === "web" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Globe className="h-4 w-4" />
+              )}
+              {activeChannel === "web"
+                ? running
+                  ? "Inserting…"
+                  : processing
+                    ? "Processing…"
+                    : "Web Chat"
+                : "Web Chat"}
+            </Button>
+          </div>
         </div>
 
         {items.length > 0 ? (

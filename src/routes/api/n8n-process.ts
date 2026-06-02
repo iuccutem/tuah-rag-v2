@@ -1,13 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// Trigger the agent to process all rows with empty web/telegram answers.
-const WEBHOOK_URL =
-  "https://tuah.utem.edu.my/agent/webhook/dfa18ba2-f8f8-4257-a8fd-646b2c002d95";
+// Trigger the agent to process rows for a given channel.
+const WEBHOOK_URLS = {
+  web: "https://tuah.utem.edu.my/agent/webhook/dfa18ba2-f8f8-4257-a8fd-646b2c002d95",
+  telegram_whatsapp:
+    "https://tuah.utem.edu.my/agent/webhook/ad7bc9b8-0b89-4e4a-bdb5-89b83ecddc59",
+} as const;
+
+type Channel = keyof typeof WEBHOOK_URLS;
 
 export const Route = createFileRoute("/api/n8n-process")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        let channel: Channel = "web";
+        try {
+          const body = (await request.json()) as { channel?: string };
+          if (body.channel === "telegram_whatsapp" || body.channel === "web") {
+            channel = body.channel;
+          }
+        } catch {
+          // default to web
+        }
+        const WEBHOOK_URL = WEBHOOK_URLS[channel];
         const user = process.env.N8N_WEBHOOK_USER;
         const password = process.env.N8N_WEBHOOK_PASSWORD;
         if (!user || !password) {
