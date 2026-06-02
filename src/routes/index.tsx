@@ -15,6 +15,10 @@ import {
   Copy,
   Trash2,
   ExternalLink,
+  Globe,
+  MessageSquare,
+  Layers,
+  Loader2,
 } from "lucide-react";
 
 import { toast } from "sonner";
