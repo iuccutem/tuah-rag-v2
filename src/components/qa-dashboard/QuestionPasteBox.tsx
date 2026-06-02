@@ -270,6 +270,26 @@ export function QuestionPasteBox({
                     : "Web Chat"
                 : "Web Chat"}
             </Button>
+            <Button
+              onClick={() => runAll("both")}
+              disabled={busy || newOnes.length === 0}
+              variant="secondary"
+              className="gap-2"
+              title="Insert questions, then trigger BOTH Web Chat and Telegram/WhatsApp"
+            >
+              {busy && activeChannel === "both" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Layers className="h-4 w-4" />
+              )}
+              {activeChannel === "both"
+                ? running
+                  ? "Inserting…"
+                  : processing
+                    ? "Processing both…"
+                    : "Run Both"
+                : "Run Both"}
+            </Button>
           </div>
         </div>
 
