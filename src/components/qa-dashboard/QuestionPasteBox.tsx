@@ -221,22 +221,45 @@ export function QuestionPasteBox({
               ? ` · ${newOnes.length} new · ${duplicates.length} duplicate${duplicates.length === 1 ? "" : "s"} skipped`
               : ""}
           </span>
-          <Button
-            onClick={runAll}
-            disabled={busy || newOnes.length === 0}
-            className="gap-2"
-          >
-            {busy ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Play className="h-4 w-4" />
-            )}
-            {running
-              ? "Inserting…"
-              : processing
-                ? "Processing…"
-                : "Run Questions"}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => runAll("telegram_whatsapp")}
+              disabled={busy || newOnes.length === 0}
+              variant="outline"
+              className="gap-2"
+            >
+              {busy && activeChannel === "telegram_whatsapp" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageSquare className="h-4 w-4" />
+              )}
+              {activeChannel === "telegram_whatsapp"
+                ? running
+                  ? "Inserting…"
+                  : processing
+                    ? "Processing…"
+                    : "Telegram / WhatsApp"
+                : "Telegram / WhatsApp"}
+            </Button>
+            <Button
+              onClick={() => runAll("web")}
+              disabled={busy || newOnes.length === 0}
+              className="gap-2"
+            >
+              {busy && activeChannel === "web" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Globe className="h-4 w-4" />
+              )}
+              {activeChannel === "web"
+                ? running
+                  ? "Inserting…"
+                  : processing
+                    ? "Processing…"
+                    : "Web Chat"
+                : "Web Chat"}
+            </Button>
+          </div>
         </div>
 
         {items.length > 0 ? (
