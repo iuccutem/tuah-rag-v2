@@ -120,14 +120,19 @@ export function QuestionPasteBox({
 
     setProcessing(true);
     try {
-      const res = await fetch("/api/n8n-process", { method: "POST" });
+      const res = await fetch("/api/n8n-process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel }),
+      });
       const json = (await res.json()) as { ok: boolean; error?: string };
-      if (json.ok) toast.success("Processing pipeline triggered.");
+      if (json.ok) toast.success(`Processing triggered (${channel === "web" ? "Web Chat" : "Telegram/WhatsApp"}).`);
       else toast.error(json.error ?? "Failed to trigger processing.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to trigger processing.");
     } finally {
       setProcessing(false);
+      setActiveChannel(null);
       onComplete?.();
     }
   };
