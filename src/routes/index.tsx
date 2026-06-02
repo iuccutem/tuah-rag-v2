@@ -12,7 +12,6 @@ import {
   Eraser,
   Search,
   Calendar,
-  Copy,
   Trash2,
   ExternalLink,
   Globe,
@@ -20,7 +19,6 @@ import {
   Layers,
   Loader2,
 } from "lucide-react";
-
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -198,23 +196,6 @@ function DashboardPage() {
     setSelectedRowIds(new Set());
   };
 
-  const duplicateGroups = useMemo(() => {
-    const map = new Map<string, QARow[]>();
-    for (const r of rows) {
-      const q = (r.question ?? "").trim().toLowerCase();
-      if (!q) continue;
-      const arr = map.get(q) ?? [];
-      arr.push(r);
-      map.set(q, arr);
-    }
-    return Array.from(map.values()).filter((g) => g.length > 1);
-  }, [rows]);
-
-  const duplicateCount = duplicateGroups.reduce(
-    (n, g) => n + (g.length - 1),
-    0,
-  );
-
   const postDelete = async (questions: string[]) => {
     const res = await fetch("/api/n8n-delete", {
       method: "POST",
@@ -250,64 +231,6 @@ function DashboardPage() {
     }
   };
 
-  const deleteDuplicates = async () => {
-    if (duplicateGroups.length === 0) {
-      toast.info("No duplicates found.");
-      return;
-    }
-    // Keep the latest occurrence of each group, delete the older ones —
-    // but only delete rows that have NO answers (web + telegram_whatsapp empty).
-    const hasAnswer = (r: QARow) =>
-      ((r.web ?? "").trim().length > 0) ||
-      ((r.telegram_whatsapp ?? "").trim().length > 0);
-
-    let skippedWithAnswers = 0;
-    const extras = duplicateGroups
-      .flatMap((g) =>
-        [...g]
-          .sort((a, b) => {
-            const ta = new Date(a.updatedAt ?? a.createdAt ?? 0).getTime();
-            const tb = new Date(b.updatedAt ?? b.createdAt ?? 0).getTime();
-            return tb - ta; // newest first
-          })
-          .slice(1)
-          .filter((r) => {
-            if (hasAnswer(r)) {
-              skippedWithAnswers++;
-              return false;
-            }
-            return true;
-          }),
-      )
-      .map((r) => (r.question ?? "").trim())
-      .filter(Boolean);
-    if (extras.length === 0) {
-      toast.error(
-        skippedWithAnswers > 0
-          ? `All ${skippedWithAnswers} duplicate row${skippedWithAnswers === 1 ? "" : "s"} already have answers — not deleted.`
-          : "Nothing to delete.",
-      );
-      return;
-    }
-    const confirmMsg =
-      skippedWithAnswers > 0
-        ? `Delete ${extras.length} empty duplicate row${extras.length === 1 ? "" : "s"}? (${skippedWithAnswers} with answers will be kept)`
-        : `Delete ${extras.length} duplicate row${extras.length === 1 ? "" : "s"}?`;
-    if (!confirm(confirmMsg)) return;
-    try {
-      const json = await postDelete(extras);
-      if (json.ok) {
-        toast.success(
-          `Deleted ${json.deleted ?? extras.length}/${json.total ?? extras.length} duplicate${extras.length === 1 ? "" : "s"}.`,
-        );
-        refetch();
-      } else {
-        toast.error(json.error ?? "Failed to delete duplicates.");
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete duplicates.");
-    }
-  };
 
 
 
@@ -511,20 +434,6 @@ function DashboardPage() {
           </Dialog>
 
           <ToolbarAction
-            onClick={deleteDuplicates}
-            disabled={duplicateCount === 0}
-            title={
-              duplicateCount === 0
-                ? "No duplicate questions"
-                : `Delete ${duplicateCount} duplicate row${duplicateCount === 1 ? "" : "s"}`
-            }
-            icon={<Copy className="h-4 w-4" />}
-            label="Duplicates"
-            badge={duplicateCount > 0 ? duplicateCount : undefined}
-            badgeTone="warning"
-          />
-
-          <ToolbarAction
             onClick={deleteSelectedRows}
             disabled={selectedRowIds.size === 0}
             title={
@@ -539,7 +448,7 @@ function DashboardPage() {
           />
 
           <a
-            href="https://tuah.utem.edu.my/agent/form/401307f6-6c59-489d-a9ca-6cd95edd81b7"
+            href="https://tuah.utem.edu.my/agent/form/d252fbe8-8741-40dd-acae-fee0590e9eaa"
             target="_blank"
             rel="noopener noreferrer"
             className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/90 hover:bg-muted"
