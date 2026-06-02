@@ -54,7 +54,7 @@ export function QuestionPasteBox({
 
   const [activeChannel, setActiveChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
 
-  const runAll = async (channel: "web" | "telegram_whatsapp") => {
+  const runAll = async (channel: "web" | "telegram_whatsapp" | "both") => {
     if (questions.length === 0) {
       toast.error("Paste at least one question.");
       return;
@@ -109,6 +109,7 @@ export function QuestionPasteBox({
 
     if (okCount === 0) {
       toast.error("No questions inserted. Skipping processing.");
+      setActiveChannel(null);
       return;
     }
 
@@ -119,15 +120,25 @@ export function QuestionPasteBox({
     );
 
     setProcessing(true);
+    const channels: Array<"web" | "telegram_whatsapp"> =
+      channel === "both" ? ["web", "telegram_whatsapp"] : [channel];
     try {
-      const res = await fetch("/api/n8n-process", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel }),
-      });
-      const json = (await res.json()) as { ok: boolean; error?: string };
-      if (json.ok) toast.success(`Processing triggered (${channel === "web" ? "Web Chat" : "Telegram/WhatsApp"}).`);
-      else toast.error(json.error ?? "Failed to trigger processing.");
+      const results = await Promise.all(
+        channels.map(async (ch) => {
+          const res = await fetch("/api/n8n-process", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ channel: ch }),
+          });
+          const json = (await res.json()) as { ok: boolean; error?: string };
+          return { ch, ok: json.ok, error: json.error };
+        }),
+      );
+      for (const r of results) {
+        const name = r.ch === "web" ? "Web Chat" : "Telegram/WhatsApp";
+        if (r.ok) toast.success(`Processing triggered (${name}).`);
+        else toast.error(`${name}: ${r.error ?? "Failed to trigger processing."}`);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to trigger processing.");
     } finally {
