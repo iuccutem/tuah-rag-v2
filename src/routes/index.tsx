@@ -668,6 +668,31 @@ function DashboardPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Processing overlay */}
+      {runningChannel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-xl border border-[var(--sheets-grid)] bg-card p-8 shadow-xl">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              {runningChannel === "web" && <Globe className="h-6 w-6 text-primary animate-pulse" />}
+              {runningChannel === "telegram_whatsapp" && <MessageSquare className="h-6 w-6 text-primary animate-pulse" />}
+              {runningChannel === "both" && <Layers className="h-6 w-6 text-primary animate-pulse" />}
+            </div>
+            <div className="text-center">
+              <p className="text-[15px] font-semibold text-foreground">
+                {runningChannel === "web"
+                  ? "Running Web Chat agent…"
+                  : runningChannel === "telegram_whatsapp"
+                    ? "Running Telegram/WhatsApp agent…"
+                    : "Running both agents…"}
+              </p>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Please wait while the answers are being generated.
+              </p>
+            </div>
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
