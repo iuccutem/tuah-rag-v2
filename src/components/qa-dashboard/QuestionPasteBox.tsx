@@ -52,7 +52,7 @@ export function QuestionPasteBox({
     [questions, existingSet],
   );
 
-  const [activeChannel, setActiveChannel] = useState<"web" | "telegram_whatsapp" | null>(null);
+  const [activeChannel, setActiveChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
 
   const runAll = async (channel: "web" | "telegram_whatsapp") => {
     if (questions.length === 0) {
