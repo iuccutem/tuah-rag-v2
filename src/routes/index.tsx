@@ -311,6 +311,47 @@ function DashboardPage() {
 
 
 
+  const runChannel = async (channel: "web" | "telegram_whatsapp" | "both") => {
+    setRunningChannel(channel);
+    const channels: Array<"web" | "telegram_whatsapp"> =
+      channel === "both" ? ["web", "telegram_whatsapp"] : [channel];
+    const selectedCount = selectedRowIds.size;
+    const label =
+      channel === "web"
+        ? "Web Chat"
+        : channel === "telegram_whatsapp"
+          ? "Telegram/WhatsApp"
+          : "both channels";
+    try {
+      const results = await Promise.all(
+        channels.map(async (ch) => {
+          const res = await fetch("/api/n8n-process", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ channel: ch }),
+          });
+          const json = (await res.json()) as { ok: boolean; error?: string };
+          return { ch, ok: json.ok, error: json.error };
+        }),
+      );
+      const okAll = results.every((r) => r.ok);
+      if (okAll) {
+        toast.success(
+          `Triggered ${label}${selectedCount > 0 ? ` (${selectedCount} row${selectedCount === 1 ? "" : "s"} selected)` : ""}.`,
+        );
+      } else {
+        for (const r of results) {
+          const name = r.ch === "web" ? "Web Chat" : "Telegram/WhatsApp";
+          if (!r.ok) toast.error(`${name}: ${r.error ?? "Failed to trigger."}`);
+        }
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to trigger.");
+    } finally {
+      setRunningChannel(null);
+    }
+  };
+
   const apiError =
     data?.error ?? (error instanceof Error ? error.message : null);
 
