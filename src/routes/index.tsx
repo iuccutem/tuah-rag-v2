@@ -552,6 +552,62 @@ function DashboardPage() {
 
         <Divider />
 
+        {/* Group: run processing (per channel) */}
+        <ToolbarGroup>
+          <ToolbarAction
+            onClick={() => runChannel("web")}
+            disabled={runningChannel !== null}
+            title={
+              selectedRowIds.size > 0
+                ? `Run Web Chat agent (${selectedRowIds.size} selected)`
+                : "Run Web Chat agent"
+            }
+            icon={
+              runningChannel === "web" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Globe className="h-4 w-4 text-primary" />
+              )
+            }
+            label="Run Web"
+            badge={selectedRowIds.size > 0 ? selectedRowIds.size : undefined}
+          />
+          <ToolbarAction
+            onClick={() => runChannel("telegram_whatsapp")}
+            disabled={runningChannel !== null}
+            title={
+              selectedRowIds.size > 0
+                ? `Run Telegram/WhatsApp agent (${selectedRowIds.size} selected)`
+                : "Run Telegram/WhatsApp agent"
+            }
+            icon={
+              runningChannel === "telegram_whatsapp" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageSquare className="h-4 w-4 text-primary" />
+              )
+            }
+            label="Run WA/TG"
+            badge={selectedRowIds.size > 0 ? selectedRowIds.size : undefined}
+          />
+          <ToolbarAction
+            onClick={() => runChannel("both")}
+            disabled={runningChannel !== null}
+            title="Run both Web Chat and Telegram/WhatsApp agents"
+            icon={
+              runningChannel === "both" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Layers className="h-4 w-4 text-primary" />
+              )
+            }
+            label="Run Both"
+          />
+        </ToolbarGroup>
+
+        <Divider />
+
+
         {/* Group: formatting */}
         <ToolbarGroup>
           <ToolbarAction
