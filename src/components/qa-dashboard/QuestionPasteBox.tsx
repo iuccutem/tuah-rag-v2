@@ -52,7 +52,9 @@ export function QuestionPasteBox({
     [questions, existingSet],
   );
 
-  const runAll = async () => {
+  const [activeChannel, setActiveChannel] = useState<"web" | "telegram_whatsapp" | null>(null);
+
+  const runAll = async (channel: "web" | "telegram_whatsapp") => {
     if (questions.length === 0) {
       toast.error("Paste at least one question.");
       return;
