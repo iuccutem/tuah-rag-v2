@@ -12,7 +12,6 @@ import {
   Eraser,
   Search,
   Calendar,
-  Copy,
   Trash2,
   ExternalLink,
   Globe,
