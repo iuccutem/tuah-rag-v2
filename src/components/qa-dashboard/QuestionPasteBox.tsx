@@ -64,6 +64,7 @@ export function QuestionPasteBox({
       return;
     }
     setRunning(true);
+    setActiveChannel(channel);
     // Duplicates are ALWAYS skipped — never sent to the insert webhook.
     const initial: RunItem[] = questions.map((q) => ({
       question: q,
