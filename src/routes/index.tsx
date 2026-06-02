@@ -14,6 +14,7 @@ import {
   Calendar,
   Copy,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
 
 import { toast } from "sonner";
