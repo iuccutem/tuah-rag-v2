@@ -529,7 +529,7 @@ function DashboardPage() {
           <>
             <ToolbarGroup>
               <ToolbarAction
-                onClick={() => runChannel("web")}
+                onClick={() => setPendingChannel("web")}
                 disabled={runningChannel !== null}
                 title={`Run Web Chat agent (${selectedRowIds.size} selected)`}
                 icon={
@@ -543,7 +543,7 @@ function DashboardPage() {
                 badge={selectedRowIds.size}
               />
               <ToolbarAction
-                onClick={() => runChannel("telegram_whatsapp")}
+                onClick={() => setPendingChannel("telegram_whatsapp")}
                 disabled={runningChannel !== null}
                 title={`Run Telegram/WhatsApp agent (${selectedRowIds.size} selected)`}
                 icon={
@@ -557,7 +557,7 @@ function DashboardPage() {
                 badge={selectedRowIds.size}
               />
               <ToolbarAction
-                onClick={() => runChannel("both")}
+                onClick={() => setPendingChannel("both")}
                 disabled={runningChannel !== null}
                 title="Run both Web Chat and Telegram/WhatsApp agents"
                 icon={
@@ -569,6 +569,7 @@ function DashboardPage() {
                 }
                 label="Run Both"
               />
+
             </ToolbarGroup>
 
             <Divider />
