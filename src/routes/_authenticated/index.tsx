@@ -85,6 +85,10 @@ function DashboardPage() {
   const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailAddress, setEmailAddress] = useState("");
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registering, setRegistering] = useState(false);
   const [insertOpen, setInsertOpen] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
