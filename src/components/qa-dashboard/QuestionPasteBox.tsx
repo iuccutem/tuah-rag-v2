@@ -126,12 +126,7 @@ export function QuestionPasteBox({
     setProcessing(true);
     const channels: Array<"web" | "telegram_whatsapp"> =
       channel === "both" ? ["web", "telegram_whatsapp"] : [channel];
-    // Only forward questions that were successfully inserted (status === "ok").
-    const insertedQuestions = newOnes.filter((q) => {
-      const item = items.find((it) => it.question === q);
-      // items hasn't been re-read here; rely on newOnes since we already toasted okCount.
-      return item ? item.status === "ok" : true;
-    });
+    // Only forward questions that were successfully inserted.
     try {
       const results: Array<{ ch: "web" | "telegram_whatsapp"; question: string; ok: boolean; error?: string }> = [];
       // Send each question one-by-one to each selected channel webhook.
