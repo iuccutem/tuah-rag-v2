@@ -73,6 +73,7 @@ export function QuestionPasteBox({
     setItems(initial);
 
     let okCount = 0;
+    const insertedQuestions: string[] = [];
     for (let i = 0; i < questions.length; i++) {
       const question = questions[i];
       if (existingSet.has(question.toLowerCase())) continue;
@@ -83,7 +84,10 @@ export function QuestionPasteBox({
           body: JSON.stringify({ question }),
         });
         const json = (await res.json()) as { ok: boolean; error?: string };
-        if (json.ok) okCount++;
+        if (json.ok) {
+          okCount++;
+          insertedQuestions.push(question);
+        }
         setItems((prev) =>
           prev.map((it, idx) =>
             idx === i
