@@ -313,35 +313,67 @@ function DashboardPage() {
         }).format(new Date(dataUpdatedAt))
       : "—";
 
-  const openEmailDialog = () => {
-    setEmailAddress("");
-    setEmailDialogOpen(true);
-  };
-
-  const sendEmail = async () => {
-    const email = emailAddress.trim();
-    if (!email) {
-      toast.error("Please enter an email address.");
-      return;
-    }
-    setSendingEmail(true);
+  const exportXlsx = async () => {
+    setExporting(true);
     try {
-      const res = await fetch("/api/n8n-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+      const wb = new ExcelJS.Workbook();
+      wb.created = new Date();
+      const ws = wb.addWorksheet("Q&A Evaluation");
+
+      ws.columns = QA_COLUMNS.map((c) => ({
+        header: c.label,
+        key: c.key as string,
+        width: Math.max(14, Math.min(60, c.label.length + 20)),
+      }));
+
+      ws.getRow(1).font = { bold: true };
+      ws.getRow(1).alignment = { vertical: "middle" };
+
+      filteredRows.forEach((row, rIdx) => {
+        const rowValues: Record<string, unknown> = {};
+        QA_COLUMNS.forEach((c) => {
+          rowValues[c.key as string] = c.raw(row);
+        });
+        const addedRow = ws.addRow(rowValues);
+        addedRow.alignment = { wrapText: true, vertical: "top" };
+
+        QA_COLUMNS.forEach((c, cIdx) => {
+          const fmt = formats[formatKey(row.id ?? rIdx, c.key as string)];
+          if (!fmt) return;
+          const cell = addedRow.getCell(cIdx + 1);
+          if (fmt.highlight) {
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFFEF08A" },
+            };
+          }
+          if (fmt.error) {
+            cell.font = { color: { argb: "FFDC2626" }, bold: true };
+          }
+        });
       });
-      const json = (await res.json()) as { ok: boolean; error?: string };
-      if (json.ok) {
-        toast.success("Email pipeline triggered.");
-        setEmailDialogOpen(false);
-      } else {
-        toast.error(json.error ?? "Failed to send email.");
-      }
+
+      ws.views = [{ state: "frozen", ySplit: 1 }];
+
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      a.href = url;
+      a.download = `qa-evaluation-${stamp}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${filteredRows.length} rows.`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to send email.");
+      toast.error(e instanceof Error ? e.message : "Failed to export.");
     } finally {
-      setSendingEmail(false);
+      setExporting(false);
     }
   };
 
