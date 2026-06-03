@@ -14,13 +14,17 @@ export const Route = createFileRoute("/api/n8n-process")({
     handlers: {
       POST: async ({ request }) => {
         let channel: Channel = "web";
+        let question = "";
         try {
-          const body = (await request.json()) as { channel?: string };
+          const body = (await request.json()) as { channel?: string; question?: string };
           if (body.channel === "telegram_whatsapp" || body.channel === "web") {
             channel = body.channel;
           }
+          if (typeof body.question === "string") {
+            question = body.question.trim();
+          }
         } catch {
-          // default to web
+          // default to web, no question
         }
         const WEBHOOK_URL = WEBHOOK_URLS[channel];
         const user = process.env.N8N_WEBHOOK_USER;
@@ -41,7 +45,7 @@ export const Route = createFileRoute("/api/n8n-process")({
               "Content-Type": "application/json",
               Accept: "application/json",
             },
-            body: JSON.stringify({}),
+            body: JSON.stringify(question ? { question } : {}),
           });
           const text = await res.text();
           let data: unknown = null;
