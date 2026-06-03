@@ -673,6 +673,43 @@ function DashboardPage() {
         </div>
       </div>
 
+      {/* Run confirmation dialog */}
+      <Dialog
+        open={pendingChannel !== null}
+        onOpenChange={(o) => {
+          if (!o) setPendingChannel(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Run agent on selected rows?</DialogTitle>
+            <DialogDescription>
+              {pendingChannel === "web"
+                ? "Re-run the Web Chat agent"
+                : pendingChannel === "telegram_whatsapp"
+                  ? "Re-run the Telegram/WhatsApp agent"
+                  : "Re-run both Web Chat and Telegram/WhatsApp agents"}
+              {" "}for {selectedRowIds.size} selected question
+              {selectedRowIds.size === 1 ? "" : "s"}. Existing answers will be updated.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingChannel(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const ch = pendingChannel;
+                setPendingChannel(null);
+                if (ch) runChannel(ch);
+              }}
+            >
+              Confirm & Run
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Email dialog */}
       <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
         <DialogContent className="sm:max-w-md">
