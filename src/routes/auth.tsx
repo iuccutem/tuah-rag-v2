@@ -58,7 +58,11 @@ function AuthPage() {
     e.preventDefault();
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      toast.error("Email and password are required.");
+      setErrorDialog({
+        open: true,
+        title: "Missing Fields",
+        message: "Email and password are required.",
+      });
       return;
     }
     setBusy(true);
@@ -70,7 +74,12 @@ function AuthPage() {
       if (error) throw error;
       navigate({ to: "/" });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Authentication failed.");
+      const msg = err instanceof Error ? err.message : "Authentication failed.";
+      setErrorDialog({
+        open: true,
+        title: "Sign In Failed",
+        message: msg,
+      });
     } finally {
       setBusy(false);
     }
