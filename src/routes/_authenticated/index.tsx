@@ -581,32 +581,12 @@ function DashboardPage() {
           />
         </ToolbarGroup>
 
-        {/* Right side */}
-        <div className="ml-auto flex items-center gap-1">
-          <ToolbarAction
-            onClick={openEmailDialog}
-            disabled={sendingEmail}
-            icon={<Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />}
-            label="Send email"
-            title="Send evaluation report by email"
-          />
-          <ToolbarAction
-            onClick={() => setRegisterOpen(true)}
-            icon={<UserPlus className="h-4 w-4 text-muted-foreground" />}
-            label="Register"
-            title="Register a new user"
-          />
-          <ToolbarAction
-            onClick={async () => {
-              await supabase.auth.signOut();
-              navigate({ to: "/auth" });
-            }}
-            icon={<LogOut className="h-4 w-4 text-muted-foreground" />}
-            label="Sign out"
-            title="Sign out"
-          />
+        {/* Right side — sheet status */}
+        <div className="ml-auto flex items-center gap-2 text-[11px] text-muted-foreground tabular-nums">
+          {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
         </div>
       </div>
+
 
 
 
