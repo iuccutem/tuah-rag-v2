@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   RefreshCw,
   AlertCircle,
-  Mail,
+  Download,
   Sheet as SheetIcon,
   ListPlus,
   Highlighter,
@@ -21,6 +21,7 @@ import {
   LogOut,
   UserPlus,
 } from "lucide-react";
+import ExcelJS from "exceljs";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,11 +83,9 @@ function DashboardPage() {
       refetchOnWindowFocus: false,
     });
 
-  const [sendingEmail, setSendingEmail] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
   const [pendingChannel, setPendingChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
-  const [emailAddress, setEmailAddress] = useState("");
   const [registerOpen, setRegisterOpen] = useState(false);
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
@@ -314,35 +313,67 @@ function DashboardPage() {
         }).format(new Date(dataUpdatedAt))
       : "—";
 
-  const openEmailDialog = () => {
-    setEmailAddress("");
-    setEmailDialogOpen(true);
-  };
-
-  const sendEmail = async () => {
-    const email = emailAddress.trim();
-    if (!email) {
-      toast.error("Please enter an email address.");
-      return;
-    }
-    setSendingEmail(true);
+  const exportXlsx = async () => {
+    setExporting(true);
     try {
-      const res = await fetch("/api/n8n-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+      const wb = new ExcelJS.Workbook();
+      wb.created = new Date();
+      const ws = wb.addWorksheet("Q&A Evaluation");
+
+      ws.columns = QA_COLUMNS.map((c) => ({
+        header: c.label,
+        key: c.key as string,
+        width: Math.max(14, Math.min(60, c.label.length + 20)),
+      }));
+
+      ws.getRow(1).font = { bold: true };
+      ws.getRow(1).alignment = { vertical: "middle" };
+
+      filteredRows.forEach((row, rIdx) => {
+        const rowValues: Record<string, unknown> = {};
+        QA_COLUMNS.forEach((c) => {
+          rowValues[c.key as string] = c.raw(row);
+        });
+        const addedRow = ws.addRow(rowValues);
+        addedRow.alignment = { wrapText: true, vertical: "top" };
+
+        QA_COLUMNS.forEach((c, cIdx) => {
+          const fmt = formats[formatKey(row.id ?? rIdx, c.key as string)];
+          if (!fmt) return;
+          const cell = addedRow.getCell(cIdx + 1);
+          if (fmt.highlight) {
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFFEF08A" },
+            };
+          }
+          if (fmt.error) {
+            cell.font = { color: { argb: "FFDC2626" }, bold: true };
+          }
+        });
       });
-      const json = (await res.json()) as { ok: boolean; error?: string };
-      if (json.ok) {
-        toast.success("Email pipeline triggered.");
-        setEmailDialogOpen(false);
-      } else {
-        toast.error(json.error ?? "Failed to send email.");
-      }
+
+      ws.views = [{ state: "frozen", ySplit: 1 }];
+
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      a.href = url;
+      a.download = `qa-evaluation-${stamp}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${filteredRows.length} rows.`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to send email.");
+      toast.error(e instanceof Error ? e.message : "Failed to export.");
     } finally {
-      setSendingEmail(false);
+      setExporting(false);
     }
   };
 
@@ -364,13 +395,13 @@ function DashboardPage() {
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={openEmailDialog}
-            disabled={sendingEmail}
-            title="Send evaluation report by email"
+            onClick={exportXlsx}
+            disabled={exporting}
+            title="Export visible rows to Excel (.xlsx) with highlights and error marks preserved"
             className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted disabled:opacity-50"
           >
-            <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
-            <span className="hidden sm:inline">Email</span>
+            <Download className={exporting ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+            <span className="hidden sm:inline">{exporting ? "Exporting…" : "Export"}</span>
           </button>
           <button
             type="button"
@@ -729,43 +760,6 @@ function DashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Email dialog */}
-      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Send Email</DialogTitle>
-            <DialogDescription>
-              Enter the recipient email to send the evaluation report.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-2">
-            <Input
-              type="email"
-              placeholder="recipient@example.com"
-              value={emailAddress}
-              onChange={(e) => setEmailAddress(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") sendEmail();
-              }}
-              disabled={sendingEmail}
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEmailDialogOpen(false)}
-              disabled={sendingEmail}
-            >
-              Cancel
-            </Button>
-            <Button onClick={sendEmail} disabled={sendingEmail} className="gap-2">
-              <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
-              {sendingEmail ? "Sending…" : "Send"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Register user dialog */}
       <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
