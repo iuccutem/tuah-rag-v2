@@ -541,7 +541,7 @@ function DashboardPage() {
         </ToolbarGroup>
 
         {/* Right side */}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
           <ToolbarAction
             onClick={openEmailDialog}
             disabled={sendingEmail}
@@ -549,8 +549,18 @@ function DashboardPage() {
             label="Send email"
             title="Send evaluation report by email"
           />
+          <ToolbarAction
+            onClick={async () => {
+              await supabase.auth.signOut();
+              navigate({ to: "/auth" });
+            }}
+            icon={<LogOut className="h-4 w-4 text-muted-foreground" />}
+            label="Sign out"
+            title="Sign out"
+          />
         </div>
       </div>
+
 
 
 
