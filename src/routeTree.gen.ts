@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as ApiN8nRunRouteImport } from './routes/api/n8n-run'
 import { Route as ApiN8nQaRouteImport } from './routes/api/n8n-qa'
@@ -16,10 +18,19 @@ import { Route as ApiN8nProcessRouteImport } from './routes/api/n8n-process'
 import { Route as ApiN8nEmailRouteImport } from './routes/api/n8n-email'
 import { Route as ApiN8nDeleteRouteImport } from './routes/api/n8n-delete'
 
-const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
-  id: '/_authenticated/',
-  path: '/',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const ApiN8nRunRoute = ApiN8nRunRouteImport.update({
   id: '/api/n8n-run',
@@ -48,14 +59,16 @@ const ApiN8nDeleteRoute = ApiN8nDeleteRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof AuthenticatedIndexRoute
+  '/auth': typeof AuthRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
-  '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesByTo {
+  '/auth': typeof AuthRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
@@ -65,6 +78,8 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
@@ -75,14 +90,16 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
+    | '/auth'
     | '/api/n8n-delete'
     | '/api/n8n-email'
     | '/api/n8n-process'
     | '/api/n8n-qa'
     | '/api/n8n-run'
-    | '/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/auth'
     | '/api/n8n-delete'
     | '/api/n8n-email'
     | '/api/n8n-process'
@@ -91,6 +108,8 @@ export interface FileRouteTypes {
     | '/'
   id:
     | '__root__'
+    | '/_authenticated'
+    | '/auth'
     | '/api/n8n-delete'
     | '/api/n8n-email'
     | '/api/n8n-process'
@@ -100,22 +119,37 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
   ApiN8nDeleteRoute: typeof ApiN8nDeleteRoute
   ApiN8nEmailRoute: typeof ApiN8nEmailRoute
   ApiN8nProcessRoute: typeof ApiN8nProcessRoute
   ApiN8nQaRoute: typeof ApiN8nQaRoute
   ApiN8nRunRoute: typeof ApiN8nRunRoute
-  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/': {
       id: '/_authenticated/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/n8n-run': {
       id: '/api/n8n-run'
@@ -155,13 +189,25 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
   ApiN8nDeleteRoute: ApiN8nDeleteRoute,
   ApiN8nEmailRoute: ApiN8nEmailRoute,
   ApiN8nProcessRoute: ApiN8nProcessRoute,
   ApiN8nQaRoute: ApiN8nQaRoute,
   ApiN8nRunRoute: ApiN8nRunRoute,
-  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
