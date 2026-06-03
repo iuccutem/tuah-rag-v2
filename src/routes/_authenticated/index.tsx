@@ -247,34 +247,52 @@ function DashboardPage() {
     setRunningChannel(channel);
     const channels: Array<"web" | "telegram_whatsapp"> =
       channel === "both" ? ["web", "telegram_whatsapp"] : [channel];
-    const selectedCount = selectedRowIds.size;
     const label =
       channel === "web"
         ? "Web Chat"
         : channel === "telegram_whatsapp"
           ? "Telegram/WhatsApp"
           : "both channels";
+
+    // Collect selected questions to forward into the webhook.
+    const selectedQuestions: string[] = [];
+    for (const row of filteredRows) {
+      const id = row.id ?? row.question ?? "";
+      if (selectedRowIds.has(id)) {
+        const q = (row.question ?? "").trim();
+        if (q) selectedQuestions.push(q);
+      }
+    }
+    if (selectedQuestions.length === 0) {
+      toast.error("Select at least one row with a question to run.");
+      setRunningChannel(null);
+      return;
+    }
+
     try {
-      const results = await Promise.all(
-        channels.map(async (ch) => {
+      const results: Array<{ ch: "web" | "telegram_whatsapp"; question: string; ok: boolean; error?: string }> = [];
+      for (const ch of channels) {
+        for (const question of selectedQuestions) {
           const res = await fetch("/api/n8n-process", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ channel: ch }),
+            body: JSON.stringify({ channel: ch, question }),
           });
           const json = (await res.json()) as { ok: boolean; error?: string };
-          return { ch, ok: json.ok, error: json.error };
-        }),
-      );
+          results.push({ ch, question, ok: json.ok, error: json.error });
+        }
+      }
       const okAll = results.every((r) => r.ok);
       if (okAll) {
         toast.success(
-          `Triggered ${label}${selectedCount > 0 ? ` (${selectedCount} row${selectedCount === 1 ? "" : "s"} selected)` : ""}.`,
+          `Triggered ${label} for ${selectedQuestions.length} question${selectedQuestions.length === 1 ? "" : "s"}.`,
         );
       } else {
         for (const r of results) {
-          const name = r.ch === "web" ? "Web Chat" : "Telegram/WhatsApp";
-          if (!r.ok) toast.error(`${name}: ${r.error ?? "Failed to trigger."}`);
+          if (!r.ok) {
+            const name = r.ch === "web" ? "Web Chat" : "Telegram/WhatsApp";
+            toast.error(`${name} · "${r.question.slice(0, 40)}": ${r.error ?? "Failed to trigger."}`);
+          }
         }
       }
     } catch (e) {
