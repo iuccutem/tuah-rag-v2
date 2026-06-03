@@ -817,12 +817,7 @@ function DashboardPage() {
                 }
                 setRegistering(true);
                 try {
-                  const { error } = await supabase.auth.signUp({
-                    email,
-                    password: registerPassword,
-                    options: { emailRedirectTo: `${window.location.origin}/` },
-                  });
-                  if (error) throw error;
+                  await registerUserFn({ data: { email, password: registerPassword } });
                   toast.success("User registered.");
                   setRegisterEmail("");
                   setRegisterPassword("");
