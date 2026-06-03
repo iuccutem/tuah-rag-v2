@@ -73,6 +73,7 @@ async function fetchRows(): Promise<ApiResponse> {
 }
 
 function DashboardPage() {
+  const navigate = useNavigate();
   const { data, isLoading, isFetching, refetch, dataUpdatedAt, error } =
     useQuery({
       queryKey: ["qa-rows"],
