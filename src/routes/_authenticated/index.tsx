@@ -395,13 +395,13 @@ function DashboardPage() {
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={openEmailDialog}
-            disabled={sendingEmail}
-            title="Send evaluation report by email"
+            onClick={exportXlsx}
+            disabled={exporting}
+            title="Export visible rows to Excel (.xlsx) with highlights and error marks preserved"
             className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted disabled:opacity-50"
           >
-            <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
-            <span className="hidden sm:inline">Email</span>
+            <Download className={exporting ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+            <span className="hidden sm:inline">{exporting ? "Exporting…" : "Export"}</span>
           </button>
           <button
             type="button"
