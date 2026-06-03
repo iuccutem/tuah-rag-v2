@@ -677,6 +677,85 @@ function DashboardPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Register user dialog */}
+      <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Register new user</DialogTitle>
+            <DialogDescription>
+              Create a new account that can sign in to this workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <label className="text-[13px] font-medium" htmlFor="reg-email">Email</label>
+              <Input
+                id="reg-email"
+                type="email"
+                placeholder="user@example.com"
+                value={registerEmail}
+                onChange={(e) => setRegisterEmail(e.target.value)}
+                disabled={registering}
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[13px] font-medium" htmlFor="reg-password">Password</label>
+              <Input
+                id="reg-password"
+                type="password"
+                placeholder="At least 6 characters"
+                value={registerPassword}
+                onChange={(e) => setRegisterPassword(e.target.value)}
+                disabled={registering}
+                minLength={6}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRegisterOpen(false)} disabled={registering}>
+              Cancel
+            </Button>
+            <Button
+              className="gap-2"
+              disabled={registering}
+              onClick={async () => {
+                const email = registerEmail.trim();
+                if (!email || !registerPassword) {
+                  toast.error("Email and password are required.");
+                  return;
+                }
+                if (registerPassword.length < 6) {
+                  toast.error("Password must be at least 6 characters.");
+                  return;
+                }
+                setRegistering(true);
+                try {
+                  const { error } = await supabase.auth.signUp({
+                    email,
+                    password: registerPassword,
+                    options: { emailRedirectTo: `${window.location.origin}/` },
+                  });
+                  if (error) throw error;
+                  toast.success("User registered.");
+                  setRegisterEmail("");
+                  setRegisterPassword("");
+                  setRegisterOpen(false);
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : "Registration failed.");
+                } finally {
+                  setRegistering(false);
+                }
+              }}
+            >
+              <UserPlus className={registering ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+              {registering ? "Creating…" : "Create user"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Processing overlay */}
       {runningChannel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
