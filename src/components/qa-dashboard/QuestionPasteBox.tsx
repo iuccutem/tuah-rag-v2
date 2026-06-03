@@ -73,6 +73,7 @@ export function QuestionPasteBox({
     setItems(initial);
 
     let okCount = 0;
+    const insertedQuestions: string[] = [];
     for (let i = 0; i < questions.length; i++) {
       const question = questions[i];
       if (existingSet.has(question.toLowerCase())) continue;
@@ -83,7 +84,10 @@ export function QuestionPasteBox({
           body: JSON.stringify({ question }),
         });
         const json = (await res.json()) as { ok: boolean; error?: string };
-        if (json.ok) okCount++;
+        if (json.ok) {
+          okCount++;
+          insertedQuestions.push(question);
+        }
         setItems((prev) =>
           prev.map((it, idx) =>
             idx === i
@@ -122,22 +126,34 @@ export function QuestionPasteBox({
     setProcessing(true);
     const channels: Array<"web" | "telegram_whatsapp"> =
       channel === "both" ? ["web", "telegram_whatsapp"] : [channel];
+    // Only forward questions that were successfully inserted.
     try {
-      const results = await Promise.all(
-        channels.map(async (ch) => {
+      const results: Array<{ ch: "web" | "telegram_whatsapp"; question: string; ok: boolean; error?: string }> = [];
+      // Send each question one-by-one to each selected channel webhook.
+      for (const ch of channels) {
+        for (const question of insertedQuestions) {
           const res = await fetch("/api/n8n-process", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ channel: ch }),
+            body: JSON.stringify({ channel: ch, question }),
           });
           const json = (await res.json()) as { ok: boolean; error?: string };
-          return { ch, ok: json.ok, error: json.error };
-        }),
-      );
+          results.push({ ch, question, ok: json.ok, error: json.error });
+        }
+      }
+      const grouped = new Map<string, { ok: number; fail: number }>();
       for (const r of results) {
         const name = r.ch === "web" ? "Web Chat" : "Telegram/WhatsApp";
-        if (r.ok) toast.success(`Processing triggered (${name}).`);
-        else toast.error(`${name}: ${r.error ?? "Failed to trigger processing."}`);
+        const g = grouped.get(name) ?? { ok: 0, fail: 0 };
+        if (r.ok) g.ok++;
+        else g.fail++;
+        grouped.set(name, g);
+        if (!r.ok) {
+          toast.error(`${name} · "${r.question.slice(0, 40)}": ${r.error ?? "Failed."}`);
+        }
+      }
+      for (const [name, g] of grouped) {
+        if (g.ok > 0) toast.success(`${name}: processed ${g.ok}/${g.ok + g.fail} question${g.ok + g.fail === 1 ? "" : "s"}.`);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to trigger processing.");
