@@ -18,8 +18,11 @@ import {
   MessageSquare,
   Layers,
   Loader2,
+  LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import {
