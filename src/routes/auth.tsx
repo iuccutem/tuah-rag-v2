@@ -1,12 +1,19 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, LogIn, Sheet as SheetIcon } from "lucide-react";
+import { Loader2, LogIn, Sheet as SheetIcon, AlertCircle } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -22,6 +29,11 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: "",
+    message: "",
+  });
 
   useEffect(() => {
     const check = async () => {
@@ -46,7 +58,11 @@ function AuthPage() {
     e.preventDefault();
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      toast.error("Email and password are required.");
+      setErrorDialog({
+        open: true,
+        title: "Missing Fields",
+        message: "Email and password are required.",
+      });
       return;
     }
     setBusy(true);
@@ -58,7 +74,12 @@ function AuthPage() {
       if (error) throw error;
       navigate({ to: "/" });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Authentication failed.");
+      const msg = err instanceof Error ? err.message : "Authentication failed.";
+      setErrorDialog({
+        open: true,
+        title: "Sign In Failed",
+        message: msg,
+      });
     } finally {
       setBusy(false);
     }
@@ -116,6 +137,23 @@ function AuthPage() {
           </Button>
         </form>
       </div>
+
+      <Dialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog((d) => ({ ...d, open }))}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              {errorDialog.title}
+            </DialogTitle>
+            <DialogDescription>{errorDialog.message}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setErrorDialog((d) => ({ ...d, open: false }))}>
+              OK
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
