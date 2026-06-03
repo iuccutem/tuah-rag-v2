@@ -92,6 +92,7 @@ function DashboardPage() {
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registering, setRegistering] = useState(false);
+  const registerUserFn = useServerFn(registerUser);
   const [insertOpen, setInsertOpen] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
