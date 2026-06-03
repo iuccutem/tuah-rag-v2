@@ -9,15 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as ApiN8nRunRouteImport } from './routes/api/n8n-run'
 import { Route as ApiN8nQaRouteImport } from './routes/api/n8n-qa'
 import { Route as ApiN8nProcessRouteImport } from './routes/api/n8n-process'
 import { Route as ApiN8nEmailRouteImport } from './routes/api/n8n-email'
 import { Route as ApiN8nDeleteRouteImport } from './routes/api/n8n-delete'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/_authenticated/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
@@ -48,73 +48,73 @@ const ApiN8nDeleteRoute = ApiN8nDeleteRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
+  '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
+  '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/api/n8n-delete'
     | '/api/n8n-email'
     | '/api/n8n-process'
     | '/api/n8n-qa'
     | '/api/n8n-run'
+    | '/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/api/n8n-delete'
     | '/api/n8n-email'
     | '/api/n8n-process'
     | '/api/n8n-qa'
     | '/api/n8n-run'
+    | '/'
   id:
     | '__root__'
-    | '/'
     | '/api/n8n-delete'
     | '/api/n8n-email'
     | '/api/n8n-process'
     | '/api/n8n-qa'
     | '/api/n8n-run'
+    | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   ApiN8nDeleteRoute: typeof ApiN8nDeleteRoute
   ApiN8nEmailRoute: typeof ApiN8nEmailRoute
   ApiN8nProcessRoute: typeof ApiN8nProcessRoute
   ApiN8nQaRoute: typeof ApiN8nQaRoute
   ApiN8nRunRoute: typeof ApiN8nRunRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/n8n-run': {
@@ -156,13 +156,23 @@ declare module '@tanstack/react-router' {
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   ApiN8nDeleteRoute: ApiN8nDeleteRoute,
   ApiN8nEmailRoute: ApiN8nEmailRoute,
   ApiN8nProcessRoute: ApiN8nProcessRoute,
   ApiN8nQaRoute: ApiN8nQaRoute,
   ApiN8nRunRoute: ApiN8nRunRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

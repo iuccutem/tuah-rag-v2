@@ -45,7 +45,7 @@ import { QuestionPasteBox } from "@/components/qa-dashboard/QuestionPasteBox";
 
 
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "Q&A Evaluation — Sheets" },
