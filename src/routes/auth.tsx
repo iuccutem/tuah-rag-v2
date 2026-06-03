@@ -29,6 +29,11 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: "",
+    message: "",
+  });
 
   useEffect(() => {
     const check = async () => {
