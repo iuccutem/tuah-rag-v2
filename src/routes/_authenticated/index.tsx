@@ -647,14 +647,6 @@ function DashboardPage() {
         <div className="flex h-7 items-center gap-2 rounded-t-md border-t-2 border-primary bg-card px-3 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]">
           Q&amp;A Evaluations
         </div>
-        <button
-          type="button"
-          onClick={() => setRegisterOpen(true)}
-          className="flex h-7 items-center gap-1.5 rounded-t-md border-t-2 border-transparent px-3 text-[13px] font-medium text-foreground/70 hover:bg-muted/60 hover:text-foreground"
-        >
-          <UserPlus className="h-3.5 w-3.5" />
-          Register
-        </button>
         <div className="ml-auto text-[11px] text-muted-foreground tabular-nums">
 
           {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
