@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, LogIn, Sheet as SheetIcon, UserPlus } from "lucide-react";
+import { Loader2, LogIn, Sheet as SheetIcon } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,11 +16,8 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-type Mode = "signin" | "signup";
-
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -52,34 +49,14 @@ function AuthPage() {
       toast.error("Email and password are required.");
       return;
     }
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters.");
-      return;
-    }
     setBusy(true);
     try {
-      if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email: trimmedEmail,
-          password,
-          options: { emailRedirectTo: `${window.location.origin}/` },
-        });
-        if (error) throw error;
-        if (data.session) {
-          toast.success("Account created.");
-          navigate({ to: "/" });
-        } else {
-          toast.success("Account created. Check your email to confirm, then sign in.");
-          setMode("signin");
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: trimmedEmail,
-          password,
-        });
-        if (error) throw error;
-        navigate({ to: "/" });
-      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password,
+      });
+      if (error) throw error;
+      navigate({ to: "/" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Authentication failed.");
     } finally {
@@ -95,8 +72,6 @@ function AuthPage() {
     );
   }
 
-  const isSignup = mode === "signup";
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--sheets-toolbar-bg)] px-4">
       <div className="w-full max-w-sm rounded-xl border border-[var(--sheets-grid)] bg-card p-6 shadow-sm">
@@ -106,33 +81,8 @@ function AuthPage() {
           </div>
           <div>
             <h1 className="text-[16px] font-semibold leading-tight">Q&amp;A Evaluation</h1>
-            <p className="text-[12px] text-muted-foreground">
-              {isSignup ? "Create your account" : "Sign in to continue"}
-            </p>
+            <p className="text-[12px] text-muted-foreground">Sign in to continue</p>
           </div>
-        </div>
-
-        <div className="mb-4 grid grid-cols-2 gap-1 rounded-md bg-muted p-1 text-[12px]">
-          <button
-            type="button"
-            onClick={() => setMode("signin")}
-            className={`rounded px-3 py-1.5 font-medium transition-colors ${
-              !isSignup ? "bg-card shadow-sm" : "text-muted-foreground"
-            }`}
-            disabled={busy}
-          >
-            Sign in
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("signup")}
-            className={`rounded px-3 py-1.5 font-medium transition-colors ${
-              isSignup ? "bg-card shadow-sm" : "text-muted-foreground"
-            }`}
-            disabled={busy}
-          >
-            Register
-          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -153,23 +103,16 @@ function AuthPage() {
             <Input
               id="password"
               type="password"
-              autoComplete={isSignup ? "new-password" : "current-password"}
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={busy}
-              minLength={6}
               required
             />
           </div>
           <Button type="submit" disabled={busy} className="w-full gap-2">
-            {busy ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : isSignup ? (
-              <UserPlus className="h-4 w-4" />
-            ) : (
-              <LogIn className="h-4 w-4" />
-            )}
-            {isSignup ? "Create account" : "Sign in"}
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+            Sign in
           </Button>
         </form>
       </div>
