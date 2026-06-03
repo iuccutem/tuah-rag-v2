@@ -329,8 +329,8 @@ function DashboardPage() {
 
   return (
     <div className="flex h-screen min-h-screen flex-col bg-[var(--sheets-toolbar-bg)] text-foreground">
-      {/* Top bar — file name + menu */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--sheets-grid)] bg-card px-3 pt-2 pb-1">
+      {/* Top bar — file name + account actions */}
+      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--sheets-grid)] bg-card px-3 pt-2 pb-2">
         <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
           <SheetIcon className="h-5 w-5 text-primary" />
         </div>
@@ -342,7 +342,42 @@ function DashboardPage() {
             Last edit was at {lastUpdated}
           </div>
         </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={openEmailDialog}
+            disabled={sendingEmail}
+            title="Send evaluation report by email"
+            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted disabled:opacity-50"
+          >
+            <Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+            <span className="hidden sm:inline">Email</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setRegisterOpen(true)}
+            title="Register a new user"
+            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span className="hidden sm:inline">Register</span>
+          </button>
+          <div className="mx-1 h-5 w-px bg-[var(--sheets-grid)]" />
+          <button
+            type="button"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              navigate({ to: "/auth" });
+            }}
+            title="Sign out"
+            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Sign out</span>
+          </button>
+        </div>
       </div>
+
 
 
       {/* Toolbar */}
@@ -546,32 +581,12 @@ function DashboardPage() {
           />
         </ToolbarGroup>
 
-        {/* Right side */}
-        <div className="ml-auto flex items-center gap-1">
-          <ToolbarAction
-            onClick={openEmailDialog}
-            disabled={sendingEmail}
-            icon={<Mail className={sendingEmail ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />}
-            label="Send email"
-            title="Send evaluation report by email"
-          />
-          <ToolbarAction
-            onClick={() => setRegisterOpen(true)}
-            icon={<UserPlus className="h-4 w-4 text-muted-foreground" />}
-            label="Register"
-            title="Register a new user"
-          />
-          <ToolbarAction
-            onClick={async () => {
-              await supabase.auth.signOut();
-              navigate({ to: "/auth" });
-            }}
-            icon={<LogOut className="h-4 w-4 text-muted-foreground" />}
-            label="Sign out"
-            title="Sign out"
-          />
+        {/* Right side — sheet status */}
+        <div className="ml-auto flex items-center gap-2 text-[11px] text-muted-foreground tabular-nums">
+          {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
         </div>
       </div>
+
 
 
 
@@ -632,14 +647,6 @@ function DashboardPage() {
         <div className="flex h-7 items-center gap-2 rounded-t-md border-t-2 border-primary bg-card px-3 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]">
           Q&amp;A Evaluations
         </div>
-        <button
-          type="button"
-          onClick={() => setRegisterOpen(true)}
-          className="flex h-7 items-center gap-1.5 rounded-t-md border-t-2 border-transparent px-3 text-[13px] font-medium text-foreground/70 hover:bg-muted/60 hover:text-foreground"
-        >
-          <UserPlus className="h-3.5 w-3.5" />
-          Register
-        </button>
         <div className="ml-auto text-[11px] text-muted-foreground tabular-nums">
 
           {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
