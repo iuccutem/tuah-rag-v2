@@ -693,6 +693,25 @@ function DashboardPage() {
               {selectedRowIds.size === 1 ? "" : "s"}. Existing answers will be updated.
             </DialogDescription>
           </DialogHeader>
+          {(() => {
+            const qs = filteredRows
+              .filter((r) => selectedRowIds.has(r.id ?? r.question ?? ""))
+              .map((r) => (r.question ?? "").trim())
+              .filter(Boolean);
+            return (
+              <div className="max-h-64 overflow-auto rounded-md border border-[var(--sheets-grid)] bg-muted/30 p-2">
+                {qs.length === 0 ? (
+                  <p className="text-[12px] text-muted-foreground">No questions selected.</p>
+                ) : (
+                  <ol className="list-decimal space-y-1 pl-5 text-[13px] text-foreground">
+                    {qs.map((q, i) => (
+                      <li key={i} className="break-words">{q}</li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            );
+          })()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setPendingChannel(null)}>
               Cancel
