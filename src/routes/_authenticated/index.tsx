@@ -25,6 +25,8 @@ import ExcelJS from "exceljs";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { registerUser } from "@/lib/admin-users.functions";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -90,6 +92,7 @@ function DashboardPage() {
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registering, setRegistering] = useState(false);
+  const registerUserFn = useServerFn(registerUser);
   const [insertOpen, setInsertOpen] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -815,12 +818,7 @@ function DashboardPage() {
                 }
                 setRegistering(true);
                 try {
-                  const { error } = await supabase.auth.signUp({
-                    email,
-                    password: registerPassword,
-                    options: { emailRedirectTo: `${window.location.origin}/` },
-                  });
-                  if (error) throw error;
+                  await registerUserFn({ data: { email, password: registerPassword } });
                   toast.success("User registered.");
                   setRegisterEmail("");
                   setRegisterPassword("");
