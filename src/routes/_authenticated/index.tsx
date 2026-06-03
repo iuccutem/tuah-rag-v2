@@ -84,6 +84,7 @@ function DashboardPage() {
 
   const [sendingEmail, setSendingEmail] = useState(false);
   const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
+  const [pendingChannel, setPendingChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailAddress, setEmailAddress] = useState("");
   const [registerOpen, setRegisterOpen] = useState(false);
