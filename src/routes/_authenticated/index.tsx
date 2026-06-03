@@ -456,10 +456,10 @@ function DashboardPage() {
             target="_blank"
             rel="noopener noreferrer"
             className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/90 hover:bg-muted"
-            title="Open agent form to update answers"
+            title="Open agent form to sync the full Q&A sheet"
           >
             <ExternalLink className="h-4 w-4 text-primary" />
-            <span>Update answers</span>
+            <span>Sync Q&A sheet</span>
           </a>
         </ToolbarGroup>
 
