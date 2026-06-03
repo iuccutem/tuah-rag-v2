@@ -556,6 +556,12 @@ function DashboardPage() {
             title="Send evaluation report by email"
           />
           <ToolbarAction
+            onClick={() => setRegisterOpen(true)}
+            icon={<UserPlus className="h-4 w-4 text-muted-foreground" />}
+            label="Register"
+            title="Register a new user"
+          />
+          <ToolbarAction
             onClick={async () => {
               await supabase.auth.signOut();
               navigate({ to: "/auth" });
