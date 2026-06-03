@@ -84,6 +84,7 @@ function DashboardPage() {
 
   const [sendingEmail, setSendingEmail] = useState(false);
   const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
+  const [pendingChannel, setPendingChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailAddress, setEmailAddress] = useState("");
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -528,7 +529,7 @@ function DashboardPage() {
           <>
             <ToolbarGroup>
               <ToolbarAction
-                onClick={() => runChannel("web")}
+                onClick={() => setPendingChannel("web")}
                 disabled={runningChannel !== null}
                 title={`Run Web Chat agent (${selectedRowIds.size} selected)`}
                 icon={
@@ -542,7 +543,7 @@ function DashboardPage() {
                 badge={selectedRowIds.size}
               />
               <ToolbarAction
-                onClick={() => runChannel("telegram_whatsapp")}
+                onClick={() => setPendingChannel("telegram_whatsapp")}
                 disabled={runningChannel !== null}
                 title={`Run Telegram/WhatsApp agent (${selectedRowIds.size} selected)`}
                 icon={
@@ -556,7 +557,7 @@ function DashboardPage() {
                 badge={selectedRowIds.size}
               />
               <ToolbarAction
-                onClick={() => runChannel("both")}
+                onClick={() => setPendingChannel("both")}
                 disabled={runningChannel !== null}
                 title="Run both Web Chat and Telegram/WhatsApp agents"
                 icon={
@@ -568,6 +569,7 @@ function DashboardPage() {
                 }
                 label="Run Both"
               />
+
             </ToolbarGroup>
 
             <Divider />
@@ -670,6 +672,43 @@ function DashboardPage() {
           {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
         </div>
       </div>
+
+      {/* Run confirmation dialog */}
+      <Dialog
+        open={pendingChannel !== null}
+        onOpenChange={(o) => {
+          if (!o) setPendingChannel(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Run agent on selected rows?</DialogTitle>
+            <DialogDescription>
+              {pendingChannel === "web"
+                ? "Re-run the Web Chat agent"
+                : pendingChannel === "telegram_whatsapp"
+                  ? "Re-run the Telegram/WhatsApp agent"
+                  : "Re-run both Web Chat and Telegram/WhatsApp agents"}
+              {" "}for {selectedRowIds.size} selected question
+              {selectedRowIds.size === 1 ? "" : "s"}. Existing answers will be updated.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingChannel(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const ch = pendingChannel;
+                setPendingChannel(null);
+                if (ch) runChannel(ch);
+              }}
+            >
+              Confirm & Run
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Email dialog */}
       <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
