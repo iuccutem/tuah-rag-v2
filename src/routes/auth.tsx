@@ -22,12 +22,26 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // Redirect away if already signed in
+  // Redirect away if already signed in (and keep listening)
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/" });
+    const check = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        navigate({ to: "/" });
+      } else {
+        setCheckingAuth(false);
+      }
+    };
+    check();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        navigate({ to: "/" });
+      }
     });
+    return () => listener.subscription.unsubscribe();
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,6 +79,14 @@ function AuthPage() {
       setBusy(false);
     }
   };
+
+  if (checkingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--sheets-toolbar-bg)] px-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--sheets-toolbar-bg)] px-4">
