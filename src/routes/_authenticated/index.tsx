@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   RefreshCw,
   AlertCircle,
-  Mail,
+  Download,
   Sheet as SheetIcon,
   ListPlus,
   Highlighter,
@@ -21,6 +21,7 @@ import {
   LogOut,
   UserPlus,
 } from "lucide-react";
+import ExcelJS from "exceljs";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
