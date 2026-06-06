@@ -61,35 +61,36 @@ export const Route = createFileRoute("/api/n8n-delete")({
         }> = [];
 
         for (const { id, question } of items) {
-          try {
-            const res = await fetch(WEBHOOK_URL, {
-              method: "POST",
-              headers: {
-                Authorization: `Basic ${auth}`,
-                "Content-Type": "application/json",
-                Accept: "application/json",
-              },
-              body: JSON.stringify({ id, question }),
-            });
-            if (!res.ok) {
-              results.push({
-                id,
-                question,
-                ok: false,
-                error: `Webhook returned ${res.status}`,
+          let okAll = true;
+          let lastError: string | undefined;
+          for (const url of WEBHOOK_URLS) {
+            try {
+              const res = await fetch(url, {
+                method: "POST",
+                headers: {
+                  Authorization: `Basic ${auth}`,
+                  "Content-Type": "application/json",
+                  Accept: "application/json",
+                },
+                body: JSON.stringify({ id, question }),
               });
-            } else {
-              results.push({ id, question, ok: true });
+              if (!res.ok) {
+                okAll = false;
+                lastError = `Webhook returned ${res.status}`;
+                break;
+              }
+            } catch (error) {
+              okAll = false;
+              lastError =
+                error instanceof Error ? error.message : "Failed to reach webhook.";
+              break;
             }
-          } catch (error) {
-            results.push({
-              id,
-              question,
-              ok: false,
-              error:
-                error instanceof Error ? error.message : "Failed to reach webhook.",
-            });
           }
+          results.push(
+            okAll
+              ? { id, question, ok: true }
+              : { id, question, ok: false, error: lastError },
+          );
         }
 
         const okCount = results.filter((r) => r.ok).length;
