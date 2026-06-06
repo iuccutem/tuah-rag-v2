@@ -208,9 +208,19 @@ function DashboardPage() {
       toast.error("Selected rows have no questions to delete.");
       return;
     }
-    if (!confirm(`Delete ${items.length} selected question${items.length === 1 ? "" : "s"}?`)) return;
-    await deleteByItems(items);
-    setSelectedRowIds(new Set());
+    setDeleteConfirm({ open: true, items });
+  };
+
+  const confirmDelete = async () => {
+    const items = deleteConfirm.items;
+    setDeleting(true);
+    try {
+      await deleteByItems(items);
+      setSelectedRowIds(new Set());
+      setDeleteConfirm({ open: false, items: [] });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const postDelete = async (
