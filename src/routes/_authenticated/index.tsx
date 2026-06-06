@@ -99,6 +99,11 @@ function DashboardPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    open: boolean;
+    items: Array<{ id: string | number | null; question: string }>;
+  }>({ open: false, items: [] });
+  const [deleting, setDeleting] = useState(false);
   const [formats, setFormats] = useState<FormatsMap>(() => {
     if (typeof window === "undefined") return {};
     try {
