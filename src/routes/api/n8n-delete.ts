@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-const WEBHOOK_URL =
-  "https://tuah.utem.edu.my/agent/webhook/498f1285-dd47-489f-bf00-17487742d2c6";
+const WEBHOOK_URLS = [
+  "https://tuah.utem.edu.my/agent/webhook/498f1285-dd47-489f-bf00-17487742d2c6",
+  "https://tuah.utem.edu.my/agent/webhook/911d5dbc-b215-4beb-8416-98098fa7d5d0",
+];
 
 export const Route = createFileRoute("/api/n8n-delete")({
   server: {
