@@ -191,28 +191,33 @@ function DashboardPage() {
       toast.error("No rows selected.");
       return;
     }
-    const questions: string[] = [];
+    const items: Array<{ id: string | number | null; question: string }> = [];
     for (const row of filteredRows) {
-      const id = row.id ?? row.question ?? "";
-      if (selectedRowIds.has(id)) {
+      const key = row.id ?? row.question ?? "";
+      if (selectedRowIds.has(key)) {
         const q = (row.question ?? "").trim();
-        if (q) questions.push(q);
+        if (q) items.push({ id: row.id ?? null, question: q });
       }
     }
-    if (questions.length === 0) {
+    if (items.length === 0) {
       toast.error("Selected rows have no questions to delete.");
       return;
     }
-    if (!confirm(`Delete ${questions.length} selected question${questions.length === 1 ? "" : "s"}?`)) return;
-    await deleteByQuestions(questions);
+    if (!confirm(`Delete ${items.length} selected question${items.length === 1 ? "" : "s"}?`)) return;
+    await deleteByItems(items);
     setSelectedRowIds(new Set());
   };
 
-  const postDelete = async (questions: string[]) => {
+  const postDelete = async (
+    items: Array<{ id: string | number | null; question: string }>,
+  ) => {
     const res = await fetch("/api/n8n-delete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questions }),
+      body: JSON.stringify({
+        items,
+        questions: items.map((i) => i.question),
+      }),
     });
     return (await res.json()) as {
       ok: boolean;
@@ -222,8 +227,12 @@ function DashboardPage() {
     };
   };
 
-  const deleteByQuestions = async (questions: string[]) => {
-    const cleaned = questions.map((q) => q.trim()).filter(Boolean);
+  const deleteByItems = async (
+    items: Array<{ id: string | number | null; question: string }>,
+  ) => {
+    const cleaned = items
+      .map((i) => ({ id: i.id ?? null, question: (i.question ?? "").trim() }))
+      .filter((i) => i.question);
     if (cleaned.length === 0) {
       toast.error("No questions to delete.");
       return;
