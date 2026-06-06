@@ -886,6 +886,69 @@ function DashboardPage() {
           </div>
         </div>
       )}
+
+      <Dialog
+        open={deleteConfirm.open}
+        onOpenChange={(o) =>
+          !deleting && setDeleteConfirm((d) => ({ ...d, open: o }))
+        }
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Delete {deleteConfirm.items.length} question
+              {deleteConfirm.items.length === 1 ? "" : "s"}?
+            </DialogTitle>
+            <DialogDescription>
+              This will remove the selected row{deleteConfirm.items.length === 1 ? "" : "s"} from the knowledge base. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-48 overflow-y-auto rounded-md border border-[var(--sheets-grid)] bg-muted/30 p-2 text-[13px]">
+            <ul className="space-y-1">
+              {deleteConfirm.items.slice(0, 20).map((it, i) => (
+                <li key={i} className="truncate">
+                  <span className="font-mono text-muted-foreground">
+                    #{it.id ?? "—"}
+                  </span>{" "}
+                  {it.question}
+                </li>
+              ))}
+              {deleteConfirm.items.length > 20 && (
+                <li className="text-muted-foreground">
+                  …and {deleteConfirm.items.length - 20} more
+                </li>
+              )}
+            </ul>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirm({ open: false, items: [] })}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
