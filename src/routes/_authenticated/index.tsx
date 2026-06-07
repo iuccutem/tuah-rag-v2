@@ -213,62 +213,48 @@ function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formats, filteredRows, optimisticFlags]);
 
-  const toggleFlag = async (
+  const sendRowFlags = async (
     rowId: string | number,
-    col: FlagCol,
-    kind: "error" | "highlight",
-    nextValue: boolean,
+    row: QARow,
+    overrides: Partial<Record<`${FlagCol}_${"error" | "highlight"}`, boolean>>,
   ) => {
-    const field = `${col}_${kind}`;
-    const optKey = `${rowId}::${field}`;
-    const row = filteredRows.find(
-      (r, i) => ((r.id ?? r.question ?? i) as string | number) === rowId,
-    );
-    setOptimisticFlags((p) => ({ ...p, [optKey]: nextValue }));
-
-    // Always send the full flag set for this row.
     const allFields = [
       "telegram_whatsapp_error",
       "web_error",
       "telegram_whatsapp_highlight",
       "web_highlight",
     ] as const;
+
     const flags: Record<string, boolean> = {};
+    const optimisticPatch: Record<string, boolean> = {};
     for (const f of allFields) {
-      if (f === field) {
-        flags[f] = nextValue;
-      } else if (row) {
-        const [c, k] = f.endsWith("_highlight")
-          ? [f.replace("_highlight", ""), "highlight" as const]
-          : [f.replace("_error", ""), "error" as const];
-        flags[f] = readFlag(row, c as FlagCol, k);
-      } else {
-        flags[f] = false;
-      }
+      const [c, k] = f.endsWith("_highlight")
+        ? [f.replace("_highlight", "") as FlagCol, "highlight" as const]
+        : [f.replace("_error", "") as FlagCol, "error" as const];
+      const next = overrides[f] !== undefined ? overrides[f]! : readFlag(row, c, k);
+      flags[f] = next;
+      optimisticPatch[`${rowId}::${f}`] = next;
     }
+
+    setOptimisticFlags((p) => ({ ...p, ...optimisticPatch }));
 
     try {
       const res = await fetch("/api/n8n-flag", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: rowId, column: field, value: nextValue, ...flags }),
+        body: JSON.stringify({ id: rowId, ...flags }),
       });
       const json = (await res.json()) as { ok: boolean; error?: string };
       if (!json.ok) throw new Error(json.error || "Failed to update.");
-      // Pull fresh rows so the optimistic value can be released.
       await refetch();
-      setOptimisticFlags((p) => {
-        const n = { ...p };
-        delete n[optKey];
-        return n;
-      });
     } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update.");
+    } finally {
       setOptimisticFlags((p) => {
         const n = { ...p };
-        delete n[optKey];
+        for (const k of Object.keys(optimisticPatch)) delete n[k];
         return n;
       });
-      toast.error(e instanceof Error ? e.message : "Failed to update.");
     }
   };
 
@@ -282,7 +268,6 @@ function DashboardPage() {
     const col = QA_COLUMNS[selection.col];
     const colKey = col.key as string;
 
-    // Only the web and telegram_whatsapp columns are flag-tracked in the DB.
     if (colKey !== "web" && colKey !== "telegram_whatsapp") {
       toast.error(
         `Only "Web" and "Telegram/WhatsApp" cells can be flagged. Selected: ${col.label}.`,
@@ -295,20 +280,16 @@ function DashboardPage() {
       toast.error("Row has no id; cannot persist.");
       return;
     }
+
+    const overrides: Partial<Record<`${FlagCol}_${"error" | "highlight"}`, boolean>> = {};
     if (patch === null) {
-      if (readFlag(row, colKey, "error")) toggleFlag(rowId, colKey, "error", false);
-      if (readFlag(row, colKey, "highlight")) toggleFlag(rowId, colKey, "highlight", false);
-      return;
+      overrides[`${colKey}_error`] = false;
+      overrides[`${colKey}_highlight`] = false;
+    } else {
+      if (patch.highlight) overrides[`${colKey}_highlight`] = true;
+      if (patch.error) overrides[`${colKey}_error`] = true;
     }
-    if (patch.highlight !== undefined) {
-      const next = !readFlag(row, colKey, "highlight");
-      toggleFlag(rowId, colKey, "highlight", next);
-    }
-    if (patch.error !== undefined) {
-      const next = !readFlag(row, colKey, "error");
-      toggleFlag(rowId, colKey, "error", next);
-    }
-    return;
+    void sendRowFlags(rowId, row, overrides);
   };
 
   const existingQuestions = useMemo(
