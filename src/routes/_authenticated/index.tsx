@@ -282,28 +282,34 @@ function DashboardPage() {
     const col = QA_COLUMNS[selection.col];
     const colKey = col.key as string;
 
-    // DB-backed flag columns: persist via webhook, toggle on repeat clicks.
-    if (colKey === "web" || colKey === "telegram_whatsapp") {
-      const rowId = (row.id ?? row.question ?? "") as string | number;
-      if (rowId === "") {
-        toast.error("Row has no id; cannot persist.");
-        return;
-      }
-      if (patch === null) {
-        if (readFlag(row, colKey, "error")) toggleFlag(rowId, colKey, "error", false);
-        if (readFlag(row, colKey, "highlight")) toggleFlag(rowId, colKey, "highlight", false);
-        return;
-      }
-      if (patch.highlight !== undefined) {
-        const next = !readFlag(row, colKey, "highlight");
-        toggleFlag(rowId, colKey, "highlight", next);
-      }
-      if (patch.error !== undefined) {
-        const next = !readFlag(row, colKey, "error");
-        toggleFlag(rowId, colKey, "error", next);
-      }
+    // Only the web and telegram_whatsapp columns are flag-tracked in the DB.
+    if (colKey !== "web" && colKey !== "telegram_whatsapp") {
+      toast.error(
+        `Only "Web" and "Telegram/WhatsApp" cells can be flagged. Selected: ${col.label}.`,
+      );
       return;
     }
+
+    const rowId = (row.id ?? "") as string | number;
+    if (rowId === "" || rowId == null) {
+      toast.error("Row has no id; cannot persist.");
+      return;
+    }
+    if (patch === null) {
+      if (readFlag(row, colKey, "error")) toggleFlag(rowId, colKey, "error", false);
+      if (readFlag(row, colKey, "highlight")) toggleFlag(rowId, colKey, "highlight", false);
+      return;
+    }
+    if (patch.highlight !== undefined) {
+      const next = !readFlag(row, colKey, "highlight");
+      toggleFlag(rowId, colKey, "highlight", next);
+    }
+    if (patch.error !== undefined) {
+      const next = !readFlag(row, colKey, "error");
+      toggleFlag(rowId, colKey, "error", next);
+    }
+    return;
+  };
 
     // Other columns keep their local-only formatting in localStorage.
     const key = formatKey(row.id ?? selection.row, colKey);
