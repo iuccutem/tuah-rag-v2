@@ -262,7 +262,9 @@ function DashboardPage() {
       // Success only when the workflow confirms with the expected message.
       if (json.ok && json.deleted === cleaned.length) {
         toast.success(
-          `Deleted ${json.deleted}/${json.total ?? cleaned.length} question${cleaned.length === 1 ? "" : "s"}.`,
+          `Deleted ${json.deleted}/${json.total ?? cleaned.length} question${
+            cleaned.length === 1 ? "" : "s"
+          }.`,
         );
         // Auto-refresh: trigger the fetch-table webhook and wait for it to finish
         // before hiding the loading overlay so the new table shows immediately.
@@ -288,7 +290,9 @@ function DashboardPage() {
         setSelection(null);
       } else {
         const firstError =
-          json.results?.find((r) => !r.ok)?.error ?? json.error ?? "Workflow did not confirm success.";
+          json.results?.find((r) => !r.ok)?.error ??
+          json.error ??
+          "Workflow did not confirm success.";
         toast.error(firstError);
       }
     } catch (e) {
