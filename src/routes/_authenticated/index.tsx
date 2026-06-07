@@ -628,6 +628,10 @@ function DashboardPage() {
             href="https://tuah.utem.edu.my/agent/form/3711c0e7-968e-4fea-ab27-31a4da013a7f"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => {
+              setSyncPhase("waiting");
+              setSyncing(true);
+            }}
             className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/90 hover:bg-muted"
             title="Open agent form to sync the full Q&A sheet"
           >
