@@ -15,6 +15,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as ApiN8nRunRouteImport } from './routes/api/n8n-run'
 import { Route as ApiN8nQaRouteImport } from './routes/api/n8n-qa'
 import { Route as ApiN8nProcessRouteImport } from './routes/api/n8n-process'
+import { Route as ApiN8nFlagRouteImport } from './routes/api/n8n-flag'
 import { Route as ApiN8nEmailRouteImport } from './routes/api/n8n-email'
 import { Route as ApiN8nDeleteRouteImport } from './routes/api/n8n-delete'
 
@@ -47,6 +48,11 @@ const ApiN8nProcessRoute = ApiN8nProcessRouteImport.update({
   path: '/api/n8n-process',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiN8nFlagRoute = ApiN8nFlagRouteImport.update({
+  id: '/api/n8n-flag',
+  path: '/api/n8n-flag',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiN8nEmailRoute = ApiN8nEmailRouteImport.update({
   id: '/api/n8n-email',
   path: '/api/n8n-email',
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
+  '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
+  '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
@@ -82,6 +90,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
+  '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/api/n8n-delete'
     | '/api/n8n-email'
+    | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
     | '/api/n8n-run'
@@ -102,6 +112,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/api/n8n-delete'
     | '/api/n8n-email'
+    | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
     | '/api/n8n-run'
@@ -112,6 +123,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/api/n8n-delete'
     | '/api/n8n-email'
+    | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
     | '/api/n8n-run'
@@ -123,6 +135,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ApiN8nDeleteRoute: typeof ApiN8nDeleteRoute
   ApiN8nEmailRoute: typeof ApiN8nEmailRoute
+  ApiN8nFlagRoute: typeof ApiN8nFlagRoute
   ApiN8nProcessRoute: typeof ApiN8nProcessRoute
   ApiN8nQaRoute: typeof ApiN8nQaRoute
   ApiN8nRunRoute: typeof ApiN8nRunRoute
@@ -172,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiN8nProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/n8n-flag': {
+      id: '/api/n8n-flag'
+      path: '/api/n8n-flag'
+      fullPath: '/api/n8n-flag'
+      preLoaderRoute: typeof ApiN8nFlagRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/n8n-email': {
       id: '/api/n8n-email'
       path: '/api/n8n-email'
@@ -205,6 +225,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ApiN8nDeleteRoute: ApiN8nDeleteRoute,
   ApiN8nEmailRoute: ApiN8nEmailRoute,
+  ApiN8nFlagRoute: ApiN8nFlagRoute,
   ApiN8nProcessRoute: ApiN8nProcessRoute,
   ApiN8nQaRoute: ApiN8nQaRoute,
   ApiN8nRunRoute: ApiN8nRunRoute,
@@ -212,3 +233,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
