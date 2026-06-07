@@ -267,9 +267,22 @@ function DashboardPage() {
         // Auto-refresh: trigger the fetch-table webhook and wait for it to finish
         // before hiding the loading overlay so the new table shows immediately.
         setDeletePhase("refreshing");
-        const refreshed = await refetch();
-        if (refreshed.error) {
-          throw refreshed.error;
+        const deletedIds = new Set(
+          cleaned
+            .map((item) => item.id)
+            .filter((id): id is string | number => id !== null),
+        );
+        let refreshed = await refetch();
+        if (refreshed.error) throw refreshed.error;
+        for (let attempt = 0; attempt < 8; attempt += 1) {
+          const refreshedRows = refreshed.data?.data ?? [];
+          const deletedRowsStillVisible = refreshedRows.some(
+            (row) => row.id != null && deletedIds.has(row.id),
+          );
+          if (!deletedRowsStillVisible) break;
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          refreshed = await refetch();
+          if (refreshed.error) throw refreshed.error;
         }
         setSelectedRowIds(new Set());
         setSelection(null);
