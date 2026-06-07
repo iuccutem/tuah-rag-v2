@@ -201,11 +201,11 @@ function DashboardPage() {
       const key = row.id ?? row.question ?? "";
       if (selectedRowIds.has(key)) {
         const q = (row.question ?? "").trim();
-        if (q) items.push({ id: row.id ?? null, question: q });
+        items.push({ id: row.id ?? null, question: q || "null" });
       }
     }
     if (items.length === 0) {
-      toast.error("Selected rows have no questions to delete.");
+      toast.error("No rows selected.");
       return;
     }
     setDeleteConfirm({ open: true, items });
@@ -245,9 +245,10 @@ function DashboardPage() {
   const deleteByItems = async (
     items: Array<{ id: string | number | null; question: string }>,
   ) => {
-    const cleaned = items
-      .map((i) => ({ id: i.id ?? null, question: (i.question ?? "").trim() }))
-      .filter((i) => i.question);
+    const cleaned = items.map((i) => ({
+      id: i.id ?? null,
+      question: (i.question ?? "").trim() || "null",
+    }));
     if (cleaned.length === 0) {
       toast.error("No questions to delete.");
       return;
