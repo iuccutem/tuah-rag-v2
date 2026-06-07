@@ -33,16 +33,15 @@ export const Route = createFileRoute("/api/n8n-delete")({
 
         let items: Array<{ id: string | number | null; question: string }> = [];
         if (Array.isArray(body.items)) {
-          items = body.items
-            .map((i) => ({
-              id: i?.id ?? null,
-              question: String(i?.question ?? "").trim(),
-            }))
-            .filter((i) => i.question);
+          items = body.items.map((i) => ({
+            id: i?.id ?? null,
+            question: (i?.question ?? "").trim() || "null",
+          }));
         } else if (Array.isArray(body.questions)) {
-          items = body.questions
-            .map((q) => ({ id: null, question: String(q).trim() }))
-            .filter((i) => i.question);
+          items = body.questions.map((q) => ({
+            id: null,
+            question: String(q).trim() || "null",
+          }));
         }
 
         if (items.length === 0) {
