@@ -119,6 +119,8 @@ function DashboardPage() {
       return {};
     }
   });
+  // In-flight optimistic flag overrides keyed by `${rowId}::${dbField}`.
+  const [optimisticFlags, setOptimisticFlags] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -172,6 +174,79 @@ function DashboardPage() {
     return result;
   }, [rows, searchQuery, dateFrom, dateTo]);
 
+  // Helpers to read a flag (server value, optionally overridden by an in-flight
+  // optimistic toggle) and to merge DB-driven flags into the formats map that
+  // QATable consumes for cell styling.
+  const flagFields = ["web", "telegram_whatsapp"] as const;
+  type FlagCol = (typeof flagFields)[number];
+
+  const readFlag = (
+    row: QARow,
+    col: FlagCol,
+    kind: "error" | "highlight",
+  ): boolean => {
+    const field = `${col}_${kind}`;
+    const rowId = (row.id ?? row.question ?? "") as string | number;
+    const optKey = `${rowId}::${field}`;
+    if (optKey in optimisticFlags) return optimisticFlags[optKey];
+    return (row as unknown as Record<string, unknown>)[field] === true;
+  };
+
+  const derivedFormats = useMemo<FormatsMap>(() => {
+    const out: FormatsMap = { ...formats };
+    for (let i = 0; i < filteredRows.length; i += 1) {
+      const row = filteredRows[i];
+      const baseKey = (row.id ?? i) as string | number;
+      for (const col of flagFields) {
+        const error = readFlag(row, col, "error");
+        const highlight = readFlag(row, col, "highlight");
+        if (!error && !highlight) continue;
+        const k = formatKey(baseKey, col);
+        out[k] = {
+          ...out[k],
+          ...(highlight ? { highlight: true } : {}),
+          ...(error ? { error: true } : {}),
+        };
+      }
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formats, filteredRows, optimisticFlags]);
+
+  const toggleFlag = async (
+    rowId: string | number,
+    col: FlagCol,
+    kind: "error" | "highlight",
+    nextValue: boolean,
+  ) => {
+    const field = `${col}_${kind}`;
+    const optKey = `${rowId}::${field}`;
+    setOptimisticFlags((p) => ({ ...p, [optKey]: nextValue }));
+    try {
+      const res = await fetch("/api/n8n-flag", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: rowId, column: field, value: nextValue }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!json.ok) throw new Error(json.error || "Failed to update.");
+      // Pull fresh rows so the optimistic value can be released.
+      await refetch();
+      setOptimisticFlags((p) => {
+        const n = { ...p };
+        delete n[optKey];
+        return n;
+      });
+    } catch (e) {
+      setOptimisticFlags((p) => {
+        const n = { ...p };
+        delete n[optKey];
+        return n;
+      });
+      toast.error(e instanceof Error ? e.message : "Failed to update.");
+    }
+  };
+
   const applyFormat = (patch: CellFormat | null) => {
     if (selection?.mode !== "cell") {
       toast.error("Select a cell first.");
@@ -180,7 +255,33 @@ function DashboardPage() {
     const row = filteredRows[selection.row];
     if (!row) return;
     const col = QA_COLUMNS[selection.col];
-    const key = formatKey(row.id ?? selection.row, col.key as string);
+    const colKey = col.key as string;
+
+    // DB-backed flag columns: persist via webhook, toggle on repeat clicks.
+    if (colKey === "web" || colKey === "telegram_whatsapp") {
+      const rowId = (row.id ?? row.question ?? "") as string | number;
+      if (rowId === "") {
+        toast.error("Row has no id; cannot persist.");
+        return;
+      }
+      if (patch === null) {
+        if (readFlag(row, colKey, "error")) toggleFlag(rowId, colKey, "error", false);
+        if (readFlag(row, colKey, "highlight")) toggleFlag(rowId, colKey, "highlight", false);
+        return;
+      }
+      if (patch.highlight !== undefined) {
+        const next = !readFlag(row, colKey, "highlight");
+        toggleFlag(rowId, colKey, "highlight", next);
+      }
+      if (patch.error !== undefined) {
+        const next = !readFlag(row, colKey, "error");
+        toggleFlag(rowId, colKey, "error", next);
+      }
+      return;
+    }
+
+    // Other columns keep their local-only formatting in localStorage.
+    const key = formatKey(row.id ?? selection.row, colKey);
     setFormats((prev) => {
       const next = { ...prev };
       if (patch === null) {
