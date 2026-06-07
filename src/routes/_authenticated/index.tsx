@@ -1028,6 +1028,35 @@ function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Overlay shown while the user syncs via the external form and the
+          table refresh that follows. */}
+      {syncing && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-lg border border-[var(--sheets-grid)] bg-card px-8 py-6 shadow-lg">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="text-center">
+              <div className="text-[15px] font-medium text-foreground">
+                {syncPhase === "refreshing" ? "Refreshing table…" : "Syncing Q&A sheet…"}
+              </div>
+              <div className="mt-1 text-[12px] text-muted-foreground">
+                {syncPhase === "refreshing"
+                  ? "Loading the latest rows from the workflow."
+                  : "Complete the form in the new tab, then return here."}
+              </div>
+              {syncPhase === "waiting" && (
+                <button
+                  type="button"
+                  onClick={() => setSyncing(false)}
+                  className="mt-3 text-[12px] text-muted-foreground underline hover:text-foreground"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
