@@ -969,10 +969,12 @@ function DashboardPage() {
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
             <div className="text-center">
               <div className="text-[15px] font-medium text-foreground">
-                Deleting…
+                {deletePhase === "refreshing" ? "Refreshing table…" : "Deleting…"}
               </div>
               <div className="mt-1 text-[12px] text-muted-foreground">
-                Waiting for the workflow to confirm.
+                {deletePhase === "refreshing"
+                  ? "Waiting for the latest data from the workflow."
+                  : "Waiting for the workflow to confirm."}
               </div>
             </div>
           </div>
