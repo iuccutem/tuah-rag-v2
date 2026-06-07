@@ -3,12 +3,6 @@ import { createFileRoute } from "@tanstack/react-router";
 const WEBHOOK_URL =
   "https://tuah.utem.edu.my/agent/webhook/adf82095-c24f-4a8f-9e10-fca39d0452ff";
 
-const ALLOWED_COLUMNS = new Set([
-  "telegram_whatsapp_error",
-  "web_error",
-  "telegram_whatsapp_highlight",
-  "web_highlight",
-]);
 
 export const Route = createFileRoute("/api/n8n-flag")({
   server: {
