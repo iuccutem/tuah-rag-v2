@@ -311,20 +311,6 @@ function DashboardPage() {
     return;
   };
 
-    // Other columns keep their local-only formatting in localStorage.
-    const key = formatKey(row.id ?? selection.row, colKey);
-    setFormats((prev) => {
-      const next = { ...prev };
-      if (patch === null) {
-        delete next[key];
-      } else {
-        next[key] = { ...next[key], ...patch };
-        if (!next[key].highlight && !next[key].error) delete next[key];
-      }
-      return next;
-    });
-  };
-
   const existingQuestions = useMemo(
     () =>
       rows
