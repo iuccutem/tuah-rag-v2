@@ -106,6 +106,8 @@ function DashboardPage() {
   }>({ open: false, items: [] });
   const [deleting, setDeleting] = useState(false);
   const [deletePhase, setDeletePhase] = useState<"deleting" | "refreshing">("deleting");
+  const [syncing, setSyncing] = useState(false);
+  const [syncPhase, setSyncPhase] = useState<"waiting" | "refreshing">("waiting");
   const [formats, setFormats] = useState<FormatsMap>(() => {
     if (typeof window === "undefined") return {};
     try {
@@ -119,6 +121,26 @@ function DashboardPage() {
     if (typeof window === "undefined") return;
     localStorage.setItem("qa-formats", JSON.stringify(formats));
   }, [formats]);
+
+  // When the user returns from the external Sync form tab, auto-refresh the
+  // table and keep the overlay visible until the fresh data has loaded.
+  useEffect(() => {
+    if (!syncing || syncPhase !== "waiting") return;
+    const onFocus = async () => {
+      setSyncPhase("refreshing");
+      try {
+        const result = await refetch();
+        if (result.error) throw result.error;
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to refresh table.");
+      } finally {
+        setSyncing(false);
+        setSyncPhase("waiting");
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [syncing, syncPhase, refetch]);
 
   const rows = data?.data ?? [];
 
@@ -606,6 +628,10 @@ function DashboardPage() {
             href="https://tuah.utem.edu.my/agent/form/3711c0e7-968e-4fea-ab27-31a4da013a7f"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => {
+              setSyncPhase("waiting");
+              setSyncing(true);
+            }}
             className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/90 hover:bg-muted"
             title="Open agent form to sync the full Q&A sheet"
           >
@@ -998,6 +1024,35 @@ function DashboardPage() {
                   ? "Waiting for the latest data from the workflow."
                   : "Waiting for the workflow to confirm."}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay shown while the user syncs via the external form and the
+          table refresh that follows. */}
+      {syncing && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-lg border border-[var(--sheets-grid)] bg-card px-8 py-6 shadow-lg">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="text-center">
+              <div className="text-[15px] font-medium text-foreground">
+                {syncPhase === "refreshing" ? "Refreshing table…" : "Syncing Q&A sheet…"}
+              </div>
+              <div className="mt-1 text-[12px] text-muted-foreground">
+                {syncPhase === "refreshing"
+                  ? "Loading the latest rows from the workflow."
+                  : "Complete the form in the new tab, then return here."}
+              </div>
+              {syncPhase === "waiting" && (
+                <button
+                  type="button"
+                  onClick={() => setSyncing(false)}
+                  className="mt-3 text-[12px] text-muted-foreground underline hover:text-foreground"
+                >
+                  Cancel
+                </button>
+              )}
             </div>
           </div>
         </div>
