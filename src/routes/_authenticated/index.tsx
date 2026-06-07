@@ -213,11 +213,11 @@ function DashboardPage() {
 
   const confirmDelete = async () => {
     const items = deleteConfirm.items;
+    // Close the confirm dialog and switch to a full-screen loading overlay.
+    setDeleteConfirm({ open: false, items: [] });
     setDeleting(true);
     try {
       await deleteByItems(items);
-      setSelectedRowIds(new Set());
-      setDeleteConfirm({ open: false, items: [] });
     } finally {
       setDeleting(false);
     }
@@ -239,6 +239,7 @@ function DashboardPage() {
       deleted?: number;
       total?: number;
       error?: string;
+      results?: Array<{ ok: boolean; error?: string; message?: string }>;
     };
   };
 
@@ -255,18 +256,23 @@ function DashboardPage() {
     }
     try {
       const json = await postDelete(cleaned);
-      if (json.ok) {
+      // Success only when the workflow confirms with the expected message.
+      if (json.ok && json.deleted === cleaned.length) {
         toast.success(
-          `Deleted ${json.deleted ?? cleaned.length}/${json.total ?? cleaned.length} question${cleaned.length === 1 ? "" : "s"}.`,
+          `Deleted ${json.deleted}/${json.total ?? cleaned.length} question${cleaned.length === 1 ? "" : "s"}.`,
         );
-        refetch();
+        setSelectedRowIds(new Set());
+        await refetch();
       } else {
-        toast.error(json.error ?? "Failed to delete.");
+        const firstError =
+          json.results?.find((r) => !r.ok)?.error ?? json.error ?? "Workflow did not confirm success.";
+        toast.error(firstError);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to delete.");
     }
   };
+
 
 
 
@@ -950,9 +956,27 @@ function DashboardPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Full-screen loading overlay shown while the delete workflow runs. */}
+      {deleting && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-lg border border-[var(--sheets-grid)] bg-card px-8 py-6 shadow-lg">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="text-center">
+              <div className="text-[15px] font-medium text-foreground">
+                Deleting…
+              </div>
+              <div className="mt-1 text-[12px] text-muted-foreground">
+                Waiting for the workflow to confirm.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 function ToolbarButton({
   children,

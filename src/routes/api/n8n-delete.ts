@@ -57,11 +57,13 @@ export const Route = createFileRoute("/api/n8n-delete")({
           question: string;
           ok: boolean;
           error?: string;
+          message?: string;
         }> = [];
 
         for (const { id, question } of items) {
           let okAll = true;
           let lastError: string | undefined;
+          let lastMessage = "";
           for (const url of WEBHOOK_URLS) {
             try {
               const res = await fetch(url, {
@@ -73,6 +75,7 @@ export const Route = createFileRoute("/api/n8n-delete")({
                 },
                 body: JSON.stringify({ id, question }),
               });
+              lastMessage = await res.text();
               if (!res.ok) {
                 okAll = false;
                 lastError = `Webhook returned ${res.status}`;
@@ -85,10 +88,18 @@ export const Route = createFileRoute("/api/n8n-delete")({
               break;
             }
           }
+
+          const SUCCESS_MESSAGE = "Delete the auto-test delete workflow successfully.";
+          const messageOk = lastMessage.includes(SUCCESS_MESSAGE);
+          if (okAll && !messageOk) {
+            okAll = false;
+            lastError = `Unexpected webhook response: ${lastMessage.slice(0, 200) || "(empty)"}`;
+          }
+
           results.push(
             okAll
-              ? { id, question, ok: true }
-              : { id, question, ok: false, error: lastError },
+              ? { id, question, ok: true, message: lastMessage }
+              : { id, question, ok: false, error: lastError, message: lastMessage },
           );
         }
 
