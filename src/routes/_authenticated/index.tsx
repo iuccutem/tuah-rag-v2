@@ -104,6 +104,7 @@ function DashboardPage() {
     items: Array<{ id: string | number | null; question: string }>;
   }>({ open: false, items: [] });
   const [deleting, setDeleting] = useState(false);
+  const [deletePhase, setDeletePhase] = useState<"deleting" | "refreshing">("deleting");
   const [formats, setFormats] = useState<FormatsMap>(() => {
     if (typeof window === "undefined") return {};
     try {
