@@ -108,6 +108,7 @@ function DashboardPage() {
   const [deletePhase, setDeletePhase] = useState<"deleting" | "refreshing">("deleting");
   const [syncing, setSyncing] = useState(false);
   const [syncPhase, setSyncPhase] = useState<"waiting" | "refreshing">("waiting");
+  const [inserting, setInserting] = useState(false);
   const [formats, setFormats] = useState<FormatsMap>(() => {
     if (typeof window === "undefined") return {};
     try {
@@ -602,9 +603,17 @@ function DashboardPage() {
               </DialogHeader>
               <QuestionPasteBox
                 existingQuestions={existingQuestions}
-                onComplete={() => {
+                onComplete={async () => {
                   setInsertOpen(false);
-                  refetch();
+                  setInserting(true);
+                  try {
+                    const result = await refetch();
+                    if (result.error) throw result.error;
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Failed to refresh table.");
+                  } finally {
+                    setInserting(false);
+                  }
                 }}
               />
             </DialogContent>
@@ -1031,6 +1040,20 @@ function DashboardPage() {
 
       {/* Overlay shown while the user syncs via the external form and the
           table refresh that follows. */}
+      {inserting && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-lg border border-[var(--sheets-grid)] bg-card px-8 py-6 shadow-lg">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="text-center">
+              <div className="text-[15px] font-medium text-foreground">Refreshing table…</div>
+              <div className="mt-1 text-[12px] text-muted-foreground">
+                Loading the latest rows from the workflow.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {syncing && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4 rounded-lg border border-[var(--sheets-grid)] bg-card px-8 py-6 shadow-lg">
