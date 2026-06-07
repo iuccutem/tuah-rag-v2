@@ -263,6 +263,9 @@ function DashboardPage() {
           `Deleted ${json.deleted}/${json.total ?? cleaned.length} question${cleaned.length === 1 ? "" : "s"}.`,
         );
         setSelectedRowIds(new Set());
+        // Auto-refresh: trigger the fetch-table webhook and wait for it to finish
+        // before hiding the loading overlay so the new table shows immediately.
+        setDeletePhase("refreshing");
         await refetch();
       } else {
         const firstError =
