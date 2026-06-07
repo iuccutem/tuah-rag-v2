@@ -87,7 +87,9 @@ export const Route = createFileRoute("/api/n8n-delete")({
           const messageOk = lastMessage.includes(SUCCESS_MESSAGE);
           if (okAll && !messageOk) {
             okAll = false;
-            lastError = `Unexpected webhook response: ${lastMessage.slice(0, 200) || "(empty)"}`;
+            lastError = `Unexpected webhook response: ${
+              lastMessage.slice(0, 200) || "(empty)"
+            }`;
           }
 
           results.push(
