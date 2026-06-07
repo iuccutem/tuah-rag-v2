@@ -106,6 +106,8 @@ function DashboardPage() {
   }>({ open: false, items: [] });
   const [deleting, setDeleting] = useState(false);
   const [deletePhase, setDeletePhase] = useState<"deleting" | "refreshing">("deleting");
+  const [syncing, setSyncing] = useState(false);
+  const [syncPhase, setSyncPhase] = useState<"waiting" | "refreshing">("waiting");
   const [formats, setFormats] = useState<FormatsMap>(() => {
     if (typeof window === "undefined") return {};
     try {
