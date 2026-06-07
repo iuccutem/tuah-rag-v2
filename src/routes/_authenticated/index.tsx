@@ -216,6 +216,7 @@ function DashboardPage() {
     const items = deleteConfirm.items;
     // Close the confirm dialog and switch to a full-screen loading overlay.
     setDeleteConfirm({ open: false, items: [] });
+    setDeletePhase("deleting");
     setDeleting(true);
     try {
       await deleteByItems(items);
