@@ -84,6 +84,8 @@ function DashboardPage() {
       queryKey: ["qa-rows"],
       queryFn: fetchRows,
       refetchOnWindowFocus: false,
+      refetchInterval: 3000,
+      refetchIntervalInBackground: false,
     });
 
   const [exporting, setExporting] = useState(false);
