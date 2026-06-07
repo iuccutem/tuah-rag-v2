@@ -1,9 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-const WEBHOOK_URLS = [
-  "https://tuah.utem.edu.my/agent/webhook/498f1285-dd47-489f-bf00-17487742d2c6",
-  "https://tuah.utem.edu.my/agent/webhook/911d5dbc-b215-4beb-8416-98098fa7d5d0",
-];
+const DELETE_WEBHOOK_URL =
+  "https://tuah.utem.edu.my/agent/webhook/498f1285-dd47-489f-bf00-17487742d2c6";
+const SUCCESS_MESSAGE = "Delete the auto-test delete workflow successfully.";
 
 export const Route = createFileRoute("/api/n8n-delete")({
   server: {
@@ -64,36 +63,33 @@ export const Route = createFileRoute("/api/n8n-delete")({
           let okAll = true;
           let lastError: string | undefined;
           let lastMessage = "";
-          for (const url of WEBHOOK_URLS) {
-            try {
-              const res = await fetch(url, {
-                method: "POST",
-                headers: {
-                  Authorization: `Basic ${auth}`,
-                  "Content-Type": "application/json",
-                  Accept: "application/json",
-                },
-                body: JSON.stringify({ id, question }),
-              });
-              lastMessage = await res.text();
-              if (!res.ok) {
-                okAll = false;
-                lastError = `Webhook returned ${res.status}`;
-                break;
-              }
-            } catch (error) {
+          try {
+            const res = await fetch(DELETE_WEBHOOK_URL, {
+              method: "POST",
+              headers: {
+                Authorization: `Basic ${auth}`,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              },
+              body: JSON.stringify({ id, question }),
+            });
+            lastMessage = await res.text();
+            if (!res.ok) {
               okAll = false;
-              lastError =
-                error instanceof Error ? error.message : "Failed to reach webhook.";
-              break;
+              lastError = `Webhook returned ${res.status}`;
             }
+          } catch (error) {
+            okAll = false;
+            lastError =
+              error instanceof Error ? error.message : "Failed to reach webhook.";
           }
 
-          const SUCCESS_MESSAGE = "Delete the auto-test delete workflow successfully.";
           const messageOk = lastMessage.includes(SUCCESS_MESSAGE);
           if (okAll && !messageOk) {
             okAll = false;
-            lastError = `Unexpected webhook response: ${lastMessage.slice(0, 200) || "(empty)"}`;
+            lastError = `Unexpected webhook response: ${
+              lastMessage.slice(0, 200) || "(empty)"
+            }`;
           }
 
           results.push(

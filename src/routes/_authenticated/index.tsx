@@ -69,7 +69,8 @@ export const Route = createFileRoute("/_authenticated/")({
 type ApiResponse = { data: QARow[]; error: string | null };
 
 async function fetchRows(): Promise<ApiResponse> {
-  const res = await fetch("/api/n8n-qa", {
+  const res = await fetch(`/api/n8n-qa?ts=${Date.now()}`, {
+    cache: "no-store",
     headers: { Accept: "application/json" },
   });
   if (!res.ok) throw new Error(`Request failed: ${res.status}`);
@@ -261,16 +262,37 @@ function DashboardPage() {
       // Success only when the workflow confirms with the expected message.
       if (json.ok && json.deleted === cleaned.length) {
         toast.success(
-          `Deleted ${json.deleted}/${json.total ?? cleaned.length} question${cleaned.length === 1 ? "" : "s"}.`,
+          `Deleted ${json.deleted}/${json.total ?? cleaned.length} question${
+            cleaned.length === 1 ? "" : "s"
+          }.`,
         );
-        setSelectedRowIds(new Set());
         // Auto-refresh: trigger the fetch-table webhook and wait for it to finish
         // before hiding the loading overlay so the new table shows immediately.
         setDeletePhase("refreshing");
-        await refetch();
+        const deletedIds = new Set(
+          cleaned
+            .map((item) => item.id)
+            .filter((id): id is string | number => id !== null),
+        );
+        let refreshed = await refetch();
+        if (refreshed.error) throw refreshed.error;
+        for (let attempt = 0; attempt < 8; attempt += 1) {
+          const refreshedRows = refreshed.data?.data ?? [];
+          const deletedRowsStillVisible = refreshedRows.some(
+            (row) => row.id != null && deletedIds.has(row.id),
+          );
+          if (!deletedRowsStillVisible) break;
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          refreshed = await refetch();
+          if (refreshed.error) throw refreshed.error;
+        }
+        setSelectedRowIds(new Set());
+        setSelection(null);
       } else {
         const firstError =
-          json.results?.find((r) => !r.ok)?.error ?? json.error ?? "Workflow did not confirm success.";
+          json.results?.find((r) => !r.ok)?.error ??
+          json.error ??
+          "Workflow did not confirm success.";
         toast.error(firstError);
       }
     } catch (e) {
