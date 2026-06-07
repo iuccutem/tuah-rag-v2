@@ -884,7 +884,7 @@ function DashboardPage() {
           isLoading={isLoading}
           selection={selection}
           onSelectionChange={setSelection}
-          formats={formats}
+          formats={derivedFormats}
           selectedRowIds={selectedRowIds}
           onToggleRow={toggleRow}
           onSelectAll={selectAllRows}
