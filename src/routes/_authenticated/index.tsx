@@ -104,6 +104,7 @@ function DashboardPage() {
     items: Array<{ id: string | number | null; question: string }>;
   }>({ open: false, items: [] });
   const [deleting, setDeleting] = useState(false);
+  const [deletePhase, setDeletePhase] = useState<"deleting" | "refreshing">("deleting");
   const [formats, setFormats] = useState<FormatsMap>(() => {
     if (typeof window === "undefined") return {};
     try {
@@ -215,6 +216,7 @@ function DashboardPage() {
     const items = deleteConfirm.items;
     // Close the confirm dialog and switch to a full-screen loading overlay.
     setDeleteConfirm({ open: false, items: [] });
+    setDeletePhase("deleting");
     setDeleting(true);
     try {
       await deleteByItems(items);
@@ -262,6 +264,9 @@ function DashboardPage() {
           `Deleted ${json.deleted}/${json.total ?? cleaned.length} question${cleaned.length === 1 ? "" : "s"}.`,
         );
         setSelectedRowIds(new Set());
+        // Auto-refresh: trigger the fetch-table webhook and wait for it to finish
+        // before hiding the loading overlay so the new table shows immediately.
+        setDeletePhase("refreshing");
         await refetch();
       } else {
         const firstError =
@@ -964,10 +969,12 @@ function DashboardPage() {
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
             <div className="text-center">
               <div className="text-[15px] font-medium text-foreground">
-                Deleting…
+                {deletePhase === "refreshing" ? "Refreshing table…" : "Deleting…"}
               </div>
               <div className="mt-1 text-[12px] text-muted-foreground">
-                Waiting for the workflow to confirm.
+                {deletePhase === "refreshing"
+                  ? "Waiting for the latest data from the workflow."
+                  : "Waiting for the workflow to confirm."}
               </div>
             </div>
           </div>
