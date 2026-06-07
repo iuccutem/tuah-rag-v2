@@ -221,12 +221,37 @@ function DashboardPage() {
   ) => {
     const field = `${col}_${kind}`;
     const optKey = `${rowId}::${field}`;
+    const row = filteredRows.find(
+      (r, i) => ((r.id ?? r.question ?? i) as string | number) === rowId,
+    );
     setOptimisticFlags((p) => ({ ...p, [optKey]: nextValue }));
+
+    // Always send the full flag set for this row.
+    const allFields = [
+      "telegram_whatsapp_error",
+      "web_error",
+      "telegram_whatsapp_highlight",
+      "web_highlight",
+    ] as const;
+    const flags: Record<string, boolean> = {};
+    for (const f of allFields) {
+      if (f === field) {
+        flags[f] = nextValue;
+      } else if (row) {
+        const [c, k] = f.endsWith("_highlight")
+          ? [f.replace("_highlight", ""), "highlight" as const]
+          : [f.replace("_error", ""), "error" as const];
+        flags[f] = readFlag(row, c as FlagCol, k);
+      } else {
+        flags[f] = false;
+      }
+    }
+
     try {
       const res = await fetch("/api/n8n-flag", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: rowId, column: field, value: nextValue }),
+        body: JSON.stringify({ id: rowId, column: field, value: nextValue, ...flags }),
       });
       const json = (await res.json()) as { ok: boolean; error?: string };
       if (!json.ok) throw new Error(json.error || "Failed to update.");
