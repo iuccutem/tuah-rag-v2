@@ -122,6 +122,26 @@ function DashboardPage() {
     localStorage.setItem("qa-formats", JSON.stringify(formats));
   }, [formats]);
 
+  // When the user returns from the external Sync form tab, auto-refresh the
+  // table and keep the overlay visible until the fresh data has loaded.
+  useEffect(() => {
+    if (!syncing || syncPhase !== "waiting") return;
+    const onFocus = async () => {
+      setSyncPhase("refreshing");
+      try {
+        const result = await refetch();
+        if (result.error) throw result.error;
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to refresh table.");
+      } finally {
+        setSyncing(false);
+        setSyncPhase("waiting");
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [syncing, syncPhase, refetch]);
+
   const rows = data?.data ?? [];
 
   const filteredRows = useMemo(() => {
