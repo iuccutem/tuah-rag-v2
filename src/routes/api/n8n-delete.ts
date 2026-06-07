@@ -57,6 +57,7 @@ export const Route = createFileRoute("/api/n8n-delete")({
           question: string;
           ok: boolean;
           error?: string;
+          message?: string;
         }> = [];
 
         for (const { id, question } of items) {
