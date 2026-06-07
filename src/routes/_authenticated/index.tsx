@@ -603,9 +603,17 @@ function DashboardPage() {
               </DialogHeader>
               <QuestionPasteBox
                 existingQuestions={existingQuestions}
-                onComplete={() => {
+                onComplete={async () => {
                   setInsertOpen(false);
-                  refetch();
+                  setInserting(true);
+                  try {
+                    const result = await refetch();
+                    if (result.error) throw result.error;
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Failed to refresh table.");
+                  } finally {
+                    setInserting(false);
+                  }
                 }}
               />
             </DialogContent>
