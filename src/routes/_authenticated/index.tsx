@@ -177,7 +177,7 @@ function DashboardPage() {
   // Helpers to read a flag (server value, optionally overridden by an in-flight
   // optimistic toggle) and to merge DB-driven flags into the formats map that
   // QATable consumes for cell styling.
-  const flagFields = ["web", "telegram_whatsapp"] as const;
+  const flagFields = ["question", "web", "telegram_whatsapp"] as const;
   type FlagCol = (typeof flagFields)[number];
 
   const readFlag = (
@@ -219,6 +219,8 @@ function DashboardPage() {
     overrides: Partial<Record<`${FlagCol}_${"error" | "highlight"}`, boolean>>,
   ) => {
     const allFields = [
+      "question_error",
+      "question_highlight",
       "telegram_whatsapp_error",
       "web_error",
       "telegram_whatsapp_highlight",
@@ -268,9 +270,9 @@ function DashboardPage() {
     const col = QA_COLUMNS[selection.col];
     const colKey = col.key as string;
 
-    if (colKey !== "web" && colKey !== "telegram_whatsapp") {
+    if (colKey !== "web" && colKey !== "telegram_whatsapp" && colKey !== "question") {
       toast.error(
-        `Only "Web" and "Telegram/WhatsApp" cells can be flagged. Selected: ${col.label}.`,
+        `Only "Question", "Web" and "Telegram/WhatsApp" cells can be flagged. Selected: ${col.label}.`,
       );
       return;
     }
