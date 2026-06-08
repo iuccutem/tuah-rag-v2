@@ -219,6 +219,8 @@ function DashboardPage() {
     overrides: Partial<Record<`${FlagCol}_${"error" | "highlight"}`, boolean>>,
   ) => {
     const allFields = [
+      "question_error",
+      "question_highlight",
       "telegram_whatsapp_error",
       "web_error",
       "telegram_whatsapp_highlight",
