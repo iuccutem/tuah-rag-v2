@@ -19,6 +19,8 @@ export const Route = createFileRoute("/api/n8n-flag")({
 
         let body: {
           id?: string | number | null;
+          question_error?: boolean;
+          question_highlight?: boolean;
           telegram_whatsapp_error?: boolean;
           web_error?: boolean;
           telegram_whatsapp_highlight?: boolean;
@@ -36,6 +38,8 @@ export const Route = createFileRoute("/api/n8n-flag")({
 
         const payload = {
           id: body.id,
+          question_error: body.question_error === true,
+          question_highlight: body.question_highlight === true,
           telegram_whatsapp_error: body.telegram_whatsapp_error === true,
           web_error: body.web_error === true,
           telegram_whatsapp_highlight: body.telegram_whatsapp_highlight === true,
