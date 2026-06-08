@@ -177,7 +177,7 @@ function DashboardPage() {
   // Helpers to read a flag (server value, optionally overridden by an in-flight
   // optimistic toggle) and to merge DB-driven flags into the formats map that
   // QATable consumes for cell styling.
-  const flagFields = ["web", "telegram_whatsapp"] as const;
+  const flagFields = ["question", "web", "telegram_whatsapp"] as const;
   type FlagCol = (typeof flagFields)[number];
 
   const readFlag = (
