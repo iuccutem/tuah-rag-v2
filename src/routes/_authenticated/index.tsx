@@ -270,9 +270,9 @@ function DashboardPage() {
     const col = QA_COLUMNS[selection.col];
     const colKey = col.key as string;
 
-    if (colKey !== "web" && colKey !== "telegram_whatsapp") {
+    if (colKey !== "web" && colKey !== "telegram_whatsapp" && colKey !== "question") {
       toast.error(
-        `Only "Web" and "Telegram/WhatsApp" cells can be flagged. Selected: ${col.label}.`,
+        `Only "Question", "Web" and "Telegram/WhatsApp" cells can be flagged. Selected: ${col.label}.`,
       );
       return;
     }
