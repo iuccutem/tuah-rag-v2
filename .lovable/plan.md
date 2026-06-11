@@ -1,44 +1,57 @@
-## Goal
+## RAG Builder — additive enhancements (v2: dynamic faculty filter)
 
-Add `question_highlight` + `question_error` support so the Question column behaves identically to the Web and Telegram/WhatsApp columns, and make every webhook POST include all 6 booleans for the row.
+Keep the existing spreadsheet UI, toolbar, colors, and all current logic untouched. Layer on branding, a dynamic faculty dropdown filter, a Faculty column, and an Export JSON button.
 
-## Changes
+### 1. Branding
+- Update the visible header text "QA Evaluation" → "RAG Builder" in `src/routes/_authenticated/index.tsx`.
+- Update `head().meta` title to "RAG Builder" and refresh the description string.
+- No styling / layout changes.
 
-### 1. `src/routes/_authenticated/index.tsx`
-- Extend the column allow-list in `applyFormat` from `["web", "telegram_whatsapp"]` to `["web", "telegram_whatsapp", "question"]`. Remove / update the "Only Web and Telegram/WhatsApp" toast accordingly.
-- Update `sendRowFlags` (the helper that builds the webhook payload) to compute and include all 6 fields, merging current state with the in-flight override:
-  - `question_error`
-  - `question_highlight`
-  - `telegram_whatsapp_error`
-  - `web_error`
-  - `telegram_whatsapp_highlight`
-  - `web_highlight`
-- Ensure local optimistic UI state (the `formats` map keyed by `${rowId}::${colKey}`) is also updated for the `question` column so the cell color changes instantly. Existing `QATable` already renders `formats[formatKey(...)]` for every column, so no table changes needed once `applyFormat` writes to the `question` key.
+### 2. Dynamic Faculty filter (dropdown, above the table)
+- Use the existing shadcn `Select` component (`@/components/ui/select`).
+- Placement: just above the `QATable`, below the existing toolbar; left-aligned, label "Filter by Faculty/Office".
+- New state: `activeFaculty: string` (default `"all"`).
+- Build options dynamically from the **full** `rows` (not filteredRows, so the dropdown stays stable as other filters change):
+  ```ts
+  const facultyOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) {
+      const f = (r.faculty ?? "").trim();
+      if (f) set.add(f);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+  ```
+- The Select shows `All Faculties` first, then the sorted unique values.
+- Extend `filteredRows` with one extra condition: when `activeFaculty !== "all"`, keep only rows whose `faculty` matches (case-insensitive compare). All existing search/date filters continue to apply unchanged.
+- Switching the filter clears `selection` and `selectedRowIds` to avoid stale references.
 
-### 2. `src/routes/api/n8n-flag.ts`
-- Add `question_error?: boolean` and `question_highlight?: boolean` to the request body type.
-- Include both new fields in the `payload` forwarded to the n8n webhook (defaulting missing values to `false`, same pattern as the existing 4 flags).
+### 3. Faculty column (new, inserted next to Question)
+- Add to `QARow` type (`src/components/qa-dashboard/QATable.tsx`): `faculty?: string | null`.
+- In `src/components/qa-dashboard/qa-columns.tsx`, insert a new `QA_COLUMNS` entry **immediately after `question`**:
+  - key: `"faculty"`, label: `"Faculty"`, width: `w-28`.
+  - render: a small `Badge` (variant `secondary`) with the value, or `<EmptyCell />` when missing.
+  - raw: returns the string for copy/formula bar.
+- `QATable.tsx` iterates `QA_COLUMNS`, so the new column appears automatically with the same selection styling pipeline.
+- The flag column allow-list in `applyFormat` (`["question", "web", "telegram_whatsapp"]`) is **not** extended — Faculty is metadata only, not flaggable.
 
-### 3. No DB / schema work
-The booleans are stored in n8n / the source the webhook writes to. No Supabase migration needed.
+### 4. Export JSON button (toolbar, top-right area)
+- New button: label "Export JSON", `Download` icon, same `variant="outline" size="sm"` as neighboring toolbar buttons.
+- Pure client-side handler:
+  1. Take `filteredRows` (already reflects active dropdown + search + date range).
+  2. `JSON.stringify(rows, null, 2)` → `Blob({ type: "application/json" })`.
+  3. Trigger download named `rag-builder-{faculty}-{YYYYMMDD-HHmm}.json` via a temporary `<a download>`.
+- No server call, no webhook.
 
-## Behavior after change
+### 5. Preserve existing functionality
+- Insert, Delete, Sync, Highlight, Mark Error, Clear, the n8n flag webhook payload (all 6 booleans), Run flows, overlays, auth/header buttons — all untouched.
+- The new Faculty column does not participate in flagging, so `sendRowFlags` / `/api/n8n-flag` payload stays exactly as today.
 
-- Selecting a **Question** cell and clicking Highlight → sets `question_highlight=true` for that row, sends all 6 booleans.
-- Mark Error on Question → sets `question_error=true`, sends all 6.
-- Clear on Question → sets both `question_*` to false, sends all 6.
-- Same for Web and Telegram/WhatsApp (unchanged behavior, just payload now carries the 2 extra question fields).
-- Any other column (id, createdAt, updatedAt) still shows the "not flaggable" toast.
+### Files touched
+- `src/routes/_authenticated/index.tsx` — header text, `head()`, `activeFaculty` state, Select dropdown, filter extension, Export JSON button + handler.
+- `src/components/qa-dashboard/qa-columns.tsx` — add Faculty column entry.
+- `src/components/qa-dashboard/QATable.tsx` — extend `QARow` with `faculty?: string | null`.
 
-## Webhook payload example
-```json
-{
-  "id": 56,
-  "question_error": false,
-  "question_highlight": true,
-  "telegram_whatsapp_error": false,
-  "telegram_whatsapp_highlight": false,
-  "web_error": true,
-  "web_highlight": false
-}
-```
+### Assumptions
+- The n8n webhook will start returning a `faculty` string per row (e.g. `"FTMK"`). Until it does, the dropdown will only show "All Faculties" and the Faculty cell renders empty — no crashes.
+- Faculty values are matched case-insensitively against the selected option.

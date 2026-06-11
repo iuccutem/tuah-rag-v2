@@ -40,6 +40,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   QATable,
   formatKey,
   type CellFormat,
@@ -55,11 +62,11 @@ import { QuestionPasteBox } from "@/components/qa-dashboard/QuestionPasteBox";
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "Q&A Evaluation — Sheets" },
+      { title: "RAG Builder" },
       {
         name: "description",
         content:
-          "Spreadsheet-style dashboard for Q&A evaluation across web and messaging channels.",
+          "RAG Builder — spreadsheet-style workspace to curate Q&A across faculties and messaging channels.",
       },
     ],
   }),
@@ -101,6 +108,7 @@ function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [activeFaculty, setActiveFaculty] = useState<string>("all");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<{
     open: boolean;
@@ -171,8 +179,45 @@ function DashboardPage() {
         return d ? d <= to : false;
       });
     }
+    if (activeFaculty !== "all") {
+      const target = activeFaculty.toLowerCase();
+      result = result.filter(
+        (r) => (r.faculty ?? "").trim().toLowerCase() === target,
+      );
+    }
     return result;
-  }, [rows, searchQuery, dateFrom, dateTo]);
+  }, [rows, searchQuery, dateFrom, dateTo, activeFaculty]);
+
+  const facultyOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) {
+      const f = (r.faculty ?? "").trim();
+      if (f) set.add(f);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
+  const exportJson = () => {
+    try {
+      const json = JSON.stringify(filteredRows, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+      const facultyTag = activeFaculty === "all" ? "all" : activeFaculty.replace(/[^a-zA-Z0-9_-]/g, "_");
+      a.href = url;
+      a.download = `rag-builder-${facultyTag}-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${filteredRows.length} row${filteredRows.length === 1 ? "" : "s"}.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to export JSON.");
+    }
+  };
 
   // Helpers to read a flag (server value, optionally overridden by an in-flight
   // optimistic toggle) and to merge DB-driven flags into the formats map that
@@ -573,7 +618,7 @@ function DashboardPage() {
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="truncate text-[17px] font-medium leading-tight text-foreground">
-            Q&amp;A Evaluation
+            RAG Builder
           </h1>
           <div className="mt-0.5 text-[12px] text-muted-foreground">
             Last edit was at {lastUpdated}
@@ -589,6 +634,15 @@ function DashboardPage() {
           >
             <Download className={exporting ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
             <span className="hidden sm:inline">{exporting ? "Exporting…" : "Export"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={exportJson}
+            title="Export currently visible rows as a JSON file"
+            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted"
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Export JSON</span>
           </button>
           <button
             type="button"
@@ -876,6 +930,36 @@ function DashboardPage() {
           <div className="flex-1">{apiError}</div>
         </div>
       ) : null}
+
+      {/* Faculty filter */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
+        <label className="text-[12px] font-medium text-foreground/80">
+          Filter by Faculty/Office
+        </label>
+        <Select
+          value={activeFaculty}
+          onValueChange={(v) => {
+            setActiveFaculty(v);
+            setSelection(null);
+            setSelectedRowIds(new Set());
+          }}
+        >
+          <SelectTrigger className="h-8 w-56 text-[13px]">
+            <SelectValue placeholder="All Faculties" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Faculties</SelectItem>
+            {facultyOptions.map((f) => (
+              <SelectItem key={f} value={f}>
+                {f}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+          {filteredRows.length}/{rows.length} row{rows.length === 1 ? "" : "s"}
+        </span>
+      </div>
 
       {/* Grid */}
       <div className="flex-1 overflow-hidden">
