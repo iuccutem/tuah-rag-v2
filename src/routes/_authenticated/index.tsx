@@ -313,6 +313,39 @@ function DashboardPage() {
   };
 
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Step 1: Re-fetch tables first
+      const tableResult = await tablesQuery.refetch();
+      const freshTables = (tableResult.data?.tables ?? []).filter((t) =>
+        t.startsWith("test-"),
+      );
+
+      // Step 2: Verify active table; switch if no longer valid
+      let targetTable = activeTable;
+      if (freshTables.length > 0 && !freshTables.includes(activeTable)) {
+        targetTable = freshTables[0];
+        setActiveTable(targetTable);
+        setSelection(null);
+        setSelectedRowIds(new Set());
+      }
+
+      // Step 3: Re-fetch rows for the active table
+      if (targetTable) {
+        await queryClient.refetchQueries({
+          queryKey: ["qa-rows", targetTable],
+          exact: true,
+        });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to refresh.");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+
   // Helpers to read a flag (server value, optionally overridden by an in-flight
   // optimistic toggle) and to merge DB-driven flags into the formats map that
   // QATable consumes for cell styling.
