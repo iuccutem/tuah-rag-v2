@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { QARow } from "./QATable";
 import { DateCell, EmptyCell, LinkOrText } from "./cell-renderers";
+import { Badge } from "@/components/ui/badge";
 
 export type QAColumn = {
   key: keyof QARow;
