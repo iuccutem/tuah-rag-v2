@@ -72,8 +72,10 @@ export const Route = createFileRoute("/_authenticated/")({
 
 type ApiResponse = { data: QARow[]; error: string | null };
 
-async function fetchRows(): Promise<ApiResponse> {
-  const res = await fetch(`/api/n8n-qa?ts=${Date.now()}`, {
+async function fetchRows(table: string): Promise<ApiResponse> {
+  const params = new URLSearchParams({ ts: String(Date.now()) });
+  if (table) params.set("table", table);
+  const res = await fetch(`/api/n8n-qa?${params.toString()}`, {
     cache: "no-store",
     headers: { Accept: "application/json" },
   });
@@ -81,16 +83,52 @@ async function fetchRows(): Promise<ApiResponse> {
   return (await res.json()) as ApiResponse;
 }
 
+type TablesResponse = { tables: string[]; error: string | null };
+
+async function fetchTables(): Promise<TablesResponse> {
+  const res = await fetch(`/api/n8n-tables?ts=${Date.now()}`, {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  return (await res.json()) as TablesResponse;
+}
+
+function formatTableLabel(raw: string): string {
+  const stripped = raw.replace(/^test-/i, "");
+  if (!stripped) return raw;
+  return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+}
+
 function DashboardPage() {
   const navigate = useNavigate();
+  const [activeTable, setActiveTable] = useState<string>("");
+
+  const tablesQuery = useQuery({
+    queryKey: ["qa-tables"],
+    queryFn: fetchTables,
+    refetchOnWindowFocus: false,
+  });
+  const tables = tablesQuery.data?.tables ?? [];
+
+  // Set the first table as the active one on initial load.
+  useEffect(() => {
+    if (!activeTable && tables.length > 0) {
+      setActiveTable(tables[0]);
+    }
+  }, [tables, activeTable]);
+
   const { data, isLoading, isFetching, refetch, dataUpdatedAt, error } =
     useQuery({
-      queryKey: ["qa-rows"],
-      queryFn: fetchRows,
+      queryKey: ["qa-rows", activeTable],
+      queryFn: () => fetchRows(activeTable),
+      enabled: !!activeTable,
       refetchOnWindowFocus: false,
       refetchInterval: 3000,
       refetchIntervalInBackground: false,
     });
+
+
 
   const [exporting, setExporting] = useState(false);
   const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
@@ -105,7 +143,10 @@ function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [activeFaculty, setActiveFaculty] = useState<string>("all");
+  const [newSheetOpen, setNewSheetOpen] = useState(false);
+  const [newSheetName, setNewSheetName] = useState("");
+  const [creatingSheet, setCreatingSheet] = useState(false);
+
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<{
     open: boolean;
@@ -176,45 +217,97 @@ function DashboardPage() {
         return d ? d <= to : false;
       });
     }
-    if (activeFaculty !== "all") {
-      const target = activeFaculty.toLowerCase();
-      result = result.filter(
-        (r) => (r.faculty ?? "").trim().toLowerCase() === target,
-      );
-    }
     return result;
-  }, [rows, searchQuery, dateFrom, dateTo, activeFaculty]);
-
-  const facultyOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const r of rows) {
-      const f = (r.faculty ?? "").trim();
-      if (f) set.add(f);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [rows]);
+  }, [rows, searchQuery, dateFrom, dateTo]);
 
   const exportJson = () => {
     try {
-      const json = JSON.stringify(filteredRows, null, 2);
+      const selected =
+        selectedRowIds.size > 0
+          ? filteredRows.filter((r) =>
+              selectedRowIds.has(r.id ?? r.question ?? ""),
+            )
+          : filteredRows;
+      // Strip to a clean shape: only known column fields + the 6 flag booleans.
+      const flagKeys = [
+        "question_highlight",
+        "question_error",
+        "web_highlight",
+        "web_error",
+        "telegram_whatsapp_highlight",
+        "telegram_whatsapp_error",
+      ] as const;
+      const cleanRows = selected.map((row) => {
+        const out: Record<string, unknown> = {};
+        for (const c of QA_COLUMNS) {
+          out[c.key as string] = (row as Record<string, unknown>)[c.key as string] ?? null;
+        }
+        for (const f of flagKeys) {
+          const v = (row as Record<string, unknown>)[f];
+          if (typeof v === "boolean") out[f] = v;
+        }
+        return out;
+      });
+      const json = JSON.stringify(cleanRows, null, 2);
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
       const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
-      const facultyTag = activeFaculty === "all" ? "all" : activeFaculty.replace(/[^a-zA-Z0-9_-]/g, "_");
+      const tableTag = (activeTable || "all").replace(/[^a-zA-Z0-9_-]/g, "_");
       a.href = url;
-      a.download = `rag-builder-${facultyTag}-${stamp}.json`;
+      a.download = `rag-builder-${tableTag}-${stamp}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast.success(`Exported ${filteredRows.length} row${filteredRows.length === 1 ? "" : "s"}.`);
+      toast.success(
+        `Exported ${cleanRows.length} row${cleanRows.length === 1 ? "" : "s"}.`,
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to export JSON.");
     }
   };
+
+  const createSheet = async () => {
+    const raw = newSheetName.trim();
+    if (!raw) {
+      toast.error("Table name is required.");
+      return;
+    }
+    const formatted = `test-${raw.toLowerCase().replace(/\s+/g, "-")}`;
+    if (!/^test-[a-z0-9-]+$/.test(formatted)) {
+      toast.error("Use letters, numbers, spaces or dashes only.");
+      return;
+    }
+    if (tables.some((t) => t.toLowerCase() === formatted)) {
+      toast.error("That sheet already exists.");
+      return;
+    }
+    setCreatingSheet(true);
+    try {
+      const res = await fetch("/api/n8n-create-table", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: formatted }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!json.ok) throw new Error(json.error || "Failed to create sheet.");
+      toast.success(`Created sheet "${formatTableLabel(formatted)}".`);
+      setNewSheetName("");
+      setNewSheetOpen(false);
+      await tablesQuery.refetch();
+      setActiveTable(formatted);
+      setSelection(null);
+      setSelectedRowIds(new Set());
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to create sheet.");
+    } finally {
+      setCreatingSheet(false);
+    }
+  };
+
 
   // Helpers to read a flag (server value, optionally overridden by an in-flight
   // optimistic toggle) and to merge DB-driven flags into the formats map that
