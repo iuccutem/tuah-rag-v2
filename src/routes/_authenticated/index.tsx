@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import {
   RefreshCw,
@@ -102,14 +102,18 @@ function formatTableLabel(raw: string): string {
 
 function DashboardPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [activeTable, setActiveTable] = useState<string>("");
+  const [refreshing, setRefreshing] = useState(false);
 
   const tablesQuery = useQuery({
     queryKey: ["qa-tables"],
     queryFn: fetchTables,
     refetchOnWindowFocus: false,
   });
-  const tables = tablesQuery.data?.tables ?? [];
+  const tables = (tablesQuery.data?.tables ?? []).filter((t) =>
+    t.startsWith("test-"),
+  );
 
   // Set the first table as the active one on initial load.
   useEffect(() => {
@@ -305,6 +309,39 @@ function DashboardPage() {
       toast.error(e instanceof Error ? e.message : "Failed to create sheet.");
     } finally {
       setCreatingSheet(false);
+    }
+  };
+
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Step 1: Re-fetch tables first
+      const tableResult = await tablesQuery.refetch();
+      const freshTables = (tableResult.data?.tables ?? []).filter((t) =>
+        t.startsWith("test-"),
+      );
+
+      // Step 2: Verify active table; switch if no longer valid
+      let targetTable = activeTable;
+      if (freshTables.length > 0 && !freshTables.includes(activeTable)) {
+        targetTable = freshTables[0];
+        setActiveTable(targetTable);
+        setSelection(null);
+        setSelectedRowIds(new Set());
+      }
+
+      // Step 3: Re-fetch rows for the active table
+      if (targetTable) {
+        await queryClient.refetchQueries({
+          queryKey: ["qa-rows", targetTable],
+          exact: true,
+        });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to refresh.");
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -770,12 +807,16 @@ function DashboardPage() {
         {/* Group: data view */}
         <ToolbarGroup>
           <ToolbarButton
-            onClick={() => refetch()}
-            disabled={isFetching}
+            onClick={handleRefresh}
+            disabled={refreshing || isFetching}
             title="Refresh data"
           >
             <RefreshCw
-              className={isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"}
+              className={
+                refreshing || isFetching
+                  ? "h-4 w-4 animate-spin"
+                  : "h-4 w-4"
+              }
             />
           </ToolbarButton>
 
@@ -1092,7 +1133,7 @@ function DashboardPage() {
           <Plus className="h-4 w-4" />
         </button>
         <div className="ml-auto text-[11px] text-muted-foreground tabular-nums">
-          {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
+          {refreshing ? "Refreshing…" : isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
         </div>
       </div>
 
