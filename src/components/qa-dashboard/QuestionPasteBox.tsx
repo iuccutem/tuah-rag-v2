@@ -17,12 +17,15 @@ type RunItem = { question: string; status: RunStatus; error?: string };
 export function QuestionPasteBox({
   onComplete,
   existingQuestions = [],
+  table,
 }: {
   onComplete?: () => void;
   existingQuestions?: string[];
+  table?: string;
   /** @deprecated kept for compatibility */
   onDeleteDuplicates?: (questions: string[]) => Promise<void> | void;
 }) {
+
   const [text, setText] = useState("");
   const [running, setRunning] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -81,8 +84,9 @@ export function QuestionPasteBox({
         const res = await fetch("/api/n8n-run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question }),
+          body: JSON.stringify(table ? { question, table } : { question }),
         });
+
         const json = (await res.json()) as { ok: boolean; error?: string };
         if (json.ok) {
           okCount++;
@@ -135,8 +139,9 @@ export function QuestionPasteBox({
           const res = await fetch("/api/n8n-process", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ channel: ch, question }),
+            body: JSON.stringify(table ? { channel: ch, question, table } : { channel: ch, question }),
           });
+
           const json = (await res.json()) as { ok: boolean; error?: string };
           results.push({ ch, question, ok: json.ok, error: json.error });
         }
