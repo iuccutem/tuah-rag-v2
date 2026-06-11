@@ -108,6 +108,7 @@ function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [activeFaculty, setActiveFaculty] = useState<string>("all");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<{
     open: boolean;
