@@ -73,6 +73,13 @@ export const Route = createFileRoute("/api/n8n-qa")({
           });
 
 
+          if (res.status === 404) {
+            return Response.json(
+              { data: [], error: null },
+              { status: 200, headers: { "Cache-Control": "no-store" } },
+            );
+          }
+
           if (!res.ok) {
             const text = await res.text().catch(() => "");
             console.error("n8n webhook error", res.status, text);
@@ -85,7 +92,22 @@ export const Route = createFileRoute("/api/n8n-qa")({
             );
           }
 
-          const json = await res.json();
+          const rawText = await res.text().catch(() => "");
+          if (!rawText.trim()) {
+            return Response.json(
+              { data: [], error: null },
+              { status: 200, headers: { "Cache-Control": "no-store" } },
+            );
+          }
+          let json: unknown = null;
+          try {
+            json = JSON.parse(rawText);
+          } catch {
+            return Response.json(
+              { data: [], error: null },
+              { status: 200, headers: { "Cache-Control": "no-store" } },
+            );
+          }
           const data = normalizeRows(json);
 
           return Response.json(
