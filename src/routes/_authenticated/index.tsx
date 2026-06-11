@@ -692,7 +692,14 @@ function DashboardPage() {
       ws.getRow(1).font = { bold: true };
       ws.getRow(1).alignment = { vertical: "middle" };
 
-      filteredRows.forEach((row, rIdx) => {
+      const rowsToExport =
+        selectedRowIds.size > 0
+          ? filteredRows.filter((r) =>
+              selectedRowIds.has(r.id ?? r.question ?? ""),
+            )
+          : filteredRows;
+
+      rowsToExport.forEach((row, rIdx) => {
         const rowValues: Record<string, unknown> = {};
         QA_COLUMNS.forEach((c) => {
           rowValues[c.key as string] = c.raw(row);
@@ -701,7 +708,7 @@ function DashboardPage() {
         addedRow.alignment = { wrapText: true, vertical: "top" };
 
         QA_COLUMNS.forEach((c, cIdx) => {
-          const fmt = formats[formatKey(row.id ?? rIdx, c.key as string)];
+          const fmt = derivedFormats[formatKey(row.id ?? rIdx, c.key as string)];
           if (!fmt) return;
           const cell = addedRow.getCell(cIdx + 1);
           if (fmt.highlight) {
