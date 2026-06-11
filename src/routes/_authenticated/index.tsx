@@ -739,7 +739,7 @@ function DashboardPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast.success(`Exported ${filteredRows.length} rows.`);
+      toast.success(`Exported ${rowsToExport.length} rows.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to export.");
     } finally {
