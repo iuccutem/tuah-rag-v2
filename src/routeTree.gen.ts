@@ -12,12 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as ApiN8nTablesRouteImport } from './routes/api/n8n-tables'
 import { Route as ApiN8nRunRouteImport } from './routes/api/n8n-run'
 import { Route as ApiN8nQaRouteImport } from './routes/api/n8n-qa'
 import { Route as ApiN8nProcessRouteImport } from './routes/api/n8n-process'
 import { Route as ApiN8nFlagRouteImport } from './routes/api/n8n-flag'
 import { Route as ApiN8nEmailRouteImport } from './routes/api/n8n-email'
 import { Route as ApiN8nDeleteRouteImport } from './routes/api/n8n-delete'
+import { Route as ApiN8nCreateTableRouteImport } from './routes/api/n8n-create-table'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -32,6 +34,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiN8nTablesRoute = ApiN8nTablesRouteImport.update({
+  id: '/api/n8n-tables',
+  path: '/api/n8n-tables',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiN8nRunRoute = ApiN8nRunRouteImport.update({
   id: '/api/n8n-run',
@@ -63,37 +70,48 @@ const ApiN8nDeleteRoute = ApiN8nDeleteRouteImport.update({
   path: '/api/n8n-delete',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiN8nCreateTableRoute = ApiN8nCreateTableRouteImport.update({
+  id: '/api/n8n-create-table',
+  path: '/api/n8n-create-table',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/api/n8n-create-table': typeof ApiN8nCreateTableRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
+  '/api/n8n-tables': typeof ApiN8nTablesRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/api/n8n-create-table': typeof ApiN8nCreateTableRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
+  '/api/n8n-tables': typeof ApiN8nTablesRoute
   '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/api/n8n-create-table': typeof ApiN8nCreateTableRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
+  '/api/n8n-tables': typeof ApiN8nTablesRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
@@ -101,44 +119,52 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/api/n8n-create-table'
     | '/api/n8n-delete'
     | '/api/n8n-email'
     | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
     | '/api/n8n-run'
+    | '/api/n8n-tables'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/api/n8n-create-table'
     | '/api/n8n-delete'
     | '/api/n8n-email'
     | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
     | '/api/n8n-run'
+    | '/api/n8n-tables'
     | '/'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/api/n8n-create-table'
     | '/api/n8n-delete'
     | '/api/n8n-email'
     | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
     | '/api/n8n-run'
+    | '/api/n8n-tables'
     | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiN8nCreateTableRoute: typeof ApiN8nCreateTableRoute
   ApiN8nDeleteRoute: typeof ApiN8nDeleteRoute
   ApiN8nEmailRoute: typeof ApiN8nEmailRoute
   ApiN8nFlagRoute: typeof ApiN8nFlagRoute
   ApiN8nProcessRoute: typeof ApiN8nProcessRoute
   ApiN8nQaRoute: typeof ApiN8nQaRoute
   ApiN8nRunRoute: typeof ApiN8nRunRoute
+  ApiN8nTablesRoute: typeof ApiN8nTablesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -163,6 +189,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/n8n-tables': {
+      id: '/api/n8n-tables'
+      path: '/api/n8n-tables'
+      fullPath: '/api/n8n-tables'
+      preLoaderRoute: typeof ApiN8nTablesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/n8n-run': {
       id: '/api/n8n-run'
@@ -206,6 +239,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiN8nDeleteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/n8n-create-table': {
+      id: '/api/n8n-create-table'
+      path: '/api/n8n-create-table'
+      fullPath: '/api/n8n-create-table'
+      preLoaderRoute: typeof ApiN8nCreateTableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -223,12 +263,14 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiN8nCreateTableRoute: ApiN8nCreateTableRoute,
   ApiN8nDeleteRoute: ApiN8nDeleteRoute,
   ApiN8nEmailRoute: ApiN8nEmailRoute,
   ApiN8nFlagRoute: ApiN8nFlagRoute,
   ApiN8nProcessRoute: ApiN8nProcessRoute,
   ApiN8nQaRoute: ApiN8nQaRoute,
   ApiN8nRunRoute: ApiN8nRunRoute,
+  ApiN8nTablesRoute: ApiN8nTablesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

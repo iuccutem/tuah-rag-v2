@@ -20,6 +20,7 @@ import {
   Loader2,
   LogOut,
   UserPlus,
+  Plus,
 } from "lucide-react";
 import ExcelJS from "exceljs";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { registerUser } from "@/lib/admin-users.functions";
+
 
 import { Button } from "@/components/ui/button";
 import {
@@ -39,13 +41,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
+
 import {
   QATable,
   formatKey,
@@ -75,8 +72,10 @@ export const Route = createFileRoute("/_authenticated/")({
 
 type ApiResponse = { data: QARow[]; error: string | null };
 
-async function fetchRows(): Promise<ApiResponse> {
-  const res = await fetch(`/api/n8n-qa?ts=${Date.now()}`, {
+async function fetchRows(table: string): Promise<ApiResponse> {
+  const params = new URLSearchParams({ ts: String(Date.now()) });
+  if (table) params.set("table", table);
+  const res = await fetch(`/api/n8n-qa?${params.toString()}`, {
     cache: "no-store",
     headers: { Accept: "application/json" },
   });
@@ -84,16 +83,52 @@ async function fetchRows(): Promise<ApiResponse> {
   return (await res.json()) as ApiResponse;
 }
 
+type TablesResponse = { tables: string[]; error: string | null };
+
+async function fetchTables(): Promise<TablesResponse> {
+  const res = await fetch(`/api/n8n-tables?ts=${Date.now()}`, {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  return (await res.json()) as TablesResponse;
+}
+
+function formatTableLabel(raw: string): string {
+  const stripped = raw.replace(/^test-/i, "");
+  if (!stripped) return raw;
+  return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+}
+
 function DashboardPage() {
   const navigate = useNavigate();
+  const [activeTable, setActiveTable] = useState<string>("");
+
+  const tablesQuery = useQuery({
+    queryKey: ["qa-tables"],
+    queryFn: fetchTables,
+    refetchOnWindowFocus: false,
+  });
+  const tables = tablesQuery.data?.tables ?? [];
+
+  // Set the first table as the active one on initial load.
+  useEffect(() => {
+    if (!activeTable && tables.length > 0) {
+      setActiveTable(tables[0]);
+    }
+  }, [tables, activeTable]);
+
   const { data, isLoading, isFetching, refetch, dataUpdatedAt, error } =
     useQuery({
-      queryKey: ["qa-rows"],
-      queryFn: fetchRows,
+      queryKey: ["qa-rows", activeTable],
+      queryFn: () => fetchRows(activeTable),
+      enabled: !!activeTable,
       refetchOnWindowFocus: false,
       refetchInterval: 3000,
       refetchIntervalInBackground: false,
     });
+
+
 
   const [exporting, setExporting] = useState(false);
   const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
@@ -108,7 +143,10 @@ function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [activeFaculty, setActiveFaculty] = useState<string>("all");
+  const [newSheetOpen, setNewSheetOpen] = useState(false);
+  const [newSheetName, setNewSheetName] = useState("");
+  const [creatingSheet, setCreatingSheet] = useState(false);
+
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<{
     open: boolean;
@@ -179,45 +217,97 @@ function DashboardPage() {
         return d ? d <= to : false;
       });
     }
-    if (activeFaculty !== "all") {
-      const target = activeFaculty.toLowerCase();
-      result = result.filter(
-        (r) => (r.faculty ?? "").trim().toLowerCase() === target,
-      );
-    }
     return result;
-  }, [rows, searchQuery, dateFrom, dateTo, activeFaculty]);
-
-  const facultyOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const r of rows) {
-      const f = (r.faculty ?? "").trim();
-      if (f) set.add(f);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [rows]);
+  }, [rows, searchQuery, dateFrom, dateTo]);
 
   const exportJson = () => {
     try {
-      const json = JSON.stringify(filteredRows, null, 2);
+      const selected =
+        selectedRowIds.size > 0
+          ? filteredRows.filter((r) =>
+              selectedRowIds.has(r.id ?? r.question ?? ""),
+            )
+          : filteredRows;
+      // Strip to a clean shape: only known column fields + the 6 flag booleans.
+      const flagKeys = [
+        "question_highlight",
+        "question_error",
+        "web_highlight",
+        "web_error",
+        "telegram_whatsapp_highlight",
+        "telegram_whatsapp_error",
+      ] as const;
+      const cleanRows = selected.map((row) => {
+        const out: Record<string, unknown> = {};
+        for (const c of QA_COLUMNS) {
+          out[c.key as string] = (row as Record<string, unknown>)[c.key as string] ?? null;
+        }
+        for (const f of flagKeys) {
+          const v = (row as Record<string, unknown>)[f];
+          if (typeof v === "boolean") out[f] = v;
+        }
+        return out;
+      });
+      const json = JSON.stringify(cleanRows, null, 2);
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
       const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
-      const facultyTag = activeFaculty === "all" ? "all" : activeFaculty.replace(/[^a-zA-Z0-9_-]/g, "_");
+      const tableTag = (activeTable || "all").replace(/[^a-zA-Z0-9_-]/g, "_");
       a.href = url;
-      a.download = `rag-builder-${facultyTag}-${stamp}.json`;
+      a.download = `rag-builder-${tableTag}-${stamp}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast.success(`Exported ${filteredRows.length} row${filteredRows.length === 1 ? "" : "s"}.`);
+      toast.success(
+        `Exported ${cleanRows.length} row${cleanRows.length === 1 ? "" : "s"}.`,
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to export JSON.");
     }
   };
+
+  const createSheet = async () => {
+    const raw = newSheetName.trim();
+    if (!raw) {
+      toast.error("Table name is required.");
+      return;
+    }
+    const formatted = `test-${raw.toLowerCase().replace(/\s+/g, "-")}`;
+    if (!/^test-[a-z0-9-]+$/.test(formatted)) {
+      toast.error("Use letters, numbers, spaces or dashes only.");
+      return;
+    }
+    if (tables.some((t) => t.toLowerCase() === formatted)) {
+      toast.error("That sheet already exists.");
+      return;
+    }
+    setCreatingSheet(true);
+    try {
+      const res = await fetch("/api/n8n-create-table", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: formatted }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!json.ok) throw new Error(json.error || "Failed to create sheet.");
+      toast.success(`Created sheet "${formatTableLabel(formatted)}".`);
+      setNewSheetName("");
+      setNewSheetOpen(false);
+      await tablesQuery.refetch();
+      setActiveTable(formatted);
+      setSelection(null);
+      setSelectedRowIds(new Set());
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to create sheet.");
+    } finally {
+      setCreatingSheet(false);
+    }
+  };
+
 
   // Helpers to read a flag (server value, optionally overridden by an in-flight
   // optimistic toggle) and to merge DB-driven flags into the formats map that
@@ -289,8 +379,9 @@ function DashboardPage() {
       const res = await fetch("/api/n8n-flag", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: rowId, ...flags }),
+        body: JSON.stringify({ id: rowId, table: activeTable, ...flags }),
       });
+
       const json = (await res.json()) as { ok: boolean; error?: string };
       if (!json.ok) throw new Error(json.error || "Failed to update.");
       await refetch();
@@ -406,8 +497,10 @@ function DashboardPage() {
       body: JSON.stringify({
         items,
         questions: items.map((i) => i.question),
+        table: activeTable,
       }),
     });
+
     return (await res.json()) as {
       ok: boolean;
       deleted?: number;
@@ -508,8 +601,9 @@ function DashboardPage() {
           const res = await fetch("/api/n8n-process", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ channel: ch, question }),
+            body: JSON.stringify({ channel: ch, question, table: activeTable }),
           });
+
           const json = (await res.json()) as { ok: boolean; error?: string };
           results.push({ ch, question, ok: json.ok, error: json.error });
         }
@@ -760,6 +854,8 @@ function DashboardPage() {
               </DialogHeader>
               <QuestionPasteBox
                 existingQuestions={existingQuestions}
+                table={activeTable}
+
                 onComplete={async () => {
                   setInsertOpen(false);
                   setInserting(true);
@@ -931,31 +1027,11 @@ function DashboardPage() {
         </div>
       ) : null}
 
-      {/* Faculty filter */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
-        <label className="text-[12px] font-medium text-foreground/80">
-          Filter by Faculty/Office
-        </label>
-        <Select
-          value={activeFaculty}
-          onValueChange={(v) => {
-            setActiveFaculty(v);
-            setSelection(null);
-            setSelectedRowIds(new Set());
-          }}
-        >
-          <SelectTrigger className="h-8 w-56 text-[13px]">
-            <SelectValue placeholder="All Faculties" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Faculties</SelectItem>
-            {facultyOptions.map((f) => (
-              <SelectItem key={f} value={f}>
-                {f}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Row count strip */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-1.5">
+        <span className="text-[11px] text-muted-foreground tabular-nums">
+          {activeTable ? `Sheet: ${formatTableLabel(activeTable)}` : "No sheet selected"}
+        </span>
         <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
           {filteredRows.length}/{rows.length} row{rows.length === 1 ? "" : "s"}
         </span>
@@ -977,15 +1053,91 @@ function DashboardPage() {
 
 
       {/* Sheet tabs */}
-      <div className="flex shrink-0 items-center gap-1 border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
-        <div className="flex h-7 items-center gap-2 rounded-t-md border-t-2 border-primary bg-card px-3 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]">
-          Q&amp;A Evaluations
-        </div>
+      <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
+        {tables.length === 0 ? (
+          <div className="flex h-7 items-center px-3 text-[12px] text-muted-foreground">
+            {tablesQuery.isLoading ? "Loading sheets…" : "No sheets yet"}
+          </div>
+        ) : (
+          tables.map((t) => {
+            const active = t === activeTable;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => {
+                  if (t === activeTable) return;
+                  setActiveTable(t);
+                  setSelection(null);
+                  setSelectedRowIds(new Set());
+                }}
+                title={t}
+                className={
+                  active
+                    ? "flex h-7 items-center gap-2 rounded-t-md border-t-2 border-primary bg-card px-3 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]"
+                    : "flex h-7 items-center gap-2 rounded-t-md border-t-2 border-transparent px-3 text-[13px] font-medium text-muted-foreground hover:bg-muted"
+                }
+              >
+                {formatTableLabel(t)}
+              </button>
+            );
+          })
+        )}
+        <button
+          type="button"
+          onClick={() => setNewSheetOpen(true)}
+          title="Add a new sheet"
+          className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
         <div className="ml-auto text-[11px] text-muted-foreground tabular-nums">
-
           {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
         </div>
       </div>
+
+      {/* New sheet dialog */}
+      <Dialog open={newSheetOpen} onOpenChange={(o) => !creatingSheet && setNewSheetOpen(o)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New sheet</DialogTitle>
+            <DialogDescription>
+              Enter a table name. It will be lowercased, spaces become dashes,
+              and a <span className="font-mono">test-</span> prefix is added.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Input
+              autoFocus
+              placeholder="e.g. New Faculty"
+              value={newSheetName}
+              onChange={(e) => setNewSheetName(e.target.value)}
+              disabled={creatingSheet}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !creatingSheet) {
+                  e.preventDefault();
+                  void createSheet();
+                }
+              }}
+            />
+            {newSheetName.trim() && (
+              <div className="text-[12px] text-muted-foreground">
+                Will create: <span className="font-mono text-foreground">test-{newSheetName.trim().toLowerCase().replace(/\s+/g, "-")}</span>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewSheetOpen(false)} disabled={creatingSheet}>
+              Cancel
+            </Button>
+            <Button onClick={createSheet} disabled={creatingSheet} className="gap-2">
+              {creatingSheet ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {creatingSheet ? "Creating…" : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Run confirmation dialog */}
       <Dialog

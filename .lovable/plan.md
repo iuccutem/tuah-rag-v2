@@ -1,57 +1,55 @@
-## RAG Builder — additive enhancements (v2: dynamic faculty filter)
+## RAG Builder — dynamic n8n tables, tab discovery, selective export
 
-Keep the existing spreadsheet UI, toolbar, colors, and all current logic untouched. Layer on branding, a dynamic faculty dropdown filter, a Faculty column, and an Export JSON button.
+### 1. Remove faculty filter (cleanup from previous iteration)
+- Drop the "Filter by Faculty/Office" dropdown UI, `activeFaculty` state, `facultyOptions` memo, and the faculty branch of `filteredRows` from `src/routes/_authenticated/index.tsx`.
+- Drop the Faculty column from `src/components/qa-dashboard/qa-columns.tsx` and the `faculty` field from `QARow` in `QATable.tsx`. Remove now-unused `Select` imports.
 
-### 1. Branding
-- Update the visible header text "QA Evaluation" → "RAG Builder" in `src/routes/_authenticated/index.tsx`.
-- Update `head().meta` title to "RAG Builder" and refresh the description string.
-- No styling / layout changes.
+### 2. Tab discovery
+- New server route `src/routes/api/n8n-tables.ts` (GET) that proxies `https://tuah.utem.edu.my/agent/webhook/4340097e-3074-4ab4-b97c-feba47f87a55` with the existing basic-auth env vars (`N8N_WEBHOOK_USER` / `N8N_WEBHOOK_PASSWORD`). Normalizes the response to `{ tables: string[], error: string | null }` — accepts a raw array, `{ data: [...] }`, `{ tables: [...] }`, or array of `{ name }` objects.
+- In `DashboardPage`, add a React Query for the tab list (`queryKey: ["qa-tables"]`). On first successful load, set `activeTable` to the first entry. Tab labels are derived from raw names by stripping the `test-` prefix and capitalizing the first letter — raw value is kept for the API calls.
 
-### 2. Dynamic Faculty filter (dropdown, above the table)
-- Use the existing shadcn `Select` component (`@/components/ui/select`).
-- Placement: just above the `QATable`, below the existing toolbar; left-aligned, label "Filter by Faculty/Office".
-- New state: `activeFaculty: string` (default `"all"`).
-- Build options dynamically from the **full** `rows` (not filteredRows, so the dropdown stays stable as other filters change):
-  ```ts
-  const facultyOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const r of rows) {
-      const f = (r.faculty ?? "").trim();
-      if (f) set.add(f);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [rows]);
-  ```
-- The Select shows `All Faculties` first, then the sorted unique values.
-- Extend `filteredRows` with one extra condition: when `activeFaculty !== "all"`, keep only rows whose `faculty` matches (case-insensitive compare). All existing search/date filters continue to apply unchanged.
-- Switching the filter clears `selection` and `selectedRowIds` to avoid stale references.
+### 3. Fetching rows per active table
+- Extend `src/routes/api/n8n-qa.ts` GET: read `?table=` from the request URL and forward it to the upstream fetch webhook as the same `?table=` query param. If absent, behave as today.
+- Client `fetchRows` becomes `fetchRows(table: string)`. React Query key becomes `["qa-rows", activeTable]`. Switching tabs clears `selection` + `selectedRowIds` and the query auto-refetches.
 
-### 3. Faculty column (new, inserted next to Question)
-- Add to `QARow` type (`src/components/qa-dashboard/QATable.tsx`): `faculty?: string | null`.
-- In `src/components/qa-dashboard/qa-columns.tsx`, insert a new `QA_COLUMNS` entry **immediately after `question`**:
-  - key: `"faculty"`, label: `"Faculty"`, width: `w-28`.
-  - render: a small `Badge` (variant `secondary`) with the value, or `<EmptyCell />` when missing.
-  - raw: returns the string for copy/formula bar.
-- `QATable.tsx` iterates `QA_COLUMNS`, so the new column appears automatically with the same selection styling pipeline.
-- The flag column allow-list in `applyFormat` (`["question", "web", "telegram_whatsapp"]`) is **not** extended — Faculty is metadata only, not flaggable.
+### 4. Tab bar (replaces the existing single bottom pill)
+- Render one pill per discovered table at the existing bottom strip in `index.tsx`, using current pill styling for the active tab and a muted hover variant for the rest. Click switches `activeTable`.
+- Trailing `+` button opens a `Dialog` with an `Input` ("Table name") + Create / Cancel. On submit:
+  1. Format: `value.trim().toLowerCase().replace(/\s+/g, "-")` then prepend `test-`. Reject empty / duplicates (case-insensitive against current list).
+  2. POST `{ name: "<formatted>" }` to new server route `src/routes/api/n8n-create-table.ts` which forwards to `https://tuah.utem.edu.my/agent/webhook/f87381b1-9fac-403e-b238-2c5420aa3af5` with basic auth and returns `{ ok, error? }`.
+  3. On success: close dialog, `refetch()` the tab-discovery query, set `activeTable` to the formatted name, toast success.
+  4. On failure: toast error, keep dialog open.
 
-### 4. Export JSON button (toolbar, top-right area)
-- New button: label "Export JSON", `Download` icon, same `variant="outline" size="sm"` as neighboring toolbar buttons.
-- Pure client-side handler:
-  1. Take `filteredRows` (already reflects active dropdown + search + date range).
-  2. `JSON.stringify(rows, null, 2)` → `Blob({ type: "application/json" })`.
-  3. Trigger download named `rag-builder-{faculty}-{YYYYMMDD-HHmm}.json` via a temporary `<a download>`.
-- No server call, no webhook.
+### 5. Forward `table` on every mutation
+- Existing API routes accept and forward a `table` field in the body to their upstream webhooks (no behavior change when absent):
+  - `src/routes/api/n8n-flag.ts`
+  - `src/routes/api/n8n-delete.ts`
+  - `src/routes/api/n8n-process.ts`
+  - `src/routes/api/n8n-run.ts`
+- All client call sites in `index.tsx` add `table: activeTable` to their JSON bodies (flag, delete, process/runChannel).
+- `QuestionPasteBox` gains an optional `table?: string` prop and forwards it on its insert POST so newly-inserted questions land in the right table. The page passes `activeTable` down.
+- The external "Sync Q&A sheet" anchor (hosted n8n form) is left untouched — it is not a webhook we control.
 
-### 5. Preserve existing functionality
-- Insert, Delete, Sync, Highlight, Mark Error, Clear, the n8n flag webhook payload (all 6 booleans), Run flows, overlays, auth/header buttons — all untouched.
-- The new Faculty column does not participate in flagging, so `sendRowFlags` / `/api/n8n-flag` payload stays exactly as today.
+### 6. Selective JSON export
+- Update `exportJson`:
+  - Source rows = if `selectedRowIds.size > 0`, `filteredRows.filter(r => selectedRowIds.has(r.id ?? r.question ?? ""))`; otherwise all `filteredRows`.
+  - Strip internal/optimistic fields: build each export row by picking only the columns present in `QA_COLUMNS` (id, question, web, telegram_whatsapp, createdAt, updatedAt) plus the 6 flag fields (`question_highlight`, `question_error`, `web_highlight`, `web_error`, `telegram_whatsapp_highlight`, `telegram_whatsapp_error`). No React/runtime keys.
+  - Filename: `rag-builder-{activeTable}-{YYYYMMDD-HHmm}.json`. Toast shows `Exported N row(s)`.
+
+### 7. Preserve everything else
+- Colors, grid styling, formula bar, toolbar, text-wrapping, highlight (yellow) and error-mark (red) cell visuals, sync overlays, Insert/Delete/Run flows, auth/Register/Sign-out, n8n flag payload (all 6 booleans) — untouched.
 
 ### Files touched
-- `src/routes/_authenticated/index.tsx` — header text, `head()`, `activeFaculty` state, Select dropdown, filter extension, Export JSON button + handler.
-- `src/components/qa-dashboard/qa-columns.tsx` — add Faculty column entry.
-- `src/components/qa-dashboard/QATable.tsx` — extend `QARow` with `faculty?: string | null`.
+- `src/routes/_authenticated/index.tsx` — remove faculty UI/state, add tab-list query, tab bar + new-sheet dialog, table-aware fetch + table body field on all mutation calls, selective export.
+- `src/components/qa-dashboard/qa-columns.tsx` — drop Faculty column.
+- `src/components/qa-dashboard/QATable.tsx` — drop `faculty` from `QARow`.
+- `src/components/qa-dashboard/QuestionPasteBox.tsx` — accept and forward `table` prop.
+- `src/routes/api/n8n-qa.ts` — read and forward `?table=`.
+- `src/routes/api/n8n-flag.ts`, `n8n-delete.ts`, `n8n-process.ts`, `n8n-run.ts` — accept `table` in body, include in upstream payload.
+- `src/routes/api/n8n-tables.ts` — new GET proxy for the discovery webhook.
+- `src/routes/api/n8n-create-table.ts` — new POST proxy for the create-table webhook.
 
 ### Assumptions
-- The n8n webhook will start returning a `faculty` string per row (e.g. `"FTMK"`). Until it does, the dropdown will only show "All Faculties" and the Faculty cell renders empty — no crashes.
-- Faculty values are matched case-insensitively against the selected option.
+- Discovery webhook returns a list of raw names with `test-` prefix; if the shape varies, the normalizer handles array / `{data}` / `{tables}` / `{name}`-object forms.
+- The fetch webhook accepts `?table=<raw-name>`; legacy single-table behavior is preserved when the param is missing.
+- Each n8n mutation workflow either uses or harmlessly ignores the new `table` body field until you wire it on the n8n side.
