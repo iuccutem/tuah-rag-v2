@@ -931,6 +931,36 @@ function DashboardPage() {
         </div>
       ) : null}
 
+      {/* Faculty filter */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
+        <label className="text-[12px] font-medium text-foreground/80">
+          Filter by Faculty/Office
+        </label>
+        <Select
+          value={activeFaculty}
+          onValueChange={(v) => {
+            setActiveFaculty(v);
+            setSelection(null);
+            setSelectedRowIds(new Set());
+          }}
+        >
+          <SelectTrigger className="h-8 w-56 text-[13px]">
+            <SelectValue placeholder="All Faculties" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Faculties</SelectItem>
+            {facultyOptions.map((f) => (
+              <SelectItem key={f} value={f}>
+                {f}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+          {filteredRows.length}/{rows.length} row{rows.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
       {/* Grid */}
       <div className="flex-1 overflow-hidden">
         <QATable
