@@ -1021,31 +1021,11 @@ function DashboardPage() {
         </div>
       ) : null}
 
-      {/* Faculty filter */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
-        <label className="text-[12px] font-medium text-foreground/80">
-          Filter by Faculty/Office
-        </label>
-        <Select
-          value={activeFaculty}
-          onValueChange={(v) => {
-            setActiveFaculty(v);
-            setSelection(null);
-            setSelectedRowIds(new Set());
-          }}
-        >
-          <SelectTrigger className="h-8 w-56 text-[13px]">
-            <SelectValue placeholder="All Faculties" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Faculties</SelectItem>
-            {facultyOptions.map((f) => (
-              <SelectItem key={f} value={f}>
-                {f}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Row count strip */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-1.5">
+        <span className="text-[11px] text-muted-foreground tabular-nums">
+          {activeTable ? `Sheet: ${formatTableLabel(activeTable)}` : "No sheet selected"}
+        </span>
         <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
           {filteredRows.length}/{rows.length} row{rows.length === 1 ? "" : "s"}
         </span>
@@ -1067,15 +1047,91 @@ function DashboardPage() {
 
 
       {/* Sheet tabs */}
-      <div className="flex shrink-0 items-center gap-1 border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
-        <div className="flex h-7 items-center gap-2 rounded-t-md border-t-2 border-primary bg-card px-3 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]">
-          Q&amp;A Evaluations
-        </div>
+      <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
+        {tables.length === 0 ? (
+          <div className="flex h-7 items-center px-3 text-[12px] text-muted-foreground">
+            {tablesQuery.isLoading ? "Loading sheets…" : "No sheets yet"}
+          </div>
+        ) : (
+          tables.map((t) => {
+            const active = t === activeTable;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => {
+                  if (t === activeTable) return;
+                  setActiveTable(t);
+                  setSelection(null);
+                  setSelectedRowIds(new Set());
+                }}
+                title={t}
+                className={
+                  active
+                    ? "flex h-7 items-center gap-2 rounded-t-md border-t-2 border-primary bg-card px-3 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]"
+                    : "flex h-7 items-center gap-2 rounded-t-md border-t-2 border-transparent px-3 text-[13px] font-medium text-muted-foreground hover:bg-muted"
+                }
+              >
+                {formatTableLabel(t)}
+              </button>
+            );
+          })
+        )}
+        <button
+          type="button"
+          onClick={() => setNewSheetOpen(true)}
+          title="Add a new sheet"
+          className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
         <div className="ml-auto text-[11px] text-muted-foreground tabular-nums">
-
           {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
         </div>
       </div>
+
+      {/* New sheet dialog */}
+      <Dialog open={newSheetOpen} onOpenChange={(o) => !creatingSheet && setNewSheetOpen(o)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New sheet</DialogTitle>
+            <DialogDescription>
+              Enter a table name. It will be lowercased, spaces become dashes,
+              and a <span className="font-mono">test-</span> prefix is added.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Input
+              autoFocus
+              placeholder="e.g. New Faculty"
+              value={newSheetName}
+              onChange={(e) => setNewSheetName(e.target.value)}
+              disabled={creatingSheet}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !creatingSheet) {
+                  e.preventDefault();
+                  void createSheet();
+                }
+              }}
+            />
+            {newSheetName.trim() && (
+              <div className="text-[12px] text-muted-foreground">
+                Will create: <span className="font-mono text-foreground">test-{newSheetName.trim().toLowerCase().replace(/\s+/g, "-")}</span>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewSheetOpen(false)} disabled={creatingSheet}>
+              Cancel
+            </Button>
+            <Button onClick={createSheet} disabled={creatingSheet} className="gap-2">
+              {creatingSheet ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {creatingSheet ? "Creating…" : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Run confirmation dialog */}
       <Dialog
