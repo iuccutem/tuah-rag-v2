@@ -45,7 +45,7 @@ function normalizeRows(input: unknown): Row[] {
 export const Route = createFileRoute("/api/n8n-qa")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }) => {
         const user = process.env.N8N_WEBHOOK_USER;
         const password = process.env.N8N_WEBHOOK_PASSWORD;
 
@@ -58,14 +58,20 @@ export const Route = createFileRoute("/api/n8n-qa")({
 
         const auth = Buffer.from(`${user}:${password}`).toString("base64");
 
+        const url = new URL(request.url);
+        const table = (url.searchParams.get("table") ?? "").trim();
+        const upstream = new URL(WEBHOOK_URL);
+        if (table) upstream.searchParams.set("table", table);
+
         try {
-          const res = await fetch(WEBHOOK_URL, {
+          const res = await fetch(upstream.toString(), {
             method: "GET",
             headers: {
               Authorization: `Basic ${auth}`,
               Accept: "application/json",
             },
           });
+
 
           if (!res.ok) {
             const text = await res.text().catch(() => "");
