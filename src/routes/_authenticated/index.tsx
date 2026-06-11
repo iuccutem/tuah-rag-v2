@@ -1133,7 +1133,7 @@ function DashboardPage() {
           <Plus className="h-4 w-4" />
         </button>
         <div className="ml-auto text-[11px] text-muted-foreground tabular-nums">
-          {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
+          {refreshing ? "Refreshing…" : isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
         </div>
       </div>
 
