@@ -179,8 +179,45 @@ function DashboardPage() {
         return d ? d <= to : false;
       });
     }
+    if (activeFaculty !== "all") {
+      const target = activeFaculty.toLowerCase();
+      result = result.filter(
+        (r) => (r.faculty ?? "").trim().toLowerCase() === target,
+      );
+    }
     return result;
-  }, [rows, searchQuery, dateFrom, dateTo]);
+  }, [rows, searchQuery, dateFrom, dateTo, activeFaculty]);
+
+  const facultyOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) {
+      const f = (r.faculty ?? "").trim();
+      if (f) set.add(f);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
+  const exportJson = () => {
+    try {
+      const json = JSON.stringify(filteredRows, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+      const facultyTag = activeFaculty === "all" ? "all" : activeFaculty.replace(/[^a-zA-Z0-9_-]/g, "_");
+      a.href = url;
+      a.download = `rag-builder-${facultyTag}-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${filteredRows.length} row${filteredRows.length === 1 ? "" : "s"}.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to export JSON.");
+    }
+  };
 
   // Helpers to read a flag (server value, optionally overridden by an in-flight
   // optimistic toggle) and to merge DB-driven flags into the formats map that
