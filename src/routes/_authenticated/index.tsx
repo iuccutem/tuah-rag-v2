@@ -102,14 +102,18 @@ function formatTableLabel(raw: string): string {
 
 function DashboardPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [activeTable, setActiveTable] = useState<string>("");
+  const [refreshing, setRefreshing] = useState(false);
 
   const tablesQuery = useQuery({
     queryKey: ["qa-tables"],
     queryFn: fetchTables,
     refetchOnWindowFocus: false,
   });
-  const tables = tablesQuery.data?.tables ?? [];
+  const tables = (tablesQuery.data?.tables ?? []).filter((t) =>
+    t.startsWith("test-"),
+  );
 
   // Set the first table as the active one on initial load.
   useEffect(() => {
