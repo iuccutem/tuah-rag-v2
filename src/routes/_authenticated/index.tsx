@@ -637,6 +637,15 @@ function DashboardPage() {
           </button>
           <button
             type="button"
+            onClick={exportJson}
+            title="Export currently visible rows as a JSON file"
+            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted"
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Export JSON</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setRegisterOpen(true)}
             title="Register a new user"
             className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted"
