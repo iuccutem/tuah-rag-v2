@@ -807,12 +807,16 @@ function DashboardPage() {
         {/* Group: data view */}
         <ToolbarGroup>
           <ToolbarButton
-            onClick={() => refetch()}
-            disabled={isFetching}
+            onClick={handleRefresh}
+            disabled={refreshing || isFetching}
             title="Refresh data"
           >
             <RefreshCw
-              className={isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"}
+              className={
+                refreshing || isFetching
+                  ? "h-4 w-4 animate-spin"
+                  : "h-4 w-4"
+              }
             />
           </ToolbarButton>
 
