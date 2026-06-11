@@ -1115,6 +1115,7 @@ function DashboardPage() {
                 type="button"
                 onClick={() => {
                   if (t === activeTable) return;
+                  queryClient.removeQueries({ queryKey: ["qa-rows", t], exact: true });
                   setActiveTable(t);
                   setSelection(null);
                   setSelectedRowIds(new Set());

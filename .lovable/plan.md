@@ -1,55 +1,41 @@
-## RAG Builder — dynamic n8n tables, tab discovery, selective export
+## What the code already does
 
-### 1. Remove faculty filter (cleanup from previous iteration)
-- Drop the "Filter by Faculty/Office" dropdown UI, `activeFaculty` state, `facultyOptions` memo, and the faculty branch of `filteredRows` from `src/routes/_authenticated/index.tsx`.
-- Drop the Faculty column from `src/components/qa-dashboard/qa-columns.tsx` and the `faculty` field from `QARow` in `QATable.tsx`. Remove now-unused `Select` imports.
+- Each sheet tab click sets `activeTable`, which is part of the React Query key `["qa-rows", activeTable]`. Switching tabs auto-refetches.
+- `fetchRows(activeTable)` calls `/api/n8n-qa?table=<qatest-…>&ts=…`.
+- `src/routes/api/n8n-qa.ts` forwards that `?table=` value to the upstream n8n webhook (`911d5dbc-…`).
+- An empty array from upstream already renders the "No evaluation records yet." empty-state in `QATable`.
 
-### 2. Tab discovery
-- New server route `src/routes/api/n8n-tables.ts` (GET) that proxies `https://tuah.utem.edu.my/agent/webhook/4340097e-3074-4ab4-b97c-feba47f87a55` with the existing basic-auth env vars (`N8N_WEBHOOK_USER` / `N8N_WEBHOOK_PASSWORD`). Normalizes the response to `{ tables: string[], error: string | null }` — accepts a raw array, `{ data: [...] }`, `{ tables: [...] }`, or array of `{ name }` objects.
-- In `DashboardPage`, add a React Query for the tab list (`queryKey: ["qa-tables"]`). On first successful load, set `activeTable` to the first entry. Tab labels are derived from raw names by stripping the `test-` prefix and capitalizing the first letter — raw value is kept for the API calls.
+Since you're wiring the n8n workflow to honor `?table=`, no client-side fetch changes are needed — once n8n filters by the param, each tab will return its own rows (or `[]`).
 
-### 3. Fetching rows per active table
-- Extend `src/routes/api/n8n-qa.ts` GET: read `?table=` from the request URL and forward it to the upstream fetch webhook as the same `?table=` query param. If absent, behave as today.
-- Client `fetchRows` becomes `fetchRows(table: string)`. React Query key becomes `["qa-rows", activeTable]`. Switching tabs clears `selection` + `selectedRowIds` and the query auto-refetches.
+## One small UX safeguard
 
-### 4. Tab bar (replaces the existing single bottom pill)
-- Render one pill per discovered table at the existing bottom strip in `index.tsx`, using current pill styling for the active tab and a muted hover variant for the rest. Click switches `activeTable`.
-- Trailing `+` button opens a `Dialog` with an `Input` ("Table name") + Create / Cancel. On submit:
-  1. Format: `value.trim().toLowerCase().replace(/\s+/g, "-")` then prepend `test-`. Reject empty / duplicates (case-insensitive against current list).
-  2. POST `{ name: "<formatted>" }` to new server route `src/routes/api/n8n-create-table.ts` which forwards to `https://tuah.utem.edu.my/agent/webhook/f87381b1-9fac-403e-b238-2c5420aa3af5` with basic auth and returns `{ ok, error? }`.
-  3. On success: close dialog, `refetch()` the tab-discovery query, set `activeTable` to the formatted name, toast success.
-  4. On failure: toast error, keep dialog open.
+When a freshly-created sheet has no rows, some n8n setups respond with a 404 or 500 instead of `[]`. Today that surfaces as a red error banner over an empty grid, which reads as "broken" rather than "empty".
 
-### 5. Forward `table` on every mutation
-- Existing API routes accept and forward a `table` field in the body to their upstream webhooks (no behavior change when absent):
-  - `src/routes/api/n8n-flag.ts`
-  - `src/routes/api/n8n-delete.ts`
-  - `src/routes/api/n8n-process.ts`
-  - `src/routes/api/n8n-run.ts`
-- All client call sites in `index.tsx` add `table: activeTable` to their JSON bodies (flag, delete, process/runChannel).
-- `QuestionPasteBox` gains an optional `table?: string` prop and forwards it on its insert POST so newly-inserted questions land in the right table. The page passes `activeTable` down.
-- The external "Sync Q&A sheet" anchor (hosted n8n form) is left untouched — it is not a webhook we control.
+Update `src/routes/api/n8n-qa.ts` so a 404 from upstream (and an empty/204 body) is treated as a successful empty result:
 
-### 6. Selective JSON export
-- Update `exportJson`:
-  - Source rows = if `selectedRowIds.size > 0`, `filteredRows.filter(r => selectedRowIds.has(r.id ?? r.question ?? ""))`; otherwise all `filteredRows`.
-  - Strip internal/optimistic fields: build each export row by picking only the columns present in `QA_COLUMNS` (id, question, web, telegram_whatsapp, createdAt, updatedAt) plus the 6 flag fields (`question_highlight`, `question_error`, `web_highlight`, `web_error`, `telegram_whatsapp_highlight`, `telegram_whatsapp_error`). No React/runtime keys.
-  - Filename: `rag-builder-{activeTable}-{YYYYMMDD-HHmm}.json`. Toast shows `Exported N row(s)`.
+- If `res.status === 404` → return `{ data: [], error: null }`.
+- If the upstream body is empty or not valid JSON → return `{ data: [], error: null }` instead of bubbling a parse error.
+- Other non-2xx responses keep the current error behavior.
 
-### 7. Preserve everything else
-- Colors, grid styling, formula bar, toolbar, text-wrapping, highlight (yellow) and error-mark (red) cell visuals, sync overlays, Insert/Delete/Run flows, auth/Register/Sign-out, n8n flag payload (all 6 booleans) — untouched.
+## Tab-switch polish (client)
 
-### Files touched
-- `src/routes/_authenticated/index.tsx` — remove faculty UI/state, add tab-list query, tab bar + new-sheet dialog, table-aware fetch + table body field on all mutation calls, selective export.
-- `src/components/qa-dashboard/qa-columns.tsx` — drop Faculty column.
-- `src/components/qa-dashboard/QATable.tsx` — drop `faculty` from `QARow`.
-- `src/components/qa-dashboard/QuestionPasteBox.tsx` — accept and forward `table` prop.
-- `src/routes/api/n8n-qa.ts` — read and forward `?table=`.
-- `src/routes/api/n8n-flag.ts`, `n8n-delete.ts`, `n8n-process.ts`, `n8n-run.ts` — accept `table` in body, include in upstream payload.
-- `src/routes/api/n8n-tables.ts` — new GET proxy for the discovery webhook.
-- `src/routes/api/n8n-create-table.ts` — new POST proxy for the create-table webhook.
+In `src/routes/_authenticated/index.tsx`, when the user clicks a different tab, also clear the previously cached rows for the new tab's key so the grid shows the skeleton/empty state immediately instead of flashing the previous sheet's rows while the new fetch is in flight:
 
-### Assumptions
-- Discovery webhook returns a list of raw names with `test-` prefix; if the shape varies, the normalizer handles array / `{data}` / `{tables}` / `{name}`-object forms.
-- The fetch webhook accepts `?table=<raw-name>`; legacy single-table behavior is preserved when the param is missing.
-- Each n8n mutation workflow either uses or harmlessly ignores the new `table` body field until you wire it on the n8n side.
+```tsx
+onClick={() => {
+  if (t === activeTable) return;
+  queryClient.removeQueries({ queryKey: ["qa-rows", t], exact: true });
+  setActiveTable(t);
+  setSelection(null);
+  setSelectedRowIds(new Set());
+}}
+```
+
+## Files touched
+
+- `src/routes/api/n8n-qa.ts` — treat 404/empty body as `{ data: [], error: null }`.
+- `src/routes/_authenticated/index.tsx` — clear the target tab's cached rows on switch.
+
+## Not changed
+
+- Tab discovery, `qatest-` prefix handling, refresh button logic, mutation webhooks, export, formatting — all untouched.
