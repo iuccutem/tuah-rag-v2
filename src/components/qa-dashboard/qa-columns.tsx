@@ -46,6 +46,20 @@ export const QA_COLUMNS: QAColumn[] = [
     raw: (row) => row.question ?? "",
   },
   {
+    key: "faculty",
+    label: "Faculty",
+    width: "w-28",
+    render: (row) =>
+      row.faculty && row.faculty.trim() ? (
+        <Badge variant="secondary" className="font-medium">
+          {row.faculty}
+        </Badge>
+      ) : (
+        <EmptyCell />
+      ),
+    raw: (row) => row.faculty ?? "",
+  },
+  {
     key: "web",
     label: "Web",
     width: "w-[26rem]",
