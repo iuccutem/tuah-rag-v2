@@ -55,11 +55,11 @@ import { QuestionPasteBox } from "@/components/qa-dashboard/QuestionPasteBox";
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "Q&A Evaluation — Sheets" },
+      { title: "RAG Builder" },
       {
         name: "description",
         content:
-          "Spreadsheet-style dashboard for Q&A evaluation across web and messaging channels.",
+          "RAG Builder — spreadsheet-style workspace to curate Q&A across faculties and messaging channels.",
       },
     ],
   }),
