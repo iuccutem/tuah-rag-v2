@@ -112,7 +112,7 @@ function DashboardPage() {
     refetchOnWindowFocus: false,
   });
   const tables = (tablesQuery.data?.tables ?? []).filter((t) =>
-    t.startsWith("test-"),
+    t.startsWith("qatest-"),
   );
 
   // Set the first table as the active one on initial load.
