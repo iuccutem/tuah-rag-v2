@@ -379,8 +379,9 @@ function DashboardPage() {
       const res = await fetch("/api/n8n-flag", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: rowId, ...flags }),
+        body: JSON.stringify({ id: rowId, table: activeTable, ...flags }),
       });
+
       const json = (await res.json()) as { ok: boolean; error?: string };
       if (!json.ok) throw new Error(json.error || "Failed to update.");
       await refetch();
@@ -496,8 +497,10 @@ function DashboardPage() {
       body: JSON.stringify({
         items,
         questions: items.map((i) => i.question),
+        table: activeTable,
       }),
     });
+
     return (await res.json()) as {
       ok: boolean;
       deleted?: number;
@@ -598,8 +601,9 @@ function DashboardPage() {
           const res = await fetch("/api/n8n-process", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ channel: ch, question }),
+            body: JSON.stringify({ channel: ch, question, table: activeTable }),
           });
+
           const json = (await res.json()) as { ok: boolean; error?: string };
           results.push({ ch, question, ok: json.ok, error: json.error });
         }
@@ -850,6 +854,8 @@ function DashboardPage() {
               </DialogHeader>
               <QuestionPasteBox
                 existingQuestions={existingQuestions}
+                table={activeTable}
+
                 onComplete={async () => {
                   setInsertOpen(false);
                   setInserting(true);
