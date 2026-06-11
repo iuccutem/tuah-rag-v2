@@ -20,6 +20,7 @@ export const Route = createFileRoute("/api/n8n-delete")({
         let body: {
           questions?: string[];
           items?: Array<{ id?: string | number | null; question?: string }>;
+          table?: string;
         } = {};
         try {
           body = await request.json();
@@ -29,6 +30,9 @@ export const Route = createFileRoute("/api/n8n-delete")({
             { status: 400 },
           );
         }
+
+        const table =
+          typeof body.table === "string" && body.table.trim() ? body.table.trim() : "";
 
         let items: Array<{ id: string | number | null; question: string }> = [];
         if (Array.isArray(body.items)) {
@@ -64,6 +68,8 @@ export const Route = createFileRoute("/api/n8n-delete")({
           let lastError: string | undefined;
           let lastMessage = "";
           try {
+            const upstreamPayload: Record<string, unknown> = { id, question };
+            if (table) upstreamPayload.table = table;
             const res = await fetch(DELETE_WEBHOOK_URL, {
               method: "POST",
               headers: {
@@ -71,8 +77,9 @@ export const Route = createFileRoute("/api/n8n-delete")({
                 "Content-Type": "application/json",
                 Accept: "application/json",
               },
-              body: JSON.stringify({ id, question }),
+              body: JSON.stringify(upstreamPayload),
             });
+
             lastMessage = await res.text();
             if (!res.ok) {
               okAll = false;

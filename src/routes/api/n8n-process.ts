@@ -15,13 +15,21 @@ export const Route = createFileRoute("/api/n8n-process")({
       POST: async ({ request }) => {
         let channel: Channel = "web";
         let question = "";
+        let table = "";
         try {
-          const body = (await request.json()) as { channel?: string; question?: string };
+          const body = (await request.json()) as {
+            channel?: string;
+            question?: string;
+            table?: string;
+          };
           if (body.channel === "telegram_whatsapp" || body.channel === "web") {
             channel = body.channel;
           }
           if (typeof body.question === "string") {
             question = body.question.trim();
+          }
+          if (typeof body.table === "string") {
+            table = body.table.trim();
           }
         } catch {
           // default to web, no question
@@ -38,6 +46,9 @@ export const Route = createFileRoute("/api/n8n-process")({
 
         const auth = Buffer.from(`${user}:${password}`).toString("base64");
         try {
+          const upstream: Record<string, unknown> = {};
+          if (question) upstream.question = question;
+          if (table) upstream.table = table;
           const res = await fetch(WEBHOOK_URL, {
             method: "POST",
             headers: {
@@ -45,8 +56,9 @@ export const Route = createFileRoute("/api/n8n-process")({
               "Content-Type": "application/json",
               Accept: "application/json",
             },
-            body: JSON.stringify(question ? { question } : {}),
+            body: JSON.stringify(upstream),
           });
+
           const text = await res.text();
           let data: unknown = null;
           try {

@@ -17,7 +17,7 @@ export const Route = createFileRoute("/api/n8n-run")({
           );
         }
 
-        let body: { question?: string } = {};
+        let body: { question?: string; table?: string } = {};
         try {
           body = await request.json();
         } catch {
@@ -27,6 +27,7 @@ export const Route = createFileRoute("/api/n8n-run")({
           );
         }
         const question = (body.question ?? "").trim();
+        const table = (body.table ?? "").trim();
         if (!question) {
           return Response.json(
             { ok: false, error: "Question is empty." },
@@ -36,6 +37,8 @@ export const Route = createFileRoute("/api/n8n-run")({
 
         const auth = Buffer.from(`${user}:${password}`).toString("base64");
         try {
+          const upstream: Record<string, unknown> = { question };
+          if (table) upstream.table = table;
           const res = await fetch(WEBHOOK_URL, {
             method: "POST",
             headers: {
@@ -43,8 +46,9 @@ export const Route = createFileRoute("/api/n8n-run")({
               "Content-Type": "application/json",
               Accept: "application/json",
             },
-            body: JSON.stringify({ question }),
+            body: JSON.stringify(upstream),
           });
+
           const text = await res.text();
           let data: unknown = null;
           try {

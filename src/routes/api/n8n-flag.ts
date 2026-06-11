@@ -19,6 +19,7 @@ export const Route = createFileRoute("/api/n8n-flag")({
 
         let body: {
           id?: string | number | null;
+          table?: string;
           question_error?: boolean;
           question_highlight?: boolean;
           telegram_whatsapp_error?: boolean;
@@ -36,7 +37,7 @@ export const Route = createFileRoute("/api/n8n-flag")({
           return Response.json({ ok: false, error: "Missing row id." }, { status: 400 });
         }
 
-        const payload = {
+        const payload: Record<string, unknown> = {
           id: body.id,
           question_error: body.question_error === true,
           question_highlight: body.question_highlight === true,
@@ -45,6 +46,10 @@ export const Route = createFileRoute("/api/n8n-flag")({
           telegram_whatsapp_highlight: body.telegram_whatsapp_highlight === true,
           web_highlight: body.web_highlight === true,
         };
+        if (typeof body.table === "string" && body.table.trim()) {
+          payload.table = body.table.trim();
+        }
+
 
         const auth = Buffer.from(`${user}:${password}`).toString("base64");
         try {
