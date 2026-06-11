@@ -95,7 +95,7 @@ async function fetchTables(): Promise<TablesResponse> {
 }
 
 function formatTableLabel(raw: string): string {
-  const stripped = raw.replace(/^test-/i, "");
+  const stripped = raw.replace(/^qatest-/i, "");
   if (!stripped) return raw;
   return stripped.charAt(0).toUpperCase() + stripped.slice(1);
 }
