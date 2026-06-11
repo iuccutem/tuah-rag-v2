@@ -5,6 +5,7 @@ import { QA_COLUMNS, colLetter } from "./qa-columns";
 export type QARow = {
   id?: number | string | null;
   question?: string | null;
+  faculty?: string | null;
   web?: string | null;
   telegram_whatsapp?: string | null;
   createdAt?: string | null;
