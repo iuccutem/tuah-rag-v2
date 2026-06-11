@@ -95,7 +95,7 @@ async function fetchTables(): Promise<TablesResponse> {
 }
 
 function formatTableLabel(raw: string): string {
-  const stripped = raw.replace(/^test-/i, "");
+  const stripped = raw.replace(/^qatest-/i, "");
   if (!stripped) return raw;
   return stripped.charAt(0).toUpperCase() + stripped.slice(1);
 }
@@ -112,7 +112,7 @@ function DashboardPage() {
     refetchOnWindowFocus: false,
   });
   const tables = (tablesQuery.data?.tables ?? []).filter((t) =>
-    t.startsWith("test-"),
+    t.startsWith("qatest-"),
   );
 
   // Set the first table as the active one on initial load.
@@ -280,8 +280,8 @@ function DashboardPage() {
       toast.error("Table name is required.");
       return;
     }
-    const formatted = `test-${raw.toLowerCase().replace(/\s+/g, "-")}`;
-    if (!/^test-[a-z0-9-]+$/.test(formatted)) {
+    const formatted = `qatest-${raw.toLowerCase().replace(/\s+/g, "-")}`;
+    if (!/^qatest-[a-z0-9-]+$/.test(formatted)) {
       toast.error("Use letters, numbers, spaces or dashes only.");
       return;
     }
@@ -319,7 +319,7 @@ function DashboardPage() {
       // Step 1: Re-fetch tables first
       const tableResult = await tablesQuery.refetch();
       const freshTables = (tableResult.data?.tables ?? []).filter((t) =>
-        t.startsWith("test-"),
+        t.startsWith("qatest-"),
       );
 
       // Step 2: Verify active table; switch if no longer valid
@@ -1144,7 +1144,7 @@ function DashboardPage() {
             <DialogTitle>New sheet</DialogTitle>
             <DialogDescription>
               Enter a table name. It will be lowercased, spaces become dashes,
-              and a <span className="font-mono">test-</span> prefix is added.
+              and a <span className="font-mono">qatest-</span> prefix is added.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
@@ -1163,7 +1163,7 @@ function DashboardPage() {
             />
             {newSheetName.trim() && (
               <div className="text-[12px] text-muted-foreground">
-                Will create: <span className="font-mono text-foreground">test-{newSheetName.trim().toLowerCase().replace(/\s+/g, "-")}</span>
+                Will create: <span className="font-mono text-foreground">qatest-{newSheetName.trim().toLowerCase().replace(/\s+/g, "-")}</span>
               </div>
             )}
           </div>
