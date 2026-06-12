@@ -1226,7 +1226,7 @@ function DashboardPage() {
 
 
       {/* Formula bar */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-2 py-1">
+      <div className="hidden md:flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-2 py-1">
         <div className="flex h-7 w-24 items-center justify-between rounded-sm border border-[var(--sheets-grid)] bg-card px-2 text-[12px] text-foreground">
           {selection?.mode === "cell"
             ? cellRef(selection.col, selection.row)
