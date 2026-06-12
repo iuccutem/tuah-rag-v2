@@ -1,41 +1,26 @@
-## What the code already does
+## Fix: distinct processing UI after insert succeeds
 
-- Each sheet tab click sets `activeTable`, which is part of the React Query key `["qa-rows", activeTable]`. Switching tabs auto-refetches.
-- `fetchRows(activeTable)` calls `/api/n8n-qa?table=<qatest-…>&ts=…`.
-- `src/routes/api/n8n-qa.ts` forwards that `?table=` value to the upstream n8n webhook (`911d5dbc-…`).
-- An empty array from upstream already renders the "No evaluation records yet." empty-state in `QATable`.
+Currently the same green button just changes label from "Inserting…" → "Processing…", which is visually identical and confusing. The per-question status list also still shows only the insert result (green check), giving no signal that the agent is now working.
 
-Since you're wiring the n8n workflow to honor `?table=`, no client-side fetch changes are needed — once n8n filters by the param, each tab will return its own rows (or `[]`).
+### Changes (only in `src/components/qa-dashboard/QuestionPasteBox.tsx`)
 
-## One small UX safeguard
+1. **Processing overlay state** — when `processing === true` (insert finished, agent running), replace the action button row + per-row results with a centered processing panel inside the card:
+   - Large spinner
+   - Heading: "Processing answers…"
+   - Sub text: "Inserted N question(s). The agent is generating answers — this can take a moment."
+   - Channel chip(s) showing which webhook(s) are running (Web Chat / Telegram-WhatsApp / Both)
+   - Disabled "Please wait" hint; no buttons during this phase
 
-When a freshly-created sheet has no rows, some n8n setups respond with a 404 or 500 instead of `[]`. Today that surfaces as a red error banner over an empty grid, which reads as "broken" rather than "empty".
+2. **Inserting phase unchanged** — while `running === true` keep the current button-with-spinner + per-row pending/ok/error list (that feedback is useful there).
 
-Update `src/routes/api/n8n-qa.ts` so a 404 from upstream (and an empty/204 body) is treated as a successful empty result:
+3. **After processing completes** — overlay disappears, results list is restored and each previously-inserted row is marked "Answered" (reuse existing ok state, no logic change).
 
-- If `res.status === 404` → return `{ data: [], error: null }`.
-- If the upstream body is empty or not valid JSON → return `{ data: [], error: null }` instead of bubbling a parse error.
-- Other non-2xx responses keep the current error behavior.
+4. No changes to:
+   - `runAll` logic, webhook calls, duplicate handling, toasts
+   - Any API route, parent component, or table refresh
+   - Business logic / data flow
 
-## Tab-switch polish (client)
-
-In `src/routes/_authenticated/index.tsx`, when the user clicks a different tab, also clear the previously cached rows for the new tab's key so the grid shows the skeleton/empty state immediately instead of flashing the previous sheet's rows while the new fetch is in flight:
-
-```tsx
-onClick={() => {
-  if (t === activeTable) return;
-  queryClient.removeQueries({ queryKey: ["qa-rows", t], exact: true });
-  setActiveTable(t);
-  setSelection(null);
-  setSelectedRowIds(new Set());
-}}
-```
-
-## Files touched
-
-- `src/routes/api/n8n-qa.ts` — treat 404/empty body as `{ data: [], error: null }`.
-- `src/routes/_authenticated/index.tsx` — clear the target tab's cached rows on switch.
-
-## Not changed
-
-- Tab discovery, `qatest-` prefix handling, refresh button logic, mutation webhooks, export, formatting — all untouched.
+### Technical notes
+- Pure presentational change inside one component.
+- Use existing `Loader2` + Tailwind tokens; no new deps.
+- Gate overlay with `{processing ? <ProcessingPanel/> : <NormalView/>}` inside `CardContent`.
