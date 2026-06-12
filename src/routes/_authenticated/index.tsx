@@ -765,14 +765,15 @@ function DashboardPage() {
           <SheetIcon className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="truncate text-[17px] font-medium leading-tight text-foreground">
+          <h1 className="truncate text-[15px] sm:text-[17px] font-medium leading-tight text-foreground">
             RAG Builder
           </h1>
-          <div className="mt-0.5 text-[12px] text-muted-foreground">
+          <div className="mt-0.5 hidden sm:block text-[12px] text-muted-foreground">
             Last edit was at {lastUpdated}
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        {/* Desktop: full action row */}
+        <div className="hidden sm:flex items-center gap-1">
           <button
             type="button"
             onClick={exportXlsx}
@@ -814,6 +815,44 @@ function DashboardPage() {
             <LogOut className="h-4 w-4" />
             <span className="hidden sm:inline">Sign out</span>
           </button>
+        </div>
+        {/* Mobile: overflow menu */}
+        <div className="sm:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
+                title="Menu"
+              >
+                <MoreVertical className="h-5 w-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={exportXlsx} disabled={exporting}>
+                <Download className="mr-2 h-4 w-4" />
+                {exporting ? "Exporting…" : "Export Excel"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportJson}>
+                <Download className="mr-2 h-4 w-4" />
+                Export JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setRegisterOpen(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Register user
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate({ to: "/auth" });
+                }}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
