@@ -858,8 +858,142 @@ function DashboardPage() {
 
 
 
-      {/* Toolbar */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
+      {/* Mobile toolbar */}
+      <div className="flex md:hidden shrink-0 flex-col gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          <ToolbarButton
+            onClick={handleRefresh}
+            disabled={refreshing || isFetching}
+            title="Refresh data"
+          >
+            <RefreshCw className={refreshing || isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          </ToolbarButton>
+
+          <button
+            type="button"
+            onClick={() => setInsertOpen(true)}
+            className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-2.5 text-[13px] font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+          >
+            <ListPlus className="h-4 w-4" />
+            Insert
+          </button>
+
+          <button
+            type="button"
+            onClick={deleteSelectedRows}
+            disabled={selectedRowIds.size === 0}
+            title={selectedRowIds.size === 0 ? "Select rows to delete" : `Delete ${selectedRowIds.size}`}
+            className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-foreground/90 hover:bg-muted disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+            {selectedRowIds.size > 0 ? (
+              <span className="rounded-full bg-destructive/15 px-1.5 text-[10px] font-semibold text-destructive tabular-nums">
+                {selectedRowIds.size}
+              </span>
+            ) : null}
+          </button>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                title="Filters"
+                className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-foreground/90 hover:bg-muted"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                {(searchQuery || dateFrom || dateTo) && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[260px] space-y-2 p-3">
+              <div className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--sheets-grid)] bg-background px-2 focus-within:ring-1 focus-within:ring-primary">
+                <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search questions…"
+                  className="h-7 flex-1 min-w-0 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">From</label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="h-9 w-full rounded-md border border-[var(--sheets-grid)] bg-background px-2 text-[13px] text-foreground focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">To</label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="h-9 w-full rounded-md border border-[var(--sheets-grid)] bg-background px-2 text-[13px] text-foreground focus:outline-none"
+                />
+              </div>
+              {(searchQuery || dateFrom || dateTo) && (
+                <button
+                  type="button"
+                  onClick={() => { setSearchQuery(""); setDateFrom(""); setDateTo(""); }}
+                  className="w-full rounded-md px-2 py-1.5 text-[12px] font-medium text-muted-foreground hover:bg-muted"
+                >
+                  Clear filters
+                </button>
+              )}
+            </PopoverContent>
+          </Popover>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                title="More actions"
+                className="ml-auto flex h-8 w-8 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              {selectedRowIds.size > 0 && (
+                <>
+                  <DropdownMenuItem onClick={() => setPendingChannel("web")} disabled={runningChannel !== null}>
+                    <Globe className="mr-2 h-4 w-4 text-primary" />
+                    Run Web ({selectedRowIds.size})
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPendingChannel("telegram_whatsapp")} disabled={runningChannel !== null}>
+                    <MessageSquare className="mr-2 h-4 w-4 text-primary" />
+                    Run WA/TG ({selectedRowIds.size})
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPendingChannel("both")} disabled={runningChannel !== null}>
+                    <Layers className="mr-2 h-4 w-4 text-primary" />
+                    Run Both
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              <DropdownMenuItem onClick={() => applyFormat({ highlight: true })}>
+                <Highlighter className="mr-2 h-4 w-4 text-yellow-500" />
+                Highlight cell
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => applyFormat({ error: true })}>
+                <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
+                Mark error
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => applyFormat(null)}>
+                <Eraser className="mr-2 h-4 w-4" />
+                Clear formatting
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Desktop Toolbar */}
+      <div className="hidden md:flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
         {/* Group: data view */}
         <ToolbarGroup>
           <ToolbarButton
