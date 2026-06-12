@@ -934,20 +934,23 @@ function DashboardPage() {
             badgeTone="danger"
           />
 
-          <a
-            href="https://tuah.utem.edu.my/agent/form/3711c0e7-968e-4fea-ab27-31a4da013a7f"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => {
-              setSyncPhase("waiting");
-              setSyncing(true);
-            }}
-            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/90 hover:bg-muted"
-            title="Open agent form to sync the full Q&A sheet"
-          >
-            <ExternalLink className="h-4 w-4 text-primary" />
-            <span>Sync Q&A sheet</span>
-          </a>
+          {/* Sync Q&A sheet button hidden for now */}
+          {false && (
+            <a
+              href="https://tuah.utem.edu.my/agent/form/3711c0e7-968e-4fea-ab27-31a4da013a7f"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => {
+                setSyncPhase("waiting");
+                setSyncing(true);
+              }}
+              className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/90 hover:bg-muted"
+              title="Open agent form to sync the full Q&A sheet"
+            >
+              <ExternalLink className="h-4 w-4 text-primary" />
+              <span>Sync Q&A sheet</span>
+            </a>
+          )}
         </ToolbarGroup>
 
         <Divider />
