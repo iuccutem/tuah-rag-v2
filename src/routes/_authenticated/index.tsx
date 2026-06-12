@@ -21,7 +21,17 @@ import {
   LogOut,
   UserPlus,
   Plus,
+  MoreVertical,
+  SlidersHorizontal,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ExcelJS from "exceljs";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
