@@ -21,7 +21,17 @@ import {
   LogOut,
   UserPlus,
   Plus,
+  MoreVertical,
+  SlidersHorizontal,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ExcelJS from "exceljs";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
@@ -755,14 +765,15 @@ function DashboardPage() {
           <SheetIcon className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="truncate text-[17px] font-medium leading-tight text-foreground">
+          <h1 className="truncate text-[15px] sm:text-[17px] font-medium leading-tight text-foreground">
             RAG Builder
           </h1>
-          <div className="mt-0.5 text-[12px] text-muted-foreground">
+          <div className="mt-0.5 hidden sm:block text-[12px] text-muted-foreground">
             Last edit was at {lastUpdated}
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        {/* Desktop: full action row */}
+        <div className="hidden sm:flex items-center gap-1">
           <button
             type="button"
             onClick={exportXlsx}
@@ -805,12 +816,184 @@ function DashboardPage() {
             <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
+        {/* Mobile: overflow menu */}
+        <div className="sm:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
+                title="Menu"
+              >
+                <MoreVertical className="h-5 w-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={exportXlsx} disabled={exporting}>
+                <Download className="mr-2 h-4 w-4" />
+                {exporting ? "Exporting…" : "Export Excel"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportJson}>
+                <Download className="mr-2 h-4 w-4" />
+                Export JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setRegisterOpen(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Register user
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate({ to: "/auth" });
+                }}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
 
 
-      {/* Toolbar */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
+      {/* Mobile toolbar */}
+      <div className="flex md:hidden shrink-0 flex-col gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          <ToolbarButton
+            onClick={handleRefresh}
+            disabled={refreshing || isFetching}
+            title="Refresh data"
+          >
+            <RefreshCw className={refreshing || isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          </ToolbarButton>
+
+          <button
+            type="button"
+            onClick={() => setInsertOpen(true)}
+            className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-2.5 text-[13px] font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+          >
+            <ListPlus className="h-4 w-4" />
+            Insert
+          </button>
+
+          <button
+            type="button"
+            onClick={deleteSelectedRows}
+            disabled={selectedRowIds.size === 0}
+            title={selectedRowIds.size === 0 ? "Select rows to delete" : `Delete ${selectedRowIds.size}`}
+            className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-foreground/90 hover:bg-muted disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+            {selectedRowIds.size > 0 ? (
+              <span className="rounded-full bg-destructive/15 px-1.5 text-[10px] font-semibold text-destructive tabular-nums">
+                {selectedRowIds.size}
+              </span>
+            ) : null}
+          </button>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                title="Filters"
+                className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-foreground/90 hover:bg-muted"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                {(searchQuery || dateFrom || dateTo) && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[260px] space-y-2 p-3">
+              <div className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--sheets-grid)] bg-background px-2 focus-within:ring-1 focus-within:ring-primary">
+                <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search questions…"
+                  className="h-7 flex-1 min-w-0 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">From</label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="h-9 w-full rounded-md border border-[var(--sheets-grid)] bg-background px-2 text-[13px] text-foreground focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">To</label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="h-9 w-full rounded-md border border-[var(--sheets-grid)] bg-background px-2 text-[13px] text-foreground focus:outline-none"
+                />
+              </div>
+              {(searchQuery || dateFrom || dateTo) && (
+                <button
+                  type="button"
+                  onClick={() => { setSearchQuery(""); setDateFrom(""); setDateTo(""); }}
+                  className="w-full rounded-md px-2 py-1.5 text-[12px] font-medium text-muted-foreground hover:bg-muted"
+                >
+                  Clear filters
+                </button>
+              )}
+            </PopoverContent>
+          </Popover>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                title="More actions"
+                className="ml-auto flex h-8 w-8 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              {selectedRowIds.size > 0 && (
+                <>
+                  <DropdownMenuItem onClick={() => setPendingChannel("web")} disabled={runningChannel !== null}>
+                    <Globe className="mr-2 h-4 w-4 text-primary" />
+                    Run Web ({selectedRowIds.size})
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPendingChannel("telegram_whatsapp")} disabled={runningChannel !== null}>
+                    <MessageSquare className="mr-2 h-4 w-4 text-primary" />
+                    Run WA/TG ({selectedRowIds.size})
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPendingChannel("both")} disabled={runningChannel !== null}>
+                    <Layers className="mr-2 h-4 w-4 text-primary" />
+                    Run Both
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              <DropdownMenuItem onClick={() => applyFormat({ highlight: true })}>
+                <Highlighter className="mr-2 h-4 w-4 text-yellow-500" />
+                Highlight cell
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => applyFormat({ error: true })}>
+                <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
+                Mark error
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => applyFormat(null)}>
+                <Eraser className="mr-2 h-4 w-4" />
+                Clear formatting
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Desktop Toolbar */}
+      <div className="hidden md:flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
         {/* Group: data view */}
         <ToolbarGroup>
           <ToolbarButton
@@ -892,7 +1075,7 @@ function DashboardPage() {
                 Insert
               </button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Insert questions</DialogTitle>
                 <DialogDescription>
@@ -1043,7 +1226,7 @@ function DashboardPage() {
 
 
       {/* Formula bar */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-2 py-1">
+      <div className="hidden md:flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-2 py-1">
         <div className="flex h-7 w-24 items-center justify-between rounded-sm border border-[var(--sheets-grid)] bg-card px-2 text-[12px] text-foreground">
           {selection?.mode === "cell"
             ? cellRef(selection.col, selection.row)
@@ -1089,7 +1272,7 @@ function DashboardPage() {
       </div>
 
       {/* Grid */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <QATable
           rows={filteredRows}
           isLoading={isLoading}
@@ -1150,7 +1333,7 @@ function DashboardPage() {
 
       {/* New sheet dialog */}
       <Dialog open={newSheetOpen} onOpenChange={(o) => !creatingSheet && setNewSheetOpen(o)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New sheet</DialogTitle>
             <DialogDescription>
@@ -1198,7 +1381,7 @@ function DashboardPage() {
           if (!o) setPendingChannel(null);
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Run agent on selected rows?</DialogTitle>
             <DialogDescription>
@@ -1250,7 +1433,7 @@ function DashboardPage() {
 
       {/* Register user dialog */}
       <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Register new user</DialogTitle>
             <DialogDescription>
@@ -1353,7 +1536,7 @@ function DashboardPage() {
           !deleting && setDeleteConfirm((d) => ({ ...d, open: o }))
         }
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Trash2 className="h-5 w-5 text-destructive" />
