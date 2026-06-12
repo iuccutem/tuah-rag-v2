@@ -38,6 +38,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { registerUser } from "@/lib/admin-users.functions";
+import { exportRowsAsRag } from "@/lib/rag-export.functions";
 
 
 import { Button } from "@/components/ui/button";
@@ -234,7 +235,8 @@ function DashboardPage() {
     return result;
   }, [rows, searchQuery, dateFrom, dateTo]);
 
-  const exportJson = () => {
+  const exportRagFn = useServerFn(exportRowsAsRag);
+  const exportJson = async () => {
     try {
       const selected =
         selectedRowIds.size > 0
@@ -242,27 +244,25 @@ function DashboardPage() {
               selectedRowIds.has(r.id ?? r.question ?? ""),
             )
           : filteredRows;
-      // Strip to a clean shape: only known column fields + the 6 flag booleans.
-      const flagKeys = [
-        "question_highlight",
-        "question_error",
-        "web_highlight",
-        "web_error",
-        "telegram_whatsapp_highlight",
-        "telegram_whatsapp_error",
-      ] as const;
-      const cleanRows = selected.map((row) => {
-        const out: Record<string, unknown> = {};
-        for (const c of QA_COLUMNS) {
-          out[c.key as string] = (row as Record<string, unknown>)[c.key as string] ?? null;
-        }
-        for (const f of flagKeys) {
-          const v = (row as Record<string, unknown>)[f];
-          if (typeof v === "boolean") out[f] = v;
-        }
-        return out;
-      });
-      const json = JSON.stringify(cleanRows, null, 2);
+      const inputRows = selected
+        .filter((r) => (r.question ?? "").trim().length > 0)
+        .map((r) => ({
+          id: (r.id ?? null) as string | number | null,
+          question: r.question ?? "",
+          web: r.web ?? "",
+          telegram_whatsapp: r.telegram_whatsapp ?? "",
+        }));
+      if (inputRows.length === 0) {
+        toast.error("No rows with a question to export.");
+        return;
+      }
+      const tId = toast.loading(
+        `Formatting ${inputRows.length} row${inputRows.length === 1 ? "" : "s"} with AI…`,
+      );
+      const { rows: ragRows } = await exportRagFn({ data: { rows: inputRows } });
+      toast.dismiss(tId);
+
+      const json = JSON.stringify(ragRows, null, 2);
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -277,12 +277,13 @@ function DashboardPage() {
       a.remove();
       URL.revokeObjectURL(url);
       toast.success(
-        `Exported ${cleanRows.length} row${cleanRows.length === 1 ? "" : "s"}.`,
+        `Exported ${ragRows.length} row${ragRows.length === 1 ? "" : "s"}.`,
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to export JSON.");
     }
   };
+
 
   const createSheet = async () => {
     const raw = newSheetName.trim();
