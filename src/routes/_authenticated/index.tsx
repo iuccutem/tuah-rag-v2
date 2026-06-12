@@ -1272,7 +1272,7 @@ function DashboardPage() {
       </div>
 
       {/* Grid */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <QATable
           rows={filteredRows}
           isLoading={isLoading}
