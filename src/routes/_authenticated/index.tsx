@@ -1075,7 +1075,7 @@ function DashboardPage() {
                 Insert
               </button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Insert questions</DialogTitle>
                 <DialogDescription>
@@ -1333,7 +1333,7 @@ function DashboardPage() {
 
       {/* New sheet dialog */}
       <Dialog open={newSheetOpen} onOpenChange={(o) => !creatingSheet && setNewSheetOpen(o)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New sheet</DialogTitle>
             <DialogDescription>
@@ -1381,7 +1381,7 @@ function DashboardPage() {
           if (!o) setPendingChannel(null);
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Run agent on selected rows?</DialogTitle>
             <DialogDescription>
@@ -1433,7 +1433,7 @@ function DashboardPage() {
 
       {/* Register user dialog */}
       <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Register new user</DialogTitle>
             <DialogDescription>
@@ -1536,7 +1536,7 @@ function DashboardPage() {
           !deleting && setDeleteConfirm((d) => ({ ...d, open: o }))
         }
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Trash2 className="h-5 w-5 text-destructive" />
