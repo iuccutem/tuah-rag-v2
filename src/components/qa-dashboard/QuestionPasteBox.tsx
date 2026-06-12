@@ -197,6 +197,33 @@ export function QuestionPasteBox({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {processing ? (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-md border bg-muted/30 p-8 text-center">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="space-y-1">
+              <div className="text-base font-medium">Processing answers…</div>
+              <div className="text-sm text-muted-foreground">
+                Inserted {items.filter((i) => i.status === "ok").length} question
+                {items.filter((i) => i.status === "ok").length === 1 ? "" : "s"}. The agent is
+                generating answers — this can take a moment.
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              {(activeChannel === "web" || activeChannel === "both") && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs">
+                  <Globe className="h-3.5 w-3.5" /> Web Chat
+                </span>
+              )}
+              {(activeChannel === "telegram_whatsapp" || activeChannel === "both") && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs">
+                  <MessageSquare className="h-3.5 w-3.5" /> Telegram / WhatsApp
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground">Please wait — do not close this dialog.</div>
+          </div>
+        ) : (
+        <>
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -332,6 +359,8 @@ export function QuestionPasteBox({
             ))}
           </ul>
         ) : null}
+        </>
+        )}
       </CardContent>
     </Card>
   );
