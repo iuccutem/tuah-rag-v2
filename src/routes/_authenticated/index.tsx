@@ -13,7 +13,7 @@ import {
   Search,
   Calendar,
   Trash2,
-  ExternalLink,
+  FileSpreadsheet as _ExternalLinkPlaceholder,
   Globe,
   MessageSquare,
   Layers,
