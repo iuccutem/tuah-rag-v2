@@ -333,8 +333,81 @@ function DashboardPage() {
     }
   };
 
+  const renameSheet = async () => {
+    const from = renameOpen.from;
+    const raw = renameValue.trim();
+    if (!raw) {
+      toast.error("New name is required.");
+      return;
+    }
+    const formatted = `qatest-${raw.toLowerCase().replace(/^qatest-/, "").replace(/\s+/g, "-")}`;
+    if (!/^qatest-[a-z0-9-]+$/.test(formatted)) {
+      toast.error("Use letters, numbers, spaces or dashes only.");
+      return;
+    }
+    if (formatted === from) {
+      toast.error("New name is the same as the current name.");
+      return;
+    }
+    if (tables.some((t) => t.toLowerCase() === formatted)) {
+      toast.error("A sheet with that name already exists.");
+      return;
+    }
+    setRenaming(true);
+    try {
+      const res = await fetch("/api/n8n-rename-table", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: from, newName: formatted }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!json.ok) throw new Error(json.error || "Failed to rename sheet.");
+      toast.success(`Renamed to "${formatTableLabel(formatted)}".`);
+      setRenameOpen({ open: false, from: "" });
+      setRenameValue("");
+      await tablesQuery.refetch();
+      if (activeTable === from) {
+        setActiveTable(formatted);
+        setSelection(null);
+        setSelectedRowIds(new Set());
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to rename sheet.");
+    } finally {
+      setRenaming(false);
+    }
+  };
 
-  const handleRefresh = async () => {
+  const deleteSheet = async () => {
+    const name = deleteSheetConfirm.name;
+    if (!name) return;
+    setDeletingSheet(true);
+    try {
+      const res = await fetch("/api/n8n-delete-table", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!json.ok) throw new Error(json.error || "Failed to delete sheet.");
+      toast.success(`Deleted sheet "${formatTableLabel(name)}".`);
+      setDeleteSheetConfirm({ open: false, name: "" });
+      const result = await tablesQuery.refetch();
+      const fresh = (result.data?.tables ?? []).filter((t) => t.startsWith("qatest-"));
+      if (activeTable === name) {
+        const next = fresh[0] ?? "";
+        setActiveTable(next);
+        setSelection(null);
+        setSelectedRowIds(new Set());
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete sheet.");
+    } finally {
+      setDeletingSheet(false);
+    }
+  };
+
+
     setRefreshing(true);
     try {
       // Step 1: Re-fetch tables first
