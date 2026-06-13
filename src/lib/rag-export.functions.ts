@@ -100,7 +100,7 @@ export const exportRowsAsRag = createServerFn({ method: "POST" })
             return {
               lang: "en" as const,
               intent: r.intent.trim(),
-              question: (row.question ?? "").trim(),
+              question: (r.question || row.question || "").trim(),
               answer,
               metadata: r.metadata.trim(),
               url: extractUrl(answer),
