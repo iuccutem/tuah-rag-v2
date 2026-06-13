@@ -1444,6 +1444,140 @@ function DashboardPage() {
         </div>
       </div>
 
+      {/* Excel import dialog */}
+      <Dialog open={excelImportOpen} onOpenChange={setExcelImportOpen}>
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Import questions from Excel</DialogTitle>
+            <DialogDescription>
+              Upload an .xlsx, .xls, or .csv file. Pick the column that holds
+              questions, then insert them into{" "}
+              <span className="font-mono">
+                {activeTable ? formatTableLabel(activeTable) : "the active sheet"}
+              </span>
+              .
+            </DialogDescription>
+          </DialogHeader>
+          <ExcelImportBox
+            table={activeTable}
+            existingQuestions={existingQuestions}
+            onComplete={async () => {
+              setExcelImportOpen(false);
+              setInserting(true);
+              try {
+                const result = await refetch();
+                if (result.error) throw result.error;
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Failed to refresh table.");
+              } finally {
+                setInserting(false);
+              }
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename sheet dialog */}
+      <Dialog
+        open={renameOpen.open}
+        onOpenChange={(o) => !renaming && setRenameOpen((s) => ({ ...s, open: o }))}
+      >
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Rename sheet</DialogTitle>
+            <DialogDescription>
+              Rename <span className="font-mono">{renameOpen.from}</span>. The{" "}
+              <span className="font-mono">qatest-</span> prefix is added automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              disabled={renaming}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !renaming) {
+                  e.preventDefault();
+                  void renameSheet();
+                }
+              }}
+            />
+            {renameValue.trim() && (
+              <div className="text-[12px] text-muted-foreground">
+                Will rename to:{" "}
+                <span className="font-mono text-foreground">
+                  qatest-{renameValue.trim().toLowerCase().replace(/^qatest-/, "").replace(/\s+/g, "-")}
+                </span>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRenameOpen({ open: false, from: "" })}
+              disabled={renaming}
+            >
+              Cancel
+            </Button>
+            <Button onClick={renameSheet} disabled={renaming} className="gap-2">
+              {renaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+              {renaming ? "Renaming…" : "Rename"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete sheet dialog */}
+      <Dialog
+        open={deleteSheetConfirm.open}
+        onOpenChange={(o) => !deletingSheet && setDeleteSheetConfirm((s) => ({ ...s, open: o }))}
+      >
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Delete sheet?
+            </DialogTitle>
+            <DialogDescription>
+              This will permanently delete the{" "}
+              <span className="font-mono">{deleteSheetConfirm.name}</span> table
+              and all its rows. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteSheetConfirm({ open: false, name: "" })}
+              disabled={deletingSheet}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={deleteSheet} disabled={deletingSheet} className="gap-2">
+              {deletingSheet ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              {deletingSheet ? "Deleting…" : "Delete sheet"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Full-screen overlay while rename/delete sheet runs */}
+      {(renaming || deletingSheet) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-lg border border-[var(--sheets-grid)] bg-card px-8 py-6 shadow-lg">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="text-center">
+              <div className="text-[15px] font-medium text-foreground">
+                {renaming ? "Renaming sheet…" : "Deleting sheet…"}
+              </div>
+              <div className="mt-1 text-[12px] text-muted-foreground">
+                Waiting for the workflow to confirm.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* New sheet dialog */}
       <Dialog open={newSheetOpen} onOpenChange={(o) => !creatingSheet && setNewSheetOpen(o)}>
         <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
