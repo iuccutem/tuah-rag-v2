@@ -13,7 +13,6 @@ import {
   Search,
   Calendar,
   Trash2,
-  ExternalLink,
   Globe,
   MessageSquare,
   Layers,
@@ -23,6 +22,9 @@ import {
   Plus,
   MoreVertical,
   SlidersHorizontal,
+  FileSpreadsheet,
+  Pencil,
+  ChevronDown,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -64,6 +66,7 @@ import {
 } from "@/components/qa-dashboard/QATable";
 import { QA_COLUMNS, cellRef } from "@/components/qa-dashboard/qa-columns";
 import { QuestionPasteBox } from "@/components/qa-dashboard/QuestionPasteBox";
+import { ExcelImportBox } from "@/components/qa-dashboard/ExcelImportBox";
 
 
 
@@ -161,6 +164,12 @@ function DashboardPage() {
   const [newSheetOpen, setNewSheetOpen] = useState(false);
   const [newSheetName, setNewSheetName] = useState("");
   const [creatingSheet, setCreatingSheet] = useState(false);
+  const [excelImportOpen, setExcelImportOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState<{ open: boolean; from: string }>({ open: false, from: "" });
+  const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const [deleteSheetConfirm, setDeleteSheetConfirm] = useState<{ open: boolean; name: string }>({ open: false, name: "" });
+  const [deletingSheet, setDeletingSheet] = useState(false);
 
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -323,6 +332,79 @@ function DashboardPage() {
     }
   };
 
+  const renameSheet = async () => {
+    const from = renameOpen.from;
+    const raw = renameValue.trim();
+    if (!raw) {
+      toast.error("New name is required.");
+      return;
+    }
+    const formatted = `qatest-${raw.toLowerCase().replace(/^qatest-/, "").replace(/\s+/g, "-")}`;
+    if (!/^qatest-[a-z0-9-]+$/.test(formatted)) {
+      toast.error("Use letters, numbers, spaces or dashes only.");
+      return;
+    }
+    if (formatted === from) {
+      toast.error("New name is the same as the current name.");
+      return;
+    }
+    if (tables.some((t) => t.toLowerCase() === formatted)) {
+      toast.error("A sheet with that name already exists.");
+      return;
+    }
+    setRenaming(true);
+    try {
+      const res = await fetch("/api/n8n-rename-table", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: from, newName: formatted }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!json.ok) throw new Error(json.error || "Failed to rename sheet.");
+      toast.success(`Renamed to "${formatTableLabel(formatted)}".`);
+      setRenameOpen({ open: false, from: "" });
+      setRenameValue("");
+      await tablesQuery.refetch();
+      if (activeTable === from) {
+        setActiveTable(formatted);
+        setSelection(null);
+        setSelectedRowIds(new Set());
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to rename sheet.");
+    } finally {
+      setRenaming(false);
+    }
+  };
+
+  const deleteSheet = async () => {
+    const name = deleteSheetConfirm.name;
+    if (!name) return;
+    setDeletingSheet(true);
+    try {
+      const res = await fetch("/api/n8n-delete-table", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!json.ok) throw new Error(json.error || "Failed to delete sheet.");
+      toast.success(`Deleted sheet "${formatTableLabel(name)}".`);
+      setDeleteSheetConfirm({ open: false, name: "" });
+      const result = await tablesQuery.refetch();
+      const fresh = (result.data?.tables ?? []).filter((t) => t.startsWith("qatest-"));
+      if (activeTable === name) {
+        const next = fresh[0] ?? "";
+        setActiveTable(next);
+        setSelection(null);
+        setSelectedRowIds(new Set());
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete sheet.");
+    } finally {
+      setDeletingSheet(false);
+    }
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -1118,23 +1200,17 @@ function DashboardPage() {
             badgeTone="danger"
           />
 
-          {/* Sync Q&A sheet button hidden for now */}
-          {false && (
-            <a
-              href="https://tuah.utem.edu.my/agent/form/3711c0e7-968e-4fea-ab27-31a4da013a7f"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                setSyncPhase("waiting");
-                setSyncing(true);
-              }}
-              className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/90 hover:bg-muted"
-              title="Open agent form to sync the full Q&A sheet"
-            >
-              <ExternalLink className="h-4 w-4 text-primary" />
-              <span>Sync Q&A sheet</span>
-            </a>
-          )}
+          {/* Import questions from Excel/CSV */}
+          <button
+            type="button"
+            onClick={() => setExcelImportOpen(true)}
+            disabled={!activeTable}
+            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/90 hover:bg-muted disabled:opacity-50"
+            title="Upload an Excel/CSV file and insert its questions into the active sheet"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-primary" />
+            <span>Import Excel</span>
+          </button>
         </ToolbarGroup>
 
         <Divider />
@@ -1297,25 +1373,60 @@ function DashboardPage() {
           tables.map((t) => {
             const active = t === activeTable;
             return (
-              <button
+              <div
                 key={t}
-                type="button"
-                onClick={() => {
-                  if (t === activeTable) return;
-                  queryClient.removeQueries({ queryKey: ["qa-rows", t], exact: true });
-                  setActiveTable(t);
-                  setSelection(null);
-                  setSelectedRowIds(new Set());
-                }}
-                title={t}
                 className={
                   active
-                    ? "flex h-7 items-center gap-2 rounded-t-md border-t-2 border-primary bg-card px-3 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]"
-                    : "flex h-7 items-center gap-2 rounded-t-md border-t-2 border-transparent px-3 text-[13px] font-medium text-muted-foreground hover:bg-muted"
+                    ? "flex h-7 items-center rounded-t-md border-t-2 border-primary bg-card pl-3 pr-1 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]"
+                    : "flex h-7 items-center rounded-t-md border-t-2 border-transparent pl-3 pr-1 text-[13px] font-medium text-muted-foreground hover:bg-muted"
                 }
               >
-                {formatTableLabel(t)}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (t === activeTable) return;
+                    queryClient.removeQueries({ queryKey: ["qa-rows", t], exact: true });
+                    setActiveTable(t);
+                    setSelection(null);
+                    setSelectedRowIds(new Set());
+                  }}
+                  title={t}
+                  className="mr-1"
+                >
+                  {formatTableLabel(t)}
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      title="Sheet actions"
+                      className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted-foreground/10 hover:text-foreground"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-40">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setRenameValue(t.replace(/^qatest-/, ""));
+                        setRenameOpen({ open: true, from: t });
+                      }}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Rename
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => setDeleteSheetConfirm({ open: true, name: t })}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             );
           })
         )}
@@ -1331,6 +1442,140 @@ function DashboardPage() {
           {refreshing ? "Refreshing…" : isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
         </div>
       </div>
+
+      {/* Excel import dialog */}
+      <Dialog open={excelImportOpen} onOpenChange={setExcelImportOpen}>
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Import questions from Excel</DialogTitle>
+            <DialogDescription>
+              Upload an .xlsx, .xls, or .csv file. Pick the column that holds
+              questions, then insert them into{" "}
+              <span className="font-mono">
+                {activeTable ? formatTableLabel(activeTable) : "the active sheet"}
+              </span>
+              .
+            </DialogDescription>
+          </DialogHeader>
+          <ExcelImportBox
+            table={activeTable}
+            existingQuestions={existingQuestions}
+            onComplete={async () => {
+              setExcelImportOpen(false);
+              setInserting(true);
+              try {
+                const result = await refetch();
+                if (result.error) throw result.error;
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Failed to refresh table.");
+              } finally {
+                setInserting(false);
+              }
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename sheet dialog */}
+      <Dialog
+        open={renameOpen.open}
+        onOpenChange={(o) => !renaming && setRenameOpen((s) => ({ ...s, open: o }))}
+      >
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Rename sheet</DialogTitle>
+            <DialogDescription>
+              Rename <span className="font-mono">{renameOpen.from}</span>. The{" "}
+              <span className="font-mono">qatest-</span> prefix is added automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              disabled={renaming}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !renaming) {
+                  e.preventDefault();
+                  void renameSheet();
+                }
+              }}
+            />
+            {renameValue.trim() && (
+              <div className="text-[12px] text-muted-foreground">
+                Will rename to:{" "}
+                <span className="font-mono text-foreground">
+                  qatest-{renameValue.trim().toLowerCase().replace(/^qatest-/, "").replace(/\s+/g, "-")}
+                </span>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRenameOpen({ open: false, from: "" })}
+              disabled={renaming}
+            >
+              Cancel
+            </Button>
+            <Button onClick={renameSheet} disabled={renaming} className="gap-2">
+              {renaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+              {renaming ? "Renaming…" : "Rename"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete sheet dialog */}
+      <Dialog
+        open={deleteSheetConfirm.open}
+        onOpenChange={(o) => !deletingSheet && setDeleteSheetConfirm((s) => ({ ...s, open: o }))}
+      >
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Delete sheet?
+            </DialogTitle>
+            <DialogDescription>
+              This will permanently delete the{" "}
+              <span className="font-mono">{deleteSheetConfirm.name}</span> table
+              and all its rows. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteSheetConfirm({ open: false, name: "" })}
+              disabled={deletingSheet}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={deleteSheet} disabled={deletingSheet} className="gap-2">
+              {deletingSheet ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              {deletingSheet ? "Deleting…" : "Delete sheet"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Full-screen overlay while rename/delete sheet runs */}
+      {(renaming || deletingSheet) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-lg border border-[var(--sheets-grid)] bg-card px-8 py-6 shadow-lg">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="text-center">
+              <div className="text-[15px] font-medium text-foreground">
+                {renaming ? "Renaming sheet…" : "Deleting sheet…"}
+              </div>
+              <div className="mt-1 text-[12px] text-muted-foreground">
+                Waiting for the workflow to confirm.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New sheet dialog */}
       <Dialog open={newSheetOpen} onOpenChange={(o) => !creatingSheet && setNewSheetOpen(o)}>

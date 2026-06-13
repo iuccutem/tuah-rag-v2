@@ -14,10 +14,12 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as ApiN8nTablesRouteImport } from './routes/api/n8n-tables'
 import { Route as ApiN8nRunRouteImport } from './routes/api/n8n-run'
+import { Route as ApiN8nRenameTableRouteImport } from './routes/api/n8n-rename-table'
 import { Route as ApiN8nQaRouteImport } from './routes/api/n8n-qa'
 import { Route as ApiN8nProcessRouteImport } from './routes/api/n8n-process'
 import { Route as ApiN8nFlagRouteImport } from './routes/api/n8n-flag'
 import { Route as ApiN8nEmailRouteImport } from './routes/api/n8n-email'
+import { Route as ApiN8nDeleteTableRouteImport } from './routes/api/n8n-delete-table'
 import { Route as ApiN8nDeleteRouteImport } from './routes/api/n8n-delete'
 import { Route as ApiN8nCreateTableRouteImport } from './routes/api/n8n-create-table'
 
@@ -45,6 +47,11 @@ const ApiN8nRunRoute = ApiN8nRunRouteImport.update({
   path: '/api/n8n-run',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiN8nRenameTableRoute = ApiN8nRenameTableRouteImport.update({
+  id: '/api/n8n-rename-table',
+  path: '/api/n8n-rename-table',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiN8nQaRoute = ApiN8nQaRouteImport.update({
   id: '/api/n8n-qa',
   path: '/api/n8n-qa',
@@ -65,6 +72,11 @@ const ApiN8nEmailRoute = ApiN8nEmailRouteImport.update({
   path: '/api/n8n-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiN8nDeleteTableRoute = ApiN8nDeleteTableRouteImport.update({
+  id: '/api/n8n-delete-table',
+  path: '/api/n8n-delete-table',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiN8nDeleteRoute = ApiN8nDeleteRouteImport.update({
   id: '/api/n8n-delete',
   path: '/api/n8n-delete',
@@ -81,10 +93,12 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/api/n8n-create-table': typeof ApiN8nCreateTableRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
+  '/api/n8n-delete-table': typeof ApiN8nDeleteTableRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
+  '/api/n8n-rename-table': typeof ApiN8nRenameTableRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
   '/api/n8n-tables': typeof ApiN8nTablesRoute
 }
@@ -92,10 +106,12 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/api/n8n-create-table': typeof ApiN8nCreateTableRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
+  '/api/n8n-delete-table': typeof ApiN8nDeleteTableRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
+  '/api/n8n-rename-table': typeof ApiN8nRenameTableRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
   '/api/n8n-tables': typeof ApiN8nTablesRoute
   '/': typeof AuthenticatedIndexRoute
@@ -106,10 +122,12 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/api/n8n-create-table': typeof ApiN8nCreateTableRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
+  '/api/n8n-delete-table': typeof ApiN8nDeleteTableRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
   '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
+  '/api/n8n-rename-table': typeof ApiN8nRenameTableRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
   '/api/n8n-tables': typeof ApiN8nTablesRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -121,10 +139,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/api/n8n-create-table'
     | '/api/n8n-delete'
+    | '/api/n8n-delete-table'
     | '/api/n8n-email'
     | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
+    | '/api/n8n-rename-table'
     | '/api/n8n-run'
     | '/api/n8n-tables'
   fileRoutesByTo: FileRoutesByTo
@@ -132,10 +152,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/api/n8n-create-table'
     | '/api/n8n-delete'
+    | '/api/n8n-delete-table'
     | '/api/n8n-email'
     | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
+    | '/api/n8n-rename-table'
     | '/api/n8n-run'
     | '/api/n8n-tables'
     | '/'
@@ -145,10 +167,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/api/n8n-create-table'
     | '/api/n8n-delete'
+    | '/api/n8n-delete-table'
     | '/api/n8n-email'
     | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
+    | '/api/n8n-rename-table'
     | '/api/n8n-run'
     | '/api/n8n-tables'
     | '/_authenticated/'
@@ -159,10 +183,12 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ApiN8nCreateTableRoute: typeof ApiN8nCreateTableRoute
   ApiN8nDeleteRoute: typeof ApiN8nDeleteRoute
+  ApiN8nDeleteTableRoute: typeof ApiN8nDeleteTableRoute
   ApiN8nEmailRoute: typeof ApiN8nEmailRoute
   ApiN8nFlagRoute: typeof ApiN8nFlagRoute
   ApiN8nProcessRoute: typeof ApiN8nProcessRoute
   ApiN8nQaRoute: typeof ApiN8nQaRoute
+  ApiN8nRenameTableRoute: typeof ApiN8nRenameTableRoute
   ApiN8nRunRoute: typeof ApiN8nRunRoute
   ApiN8nTablesRoute: typeof ApiN8nTablesRoute
 }
@@ -204,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiN8nRunRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/n8n-rename-table': {
+      id: '/api/n8n-rename-table'
+      path: '/api/n8n-rename-table'
+      fullPath: '/api/n8n-rename-table'
+      preLoaderRoute: typeof ApiN8nRenameTableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/n8n-qa': {
       id: '/api/n8n-qa'
       path: '/api/n8n-qa'
@@ -230,6 +263,13 @@ declare module '@tanstack/react-router' {
       path: '/api/n8n-email'
       fullPath: '/api/n8n-email'
       preLoaderRoute: typeof ApiN8nEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/n8n-delete-table': {
+      id: '/api/n8n-delete-table'
+      path: '/api/n8n-delete-table'
+      fullPath: '/api/n8n-delete-table'
+      preLoaderRoute: typeof ApiN8nDeleteTableRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/n8n-delete': {
@@ -265,23 +305,15 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ApiN8nCreateTableRoute: ApiN8nCreateTableRoute,
   ApiN8nDeleteRoute: ApiN8nDeleteRoute,
+  ApiN8nDeleteTableRoute: ApiN8nDeleteTableRoute,
   ApiN8nEmailRoute: ApiN8nEmailRoute,
   ApiN8nFlagRoute: ApiN8nFlagRoute,
   ApiN8nProcessRoute: ApiN8nProcessRoute,
   ApiN8nQaRoute: ApiN8nQaRoute,
+  ApiN8nRenameTableRoute: ApiN8nRenameTableRoute,
   ApiN8nRunRoute: ApiN8nRunRoute,
   ApiN8nTablesRoute: ApiN8nTablesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
