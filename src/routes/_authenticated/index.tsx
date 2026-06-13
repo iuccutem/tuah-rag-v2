@@ -1374,25 +1374,60 @@ function DashboardPage() {
           tables.map((t) => {
             const active = t === activeTable;
             return (
-              <button
+              <div
                 key={t}
-                type="button"
-                onClick={() => {
-                  if (t === activeTable) return;
-                  queryClient.removeQueries({ queryKey: ["qa-rows", t], exact: true });
-                  setActiveTable(t);
-                  setSelection(null);
-                  setSelectedRowIds(new Set());
-                }}
-                title={t}
                 className={
                   active
-                    ? "flex h-7 items-center gap-2 rounded-t-md border-t-2 border-primary bg-card px-3 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]"
-                    : "flex h-7 items-center gap-2 rounded-t-md border-t-2 border-transparent px-3 text-[13px] font-medium text-muted-foreground hover:bg-muted"
+                    ? "flex h-7 items-center rounded-t-md border-t-2 border-primary bg-card pl-3 pr-1 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]"
+                    : "flex h-7 items-center rounded-t-md border-t-2 border-transparent pl-3 pr-1 text-[13px] font-medium text-muted-foreground hover:bg-muted"
                 }
               >
-                {formatTableLabel(t)}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (t === activeTable) return;
+                    queryClient.removeQueries({ queryKey: ["qa-rows", t], exact: true });
+                    setActiveTable(t);
+                    setSelection(null);
+                    setSelectedRowIds(new Set());
+                  }}
+                  title={t}
+                  className="mr-1"
+                >
+                  {formatTableLabel(t)}
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      title="Sheet actions"
+                      className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted-foreground/10 hover:text-foreground"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-40">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setRenameValue(t.replace(/^qatest-/, ""));
+                        setRenameOpen({ open: true, from: t });
+                      }}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Rename
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => setDeleteSheetConfirm({ open: true, name: t })}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             );
           })
         )}
