@@ -23,6 +23,9 @@ import {
   Plus,
   MoreVertical,
   SlidersHorizontal,
+  FileSpreadsheet,
+  Pencil,
+  ChevronDown,
 } from "lucide-react";
 import {
   DropdownMenu,
