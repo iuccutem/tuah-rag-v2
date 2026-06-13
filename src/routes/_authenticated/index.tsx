@@ -407,7 +407,7 @@ function DashboardPage() {
     }
   };
 
-
+  const handleRefresh = async () => {
     setRefreshing(true);
     try {
       // Step 1: Re-fetch tables first
