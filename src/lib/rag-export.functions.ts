@@ -19,6 +19,7 @@ const InputSchema = z.object({
 
 const RowOutput = z.object({
   intent: z.string(),
+  question: z.string(),
   answer: z.string(),
   metadata: z.string(),
 });
@@ -42,18 +43,25 @@ function extractUrl(text: string): string | null {
 async function formatOne(
   model: ReturnType<ReturnType<typeof createLovableAiGatewayProvider>>,
   row: { question?: string | null; web?: string | null; telegram_whatsapp?: string | null },
-): Promise<{ intent: string; answer: string; metadata: string }> {
+): Promise<{ intent: string; question: string; answer: string; metadata: string }> {
   const question = (row.question ?? "").trim();
   const webText = (row.web ?? "").trim();
   const tgText = (row.telegram_whatsapp ?? "").trim();
 
   const prompt = `You are formatting Q&A entries for a RAG knowledge base.
 
-Given a question and up to two candidate answers from different channels (Web and Telegram/WhatsApp), produce:
+Given a QUESTION and up to two candidate answers (Web and Telegram/WhatsApp), produce four fields. The Web answer is the primary source — prefer it when both are present; merge in Telegram/WhatsApp content only if it adds clearly useful facts not already in Web.
 
-1. "answer": the single best answer in English. Pick the more complete/cleaner of the two candidates, or merge them if both add value. Preserve any URLs inline. Strip channel-specific noise (greetings, signatures, "Click here" boilerplate). Keep it factual and readable.
-2. "intent": a short dotted slug describing the question's intent, like "staff.director", "accommodation.count", "admissions.office". Lowercase, 2-3 dot-separated segments, snake_case if needed within a segment.
-3. "metadata": 2-4 short topical tags joined with "; " (semicolon + space). Example: "education; university_administration; UTeM ACCESS".
+OUTPUT FIELDS:
+1. "question": the original question, translated to natural English if it is in Malay or mixed Malay/English. If already in English, keep as-is (light cleanup only). Preserve proper nouns and acronyms (UTeM, FTKEK, FAIX, ACCESS, etc.) unchanged.
+2. "answer": the single best answer in English. Translate from Malay if needed. Use the Web answer as the base; merge from Telegram/WhatsApp only if it adds value. Strip channel-specific noise (greetings, signatures, "Click here" boilerplate, emojis). Preserve URLs inline exactly as written. Keep it factual, complete, and readable.
+3. "intent": a short dotted slug describing the question's intent, like "staff.director", "accommodation.count", "admissions.office". Lowercase, 2-3 dot-separated segments, snake_case if needed within a segment.
+4. "metadata": 2-4 short topical tags joined with "; " (semicolon + space). Example: "education; university_administration; UTeM ACCESS".
+
+TRANSLATION RULES:
+- Translate Malay → English naturally; do not transliterate.
+- Keep proper nouns, acronyms, course codes, programme names, URLs, and email addresses unchanged.
+- If text is already English, do not paraphrase aggressively — keep the user's wording.
 
 QUESTION:
 ${question}
