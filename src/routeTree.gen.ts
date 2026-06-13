@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as ApiN8nTablesRouteImport } from './routes/api/n8n-tables'
 import { Route as ApiN8nRunRouteImport } from './routes/api/n8n-run'
+import { Route as ApiN8nRenameTableRouteImport } from './routes/api/n8n-rename-table'
 import { Route as ApiN8nQaRouteImport } from './routes/api/n8n-qa'
 import { Route as ApiN8nProcessRouteImport } from './routes/api/n8n-process'
 import { Route as ApiN8nFlagRouteImport } from './routes/api/n8n-flag'
@@ -44,6 +45,11 @@ const ApiN8nTablesRoute = ApiN8nTablesRouteImport.update({
 const ApiN8nRunRoute = ApiN8nRunRouteImport.update({
   id: '/api/n8n-run',
   path: '/api/n8n-run',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiN8nRenameTableRoute = ApiN8nRenameTableRouteImport.update({
+  id: '/api/n8n-rename-table',
+  path: '/api/n8n-rename-table',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiN8nQaRoute = ApiN8nQaRouteImport.update({
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
+  '/api/n8n-rename-table': typeof ApiN8nRenameTableRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
   '/api/n8n-tables': typeof ApiN8nTablesRoute
 }
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
+  '/api/n8n-rename-table': typeof ApiN8nRenameTableRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
   '/api/n8n-tables': typeof ApiN8nTablesRoute
   '/': typeof AuthenticatedIndexRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
+  '/api/n8n-rename-table': typeof ApiN8nRenameTableRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
   '/api/n8n-tables': typeof ApiN8nTablesRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
+    | '/api/n8n-rename-table'
     | '/api/n8n-run'
     | '/api/n8n-tables'
   fileRoutesByTo: FileRoutesByTo
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
+    | '/api/n8n-rename-table'
     | '/api/n8n-run'
     | '/api/n8n-tables'
     | '/'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
+    | '/api/n8n-rename-table'
     | '/api/n8n-run'
     | '/api/n8n-tables'
     | '/_authenticated/'
@@ -176,6 +188,7 @@ export interface RootRouteChildren {
   ApiN8nFlagRoute: typeof ApiN8nFlagRoute
   ApiN8nProcessRoute: typeof ApiN8nProcessRoute
   ApiN8nQaRoute: typeof ApiN8nQaRoute
+  ApiN8nRenameTableRoute: typeof ApiN8nRenameTableRoute
   ApiN8nRunRoute: typeof ApiN8nRunRoute
   ApiN8nTablesRoute: typeof ApiN8nTablesRoute
 }
@@ -215,6 +228,13 @@ declare module '@tanstack/react-router' {
       path: '/api/n8n-run'
       fullPath: '/api/n8n-run'
       preLoaderRoute: typeof ApiN8nRunRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/n8n-rename-table': {
+      id: '/api/n8n-rename-table'
+      path: '/api/n8n-rename-table'
+      fullPath: '/api/n8n-rename-table'
+      preLoaderRoute: typeof ApiN8nRenameTableRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/n8n-qa': {
@@ -290,6 +310,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiN8nFlagRoute: ApiN8nFlagRoute,
   ApiN8nProcessRoute: ApiN8nProcessRoute,
   ApiN8nQaRoute: ApiN8nQaRoute,
+  ApiN8nRenameTableRoute: ApiN8nRenameTableRoute,
   ApiN8nRunRoute: ApiN8nRunRoute,
   ApiN8nTablesRoute: ApiN8nTablesRoute,
 }
