@@ -165,6 +165,12 @@ function DashboardPage() {
   const [newSheetOpen, setNewSheetOpen] = useState(false);
   const [newSheetName, setNewSheetName] = useState("");
   const [creatingSheet, setCreatingSheet] = useState(false);
+  const [excelImportOpen, setExcelImportOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState<{ open: boolean; from: string }>({ open: false, from: "" });
+  const [renameValue, setRenameValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const [deleteSheetConfirm, setDeleteSheetConfirm] = useState<{ open: boolean; name: string }>({ open: false, name: "" });
+  const [deletingSheet, setDeletingSheet] = useState(false);
 
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<{
