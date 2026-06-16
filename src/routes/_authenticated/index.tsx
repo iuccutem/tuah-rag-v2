@@ -40,7 +40,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { registerUser } from "@/lib/admin-users.functions";
-import { exportRowsAsRag } from "@/lib/rag-export.functions";
+
 
 
 import { Button } from "@/components/ui/button";
