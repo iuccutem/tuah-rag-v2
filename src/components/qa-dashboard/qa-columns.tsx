@@ -7,6 +7,10 @@ export type QAColumn = {
   key: keyof QARow;
   label: string;
   width: string;
+  /** Whether this cell can be edited inline (double-click to edit). */
+  editable?: boolean;
+  /** Single-line input vs multi-line textarea for editing. */
+  inputType?: "text" | "textarea";
   /** Visual cell render */
   render: (row: QARow, idx: number) => ReactNode;
   /** Raw string for formula bar / copy */
@@ -35,6 +39,8 @@ export const QA_COLUMNS: QAColumn[] = [
     key: "question",
     label: "Question",
     width: "w-[22rem]",
+    editable: true,
+    inputType: "textarea",
     render: (row) =>
       row.question ? (
         <span className="whitespace-pre-wrap break-words leading-snug">
@@ -67,6 +73,15 @@ export const QA_COLUMNS: QAColumn[] = [
       </div>
     ),
     raw: (row) => row.telegram_whatsapp ?? "",
+  },
+  {
+    key: "url",
+    label: "URL",
+    width: "w-[20rem]",
+    editable: true,
+    inputType: "text",
+    render: (row) => <LinkOrText value={row.url} />,
+    raw: (row) => row.url ?? "",
   },
   {
     key: "createdAt",
