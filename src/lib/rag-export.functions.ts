@@ -11,6 +11,7 @@ const InputSchema = z.object({
         question: z.string().nullable().optional(),
         web: z.string().nullable().optional(),
         telegram_whatsapp: z.string().nullable().optional(),
+        url: z.string().nullable().optional(),
       }),
     )
     .min(1)
@@ -33,11 +34,9 @@ export type RagExportRow = {
   url: string | null;
 };
 
-const URL_RE = /(https?:\/\/[^\s<>()\[\]]+)/i;
-function extractUrl(text: string): string | null {
-  const m = text.match(URL_RE);
-  if (!m) return null;
-  return m[1].replace(/[.,;:!?)\]]+$/, "");
+function cleanUrl(raw: string | null | undefined): string | null {
+  const v = (raw ?? "").trim();
+  return v.length > 0 ? v : null;
 }
 
 async function formatOne(
@@ -103,7 +102,7 @@ export const exportRowsAsRag = createServerFn({ method: "POST" })
               question: (r.question || row.question || "").trim(),
               answer,
               metadata: r.metadata.trim(),
-              url: extractUrl(answer),
+              url: cleanUrl(row.url),
             };
           } catch (e) {
             const question = (row.question ?? "").trim();
@@ -114,7 +113,7 @@ export const exportRowsAsRag = createServerFn({ method: "POST" })
               question,
               answer: fallback,
               metadata: "",
-              url: extractUrl(fallback),
+              url: cleanUrl(row.url),
             };
           }
         }),

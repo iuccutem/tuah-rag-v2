@@ -8,6 +8,7 @@ export type QARow = {
 
   web?: string | null;
   telegram_whatsapp?: string | null;
+  url?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 };
