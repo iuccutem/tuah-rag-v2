@@ -493,6 +493,35 @@ function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formats, filteredRows, optimisticFlags]);
 
+  const buildRowPayload = (
+    row: QARow,
+    overrides: Partial<Record<`${FlagCol}_${"error" | "highlight"}`, boolean>> = {},
+    fieldPatch: Partial<Pick<QARow, "question" | "url" | "web" | "telegram_whatsapp">> = {},
+  ) => {
+    const allFlagFields = [
+      "question_error",
+      "question_highlight",
+      "telegram_whatsapp_error",
+      "web_error",
+      "telegram_whatsapp_highlight",
+      "web_highlight",
+    ] as const;
+    const flags: Record<string, boolean> = {};
+    for (const f of allFlagFields) {
+      const [c, k] = f.endsWith("_highlight")
+        ? [f.replace("_highlight", "") as FlagCol, "highlight" as const]
+        : [f.replace("_error", "") as FlagCol, "error" as const];
+      flags[f] = overrides[f] !== undefined ? overrides[f]! : readFlag(row, c, k);
+    }
+    return {
+      question: (fieldPatch.question ?? row.question ?? "") as string,
+      url: (fieldPatch.url ?? row.url ?? "") as string,
+      web: (fieldPatch.web ?? row.web ?? "") as string,
+      telegram_whatsapp: (fieldPatch.telegram_whatsapp ?? row.telegram_whatsapp ?? "") as string,
+      ...flags,
+    };
+  };
+
   const sendRowFlags = async (
     rowId: string | number,
     row: QARow,
@@ -507,24 +536,28 @@ function DashboardPage() {
       "web_highlight",
     ] as const;
 
-    const flags: Record<string, boolean> = {};
     const optimisticPatch: Record<string, boolean> = {};
     for (const f of allFields) {
       const [c, k] = f.endsWith("_highlight")
         ? [f.replace("_highlight", "") as FlagCol, "highlight" as const]
         : [f.replace("_error", "") as FlagCol, "error" as const];
       const next = overrides[f] !== undefined ? overrides[f]! : readFlag(row, c, k);
-      flags[f] = next;
       optimisticPatch[`${rowId}::${f}`] = next;
     }
 
     setOptimisticFlags((p) => ({ ...p, ...optimisticPatch }));
 
     try {
+      const payload = {
+        id: rowId,
+        table: activeTable,
+        field: null,
+        ...buildRowPayload(row, overrides),
+      };
       const res = await fetch("/api/n8n-flag", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: rowId, table: activeTable, ...flags }),
+        body: JSON.stringify(payload),
       });
 
       const json = (await res.json()) as { ok: boolean; error?: string };
@@ -567,10 +600,16 @@ function DashboardPage() {
       };
     });
     try {
-      const res = await fetch("/api/n8n-update", {
+      const payload = {
+        id: rowId,
+        table: activeTable,
+        field,
+        ...buildRowPayload(row, {}, { [field]: value }),
+      };
+      const res = await fetch("/api/n8n-flag", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: rowId, table: activeTable, field, value }),
+        body: JSON.stringify(payload),
       });
       const json = (await res.json()) as { ok: boolean; error?: string };
       if (!json.ok) throw new Error(json.error || "Failed to save.");
@@ -595,6 +634,7 @@ function DashboardPage() {
       return false;
     }
   };
+
 
 
 

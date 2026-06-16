@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 const WEBHOOK_URL =
   "https://tuah.utem.edu.my/agent/webhook/adf82095-c24f-4a8f-9e10-fca39d0452ff";
 
+type Field = "question" | "url" | "web" | "telegram_whatsapp" | null;
 
 export const Route = createFileRoute("/api/n8n-flag")({
   server: {
@@ -20,36 +21,62 @@ export const Route = createFileRoute("/api/n8n-flag")({
         let body: {
           id?: string | number | null;
           table?: string;
+          field?: Field;
+          question?: string | null;
+          url?: string | null;
+          web?: string | null;
+          telegram_whatsapp?: string | null;
           question_error?: boolean;
           question_highlight?: boolean;
           telegram_whatsapp_error?: boolean;
-          web_error?: boolean;
           telegram_whatsapp_highlight?: boolean;
+          web_error?: boolean;
           web_highlight?: boolean;
         };
         try {
           body = await request.json();
         } catch {
-          return Response.json({ ok: false, error: "Invalid JSON body." }, { status: 400 });
+          return Response.json(
+            { ok: false, error: "Invalid JSON body." },
+            { status: 400 },
+          );
         }
 
         if (body?.id == null || body.id === "") {
-          return Response.json({ ok: false, error: "Missing row id." }, { status: 400 });
+          return Response.json(
+            { ok: false, error: "Missing row id." },
+            { status: 400 },
+          );
         }
+
+        const str = (v: unknown) => (typeof v === "string" ? v : "");
+        const bool = (v: unknown) => v === true;
+        const allowedFields: Field[] = [
+          "question",
+          "url",
+          "web",
+          "telegram_whatsapp",
+        ];
+        const field: Field =
+          body.field && allowedFields.includes(body.field) ? body.field : null;
 
         const payload: Record<string, unknown> = {
           id: body.id,
-          question_error: body.question_error === true,
-          question_highlight: body.question_highlight === true,
-          telegram_whatsapp_error: body.telegram_whatsapp_error === true,
-          web_error: body.web_error === true,
-          telegram_whatsapp_highlight: body.telegram_whatsapp_highlight === true,
-          web_highlight: body.web_highlight === true,
+          field,
+          question: str(body.question),
+          url: str(body.url),
+          web: str(body.web),
+          telegram_whatsapp: str(body.telegram_whatsapp),
+          question_error: bool(body.question_error),
+          question_highlight: bool(body.question_highlight),
+          telegram_whatsapp_error: bool(body.telegram_whatsapp_error),
+          telegram_whatsapp_highlight: bool(body.telegram_whatsapp_highlight),
+          web_error: bool(body.web_error),
+          web_highlight: bool(body.web_highlight),
         };
         if (typeof body.table === "string" && body.table.trim()) {
           payload.table = body.table.trim();
         }
-
 
         const auth = Buffer.from(`${user}:${password}`).toString("base64");
         try {
