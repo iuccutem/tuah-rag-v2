@@ -1,45 +1,60 @@
-## Goal
+# Mobile UI Fixes — RAG Builder Dashboard
 
-Send every cell edit and every flag toggle to one webhook with the full row payload:
+Targeted responsive fixes in `src/routes/_authenticated/index.tsx` plus a small CSS utility and one minor table-wrapper tweak. No business logic changes.
 
-`https://tuah.utem.edu.my/agent/webhook/adf82095-c24f-4a8f-9e10-fca39d0452ff`
+## 1. Add "Upload Excel" to the mobile overflow menu
+File: `src/routes/_authenticated/index.tsx` (mobile top-bar dropdown, ~lines 1026–1049).
 
-## Unified payload (always all columns)
+Add a new `DropdownMenuItem` between "Export JSON" and "Register user" that calls `setExcelImportOpen(true)` (same handler as the desktop button at line 1318). Use the `Upload` icon from `lucide-react` (add to the existing import list — check for duplicates first).
 
-Every POST sends the same shape — id, table, all data columns (including `url` now present on every table), and all 6 flags. No partial/optional fields. The `field` key tells n8n which column the user just changed (`null` for flag-only toggles).
+```tsx
+<DropdownMenuItem onClick={() => setExcelImportOpen(true)}>
+  <Upload className="mr-2 h-4 w-4" />
+  Upload Excel
+</DropdownMenuItem>
+```
 
-```json
-{
-  "id": "...",
-  "table": "...",
-  "field": "question" | "url" | "web" | "telegram_whatsapp" | null,
-  "question": "...",
-  "url": "...",
-  "web": "...",
-  "telegram_whatsapp": "...",
-  "question_error": false,
-  "question_highlight": false,
-  "telegram_whatsapp_error": false,
-  "telegram_whatsapp_highlight": false,
-  "web_error": false,
-  "web_highlight": false
+This reuses the existing `excelImportOpen` state and `ExcelImportBox` dialog, so behavior matches desktop exactly.
+
+## 2. Fix empty date pickers in mobile filter popover
+File: `src/routes/_authenticated/index.tsx` (lines 1104, 1117–1131).
+
+- Change `<PopoverContent align="start" className="w-[260px] space-y-2 p-3">` to `align="start" sideOffset={6} className="z-[100] w-[min(92vw,300px)] space-y-2 p-3"`.
+- On the two `<input type="date">` elements, add `min-h-[40px]` and remove anything that could collapse them; also drop `h-9` in favor of `h-10` so the native iOS/Android date wheel UI renders. Keep `w-full`.
+
+This ensures the popover sits above all sibling z-stacks and the native date input has enough box height to render its picker affordance.
+
+## 3. Scrollable bottom sheet tabs (no UI freeze on tap)
+File: `src/routes/_authenticated/index.tsx` (line 1481 container).
+
+- Container already has `overflow-x-auto`. Add `hide-scrollbar` and `flex-nowrap`, and add `shrink-0` to each tab `<div>` (line 1490) and to the trailing "+" button and "Synced…" status so they don't compress.
+- The "Synced…" `ml-auto` div is what currently pushes the "+" off-screen when many tabs exist on mobile. Remove `ml-auto` on mobile by changing it to `hidden sm:block ml-auto …` so the status text is desktop-only; this keeps the "+" button immediately after the last tab on mobile (covers fix #4 visibility).
+- Add a global utility in `src/styles.css`:
+
+```css
+@layer utilities {
+  .hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
 }
 ```
 
-All string columns default to `""` if null/undefined. All flags default to `false`.
+Tab click handler at line 1500 is already correct; no logic changes — the "freeze" perception comes from the off-screen "+" and from horizontal overflow on the parent, both addressed here and in #5.
 
-## Changes
+## 4. "Add Sheet" (+) visible and modal fits mobile
+- Visibility handled in #3 (status text hidden on mobile so "+" stays in view).
+- The New Sheet dialog at line 1696 currently uses `w-[calc(100vw-1.5rem)] sm:max-w-md`. Change to `w-[90vw] max-w-[400px] sm:max-w-md` so on mobile it caps at 400px and uses 90vw, matching the requested spec.
 
-1. **`src/routes/api/n8n-flag.ts`** — repurpose as the single unified endpoint (URL unchanged). New input schema accepts `id`, `table`, optional `field`, and the full set of column values + flags. Build the payload above (coercing missing fields to `""` / `false`) and POST it Basic-auth'd to the webhook. Keep existing error handling.
+No logic changes to `setNewSheetOpen` / create flow.
 
-2. **`src/routes/_authenticated/index.tsx`**
-   - **`handleEditCell`**: stop calling `/api/n8n-update`. POST to `/api/n8n-flag` with the full row — `{ id, table, field, question, url, web, telegram_whatsapp, ...currentFlags }` — where `field`/value is the edited column (the row object is patched with the new value first via the existing optimistic update, then read for the payload). Optimistic UI + revert unchanged.
-   - **`sendRowFlags`**: also send the full row — same payload shape, `field: null`, plus the existing flag overrides applied on top of `readFlag` values.
+## 5. Data table horizontal scrolling on mobile
+File: `src/routes/_authenticated/index.tsx` (line 1464) — the QATable wrapper.
 
-3. **Delete `src/routes/api/n8n-update.ts`** — no longer referenced; routetree regenerates.
+- Change `<div className="flex-1 min-w-0 overflow-hidden">` to `<div className="flex-1 min-w-0 w-full overflow-x-auto overflow-y-auto">`.
+- `QATable` itself already renders `<table className="w-max min-w-full …">` inside a `h-full overflow-auto` container; the parent's `overflow-hidden` was clipping horizontal scroll on mobile. Switching to `overflow-x-auto` lets users swipe horizontally without expanding the page width (the outer flex column already has `min-w-0`, preventing layout stretch).
+
+No changes inside `QATable.tsx`.
 
 ## Out of scope
-
-- No UI changes.
-- No edits to other webhooks (export, delete, create-table, rename, email, qa, run, process, tables).
-- Old `n8n-update` n8n workflows can be retired on the n8n side.
+- No changes to data fetching, webhooks, auth, or any non-UI logic.
+- No desktop layout changes beyond the shared dialog width tweak in #4 (still uses `sm:max-w-md` on desktop).
+- No new dependencies.
