@@ -1,35 +1,52 @@
 ## Goal
 
-1. Make the **Question** column editable (inline edit) and persist via n8n.
-2. Add a new **URL** column (editable) and persist via n8n; use it as the `url` field on RAG JSON export (always — even when the answer text contains a URL).
+Replace the AI-based "Export JSON" flow (Lovable AI Gateway) with an n8n webhook call. The webhook returns the formatted RAG rows; the browser saves them as a JSON file. UX, filename, and selection logic stay identical.
 
-## Scope
+## Webhook
 
-- `src/components/qa-dashboard/QATable.tsx` — add `url` to `QARow`; let `Question`/`URL` cells become editable on double-click / Enter (textarea for question, input for URL). Blur or Enter commits; Esc cancels.
-- `src/components/qa-dashboard/qa-columns.tsx` — add `url` column right after Telegram/WhatsApp (label "URL", monospace, link rendering, empty state). Question stays where it is.
-- `src/routes/_authenticated/index.tsx`:
-  - Wire `onEditCell(rowId, col, value)` from the table. Optimistic local patch + toast on success/error; refetch after success (debounced).
-  - Build export payload: pass `url` per row to the export server fn and use it directly in the output.
-  - Excel column for the auto-generated workbook download now includes URL.
-- `src/lib/rag-export.functions.ts`:
-  - Accept `url?: string | null` per input row.
-  - Drop AI-extracted URL fallback. Output `url = (row.url ?? "").trim() || null` — always the user-typed value; empty stays `null`.
-  - Keep translation + intent + metadata behavior unchanged.
-- New server route `src/routes/api/n8n-update.ts` — proxies to either of:
-  - `https://tuah.utem.edu.my/agent/webhook/9f887e4b-b49f-4f98-b4a3-b545206bffa4` (question)
-  - `https://tuah.utem.edu.my/agent/webhook/18285d76-b8dd-42df-92d2-f3069f2e51db` (url)
-  Body in: `{ table, id, field: "question" | "url", value }`. Sends Basic auth (existing `N8N_WEBHOOK_USER` / `_PASSWORD` envs) and posts `{ table, id, <field>: value }` to the matching webhook. Returns `{ ok, error? }`. One field per request keeps the contract simple and lets each cell save independently.
+- URL (test): `https://tuah.utem.edu.my/agent/webhook-test/22f796c0-d27f-4e92-a914-a6dcde8a0c5f` (user will swap to production URL later)
+- Method: `POST`
+- Auth: Basic auth via existing `N8N_BASIC_AUTH_*` envs (same as other n8n proxies in this project)
+- Request body:
+  ```json
+  {
+    "table": "<active table or 'all'>",
+    "rows": [
+      { "id": "...", "question": "...", "web": "...", "telegram_whatsapp": "...", "url": "..." }
+    ]
+  }
+  ```
+- Expected response:
+  ```json
+  {
+    "rows": [
+      { "lang": "en", "intent": "...", "question": "...", "answer": "...", "metadata": "...", "url": "..." | null }
+    ]
+  }
+  ```
 
-## UX details
+## Changes
 
-- Double-click a Question or URL cell → editable. Visual: bordered input, sized to cell, autofocus, select-all.
-- Save: blur or Cmd/Ctrl+Enter (textarea) / Enter (URL). Cancel: Esc.
-- During save: subtle "Saving…" inline + disable input; on error toast and revert.
-- URL cell renders as a clickable link when not editing (reuses existing `LinkOrText`).
-- Export note next to the JSON export button updated: "Uses the URL column verbatim."
+1. **New server route `src/routes/api/n8n-export.ts`**
+   - Accepts `POST { table, rows }` from the client.
+   - Reads webhook URL from env (`N8N_EXPORT_WEBHOOK_URL`) with a hardcoded fallback to the test URL above so it works immediately.
+   - Forwards the body to the webhook with Basic auth headers, 120s timeout.
+   - Returns `{ rows }` from the webhook verbatim (validated minimally — must be an object with an array `rows`). On failure returns `{ error }` with non-200 status.
+
+2. **New secret `N8N_EXPORT_WEBHOOK_URL`** (optional)
+   - Not required for the initial test — the test URL is the route's default.
+   - User can later add the production URL via the secrets tool to override.
+
+3. **`src/routes/_authenticated/index.tsx` — `exportJson`**
+   - Stop calling `exportRowsAsRag` server fn.
+   - `fetch('/api/n8n-export', { method: 'POST', body: JSON.stringify({ table: activeTable || 'all', rows: inputRows }) })`.
+   - Read `{ rows }` from the JSON response, then run the existing Blob/download code unchanged.
+   - Toast text changes from "Formatting … with AI" to "Sending to n8n…".
+
+4. **Leave `src/lib/rag-export.functions.ts` in place** (unused but kept) — out of scope to delete. Can remove in a follow-up if desired.
 
 ## Out of scope
 
-- No DB / schema changes, no new secrets, no other column edits.
-- Telegram/WhatsApp behavior unchanged.
-- No bulk-edit; one cell at a time.
+- No change to Excel export, editing, table CRUD, or any other column.
+- No schema changes.
+- No deletion of the old AI export function (kept dormant for easy rollback).
