@@ -56,6 +56,7 @@ export function QATable({
   const rowCount = displayRows.length;
   const allSelected = rowCount > 0 && displayRows.every((r) => selectedRowIds.has(r.id ?? r.question ?? ""));
   const someSelected = !allSelected && displayRows.some((r) => selectedRowIds.has(r.id ?? r.question ?? ""));
+  const [editing, setEditing] = useState<{ row: number; col: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const cellRefs = useRef<Map<string, HTMLTableCellElement>>(new Map());
