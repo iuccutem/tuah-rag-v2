@@ -527,6 +527,63 @@ function DashboardPage() {
     }
   };
 
+  const handleEditCell = async (
+    row: QARow,
+    col: { key: keyof QARow },
+    value: string,
+  ): Promise<boolean> => {
+    const field = col.key === "question" ? "question" : col.key === "url" ? "url" : null;
+    if (!field) return false;
+    const rowId = row.id;
+    if (rowId == null || rowId === "") {
+      toast.error("This row has no id and cannot be saved.");
+      return false;
+    }
+    const prev = (row[field] ?? "") as string;
+    // Optimistic update of cached rows
+    queryClient.setQueryData<ApiResponse>(["qa-rows", activeTable], (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        data: old.data.map((r) =>
+          (r.id ?? r.question ?? "") === (row.id ?? row.question ?? "")
+            ? { ...r, [field]: value }
+            : r,
+        ),
+      };
+    });
+    try {
+      const res = await fetch("/api/n8n-update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: rowId, table: activeTable, field, value }),
+      });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!json.ok) throw new Error(json.error || "Failed to save.");
+      toast.success(`${field === "question" ? "Question" : "URL"} updated.`);
+      // background refresh
+      void refetch();
+      return true;
+    } catch (e) {
+      // revert
+      queryClient.setQueryData<ApiResponse>(["qa-rows", activeTable], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((r) =>
+            (r.id ?? r.question ?? "") === (row.id ?? row.question ?? "")
+              ? { ...r, [field]: prev }
+              : r,
+          ),
+        };
+      });
+      toast.error(e instanceof Error ? e.message : "Failed to save.");
+      return false;
+    }
+  };
+
+
+
   const applyFormat = (patch: CellFormat | null) => {
     if (selection?.mode !== "cell") {
       toast.error("Select a cell first.");
