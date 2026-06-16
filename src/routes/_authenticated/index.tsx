@@ -23,6 +23,7 @@ import {
   MoreVertical,
   SlidersHorizontal,
   FileSpreadsheet,
+  Upload,
   Pencil,
   ChevronDown,
 } from "lucide-react";
@@ -1032,6 +1033,10 @@ function DashboardPage() {
                 <Download className="mr-2 h-4 w-4" />
                 Export JSON
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setExcelImportOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload Excel
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setRegisterOpen(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Register user
@@ -1101,7 +1106,7 @@ function DashboardPage() {
                 )}
               </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[260px] space-y-2 p-3">
+            <PopoverContent align="start" sideOffset={6} className="z-[100] w-[min(92vw,300px)] space-y-2 p-3">
               <div className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--sheets-grid)] bg-background px-2 focus-within:ring-1 focus-within:ring-primary">
                 <Search className="h-3.5 w-3.5 text-muted-foreground" />
                 <input
@@ -1118,7 +1123,7 @@ function DashboardPage() {
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="h-9 w-full rounded-md border border-[var(--sheets-grid)] bg-background px-2 text-[13px] text-foreground focus:outline-none"
+                  className="h-10 min-h-[40px] w-full rounded-md border border-[var(--sheets-grid)] bg-background px-2 text-[13px] text-foreground focus:outline-none"
                 />
               </div>
               <div className="space-y-1">
@@ -1127,7 +1132,7 @@ function DashboardPage() {
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="h-9 w-full rounded-md border border-[var(--sheets-grid)] bg-background px-2 text-[13px] text-foreground focus:outline-none"
+                  className="h-10 min-h-[40px] w-full rounded-md border border-[var(--sheets-grid)] bg-background px-2 text-[13px] text-foreground focus:outline-none"
                 />
               </div>
               {(searchQuery || dateFrom || dateTo) && (
@@ -1461,7 +1466,7 @@ function DashboardPage() {
       </div>
 
       {/* Grid */}
-      <div className="flex-1 min-w-0 overflow-hidden">
+      <div className="flex-1 min-w-0 w-full overflow-x-auto overflow-y-auto">
         <QATable
           rows={filteredRows}
           isLoading={isLoading}
@@ -1478,7 +1483,7 @@ function DashboardPage() {
 
 
       {/* Sheet tabs */}
-      <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
+      <div className="flex shrink-0 flex-nowrap items-center gap-1 overflow-x-auto hide-scrollbar border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
         {tables.length === 0 ? (
           <div className="flex h-7 items-center px-3 text-[12px] text-muted-foreground">
             {tablesQuery.isLoading ? "Loading sheets…" : "No sheets yet"}
@@ -1491,8 +1496,8 @@ function DashboardPage() {
                 key={t}
                 className={
                   active
-                    ? "flex h-7 items-center rounded-t-md border-t-2 border-primary bg-card pl-3 pr-1 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]"
-                    : "flex h-7 items-center rounded-t-md border-t-2 border-transparent pl-3 pr-1 text-[13px] font-medium text-muted-foreground hover:bg-muted"
+                    ? "flex h-7 shrink-0 items-center rounded-t-md border-t-2 border-primary bg-card pl-3 pr-1 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]"
+                    : "flex h-7 shrink-0 items-center rounded-t-md border-t-2 border-transparent pl-3 pr-1 text-[13px] font-medium text-muted-foreground hover:bg-muted"
                 }
               >
                 <button
@@ -1548,11 +1553,11 @@ function DashboardPage() {
           type="button"
           onClick={() => setNewSheetOpen(true)}
           title="Add a new sheet"
-          className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <Plus className="h-4 w-4" />
         </button>
-        <div className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+        <div className="ml-auto hidden shrink-0 text-[11px] text-muted-foreground tabular-nums sm:block">
           {refreshing ? "Refreshing…" : isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
         </div>
       </div>
@@ -1693,7 +1698,7 @@ function DashboardPage() {
 
       {/* New sheet dialog */}
       <Dialog open={newSheetOpen} onOpenChange={(o) => !creatingSheet && setNewSheetOpen(o)}>
-        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[90vw] max-w-[400px] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New sheet</DialogTitle>
             <DialogDescription>
