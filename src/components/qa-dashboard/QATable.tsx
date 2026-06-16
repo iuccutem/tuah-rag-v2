@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QA_COLUMNS, colLetter } from "./qa-columns";
+import { Loader2 } from "lucide-react";
+import { QA_COLUMNS, colLetter, type QAColumn } from "./qa-columns";
 
 export type QARow = {
   id?: number | string | null;
@@ -8,6 +9,7 @@ export type QARow = {
 
   web?: string | null;
   telegram_whatsapp?: string | null;
+  url?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 };
@@ -31,6 +33,7 @@ export function QATable({
   selectedRowIds,
   onToggleRow,
   onSelectAll,
+  onEditCell,
 }: {
   rows: QARow[];
   isLoading: boolean;
@@ -40,6 +43,11 @@ export function QATable({
   selectedRowIds: Set<string | number>;
   onToggleRow: (id: string | number) => void;
   onSelectAll: (select: boolean) => void;
+  onEditCell?: (
+    row: QARow,
+    col: QAColumn,
+    value: string,
+  ) => Promise<boolean> | boolean;
 }) {
 
   const skeletonRows = Array.from({ length: 8 });
@@ -48,6 +56,7 @@ export function QATable({
   const rowCount = displayRows.length;
   const allSelected = rowCount > 0 && displayRows.every((r) => selectedRowIds.has(r.id ?? r.question ?? ""));
   const someSelected = !allSelected && displayRows.some((r) => selectedRowIds.has(r.id ?? r.question ?? ""));
+  const [editing, setEditing] = useState<{ row: number; col: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const cellRefs = useRef<Map<string, HTMLTableCellElement>>(new Map());
@@ -269,6 +278,7 @@ export function QATable({
                         formats[formatKey(row.id ?? rIdx, c.key as string)] ?? {};
                       const fmtBg = fmt.highlight ? "!bg-yellow-200" : "";
                       const fmtText = fmt.error ? "!text-red-600 font-medium" : "";
+                      const canEdit = !!c.editable && !!onEditCell;
                       return (
                         <td
                           key={c.key}
@@ -284,15 +294,36 @@ export function QATable({
                               col: cIdx,
                             })
                           }
-                          className={`${c.width} relative cursor-cell border-r border-b border-[var(--sheets-grid)] px-3 py-2 align-top ${
+                          onDoubleClick={() => {
+                            if (canEdit)
+                              setEditing({ row: rIdx, col: cIdx });
+                          }}
+                          className={`${c.width} relative ${canEdit ? "cursor-text" : "cursor-cell"} border-r border-b border-[var(--sheets-grid)] px-3 py-2 align-top ${
                             selected
                               ? "bg-card outline outline-2 -outline-offset-2 outline-primary"
                               : inSelectedRowOrCol
                                 ? "bg-primary/[0.04]"
                                 : "bg-card hover:bg-[var(--sheets-row-hover)]"
                           } ${fmtBg} ${fmtText}`}
+                          title={canEdit ? "Double-click to edit" : undefined}
                         >
-                          {c.render(row, rIdx)}
+                          {canEdit &&
+                          editing &&
+                          editing.row === rIdx &&
+                          editing.col === cIdx ? (
+                            <EditableCell
+                              column={c}
+                              initial={c.raw(row)}
+                              onCancel={() => setEditing(null)}
+                              onCommit={async (value) => {
+                                if (!onEditCell) return;
+                                const ok = await onEditCell(row, c, value);
+                                if (ok) setEditing(null);
+                              }}
+                            />
+                          ) : (
+                            c.render(row, rIdx)
+                          )}
                         </td>
                       );
                     })}
@@ -351,5 +382,86 @@ function EmptySheetRow({ n }: { n: number }) {
         />
       ))}
     </tr>
+  );
+}
+
+function EditableCell({
+  column,
+  initial,
+  onCommit,
+  onCancel,
+}: {
+  column: QAColumn;
+  initial: string;
+  onCommit: (value: string) => Promise<void> | void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const isTextarea = column.inputType === "textarea";
+
+  const commit = async () => {
+    if (saving) return;
+    if (value === initial) {
+      onCancel();
+      return;
+    }
+    setSaving(true);
+    try {
+      await onCommit(value);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      onCancel();
+    } else if (e.key === "Enter") {
+      if (isTextarea && !(e.metaKey || e.ctrlKey)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      void commit();
+    }
+  };
+
+  const common = {
+    autoFocus: true,
+    disabled: saving,
+    value,
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setValue(e.target.value),
+    onBlur: () => void commit(),
+    onKeyDown: onKey,
+    onClick: (e: React.MouseEvent) => e.stopPropagation(),
+    onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      e.currentTarget.select(),
+  };
+
+  return (
+    <div className="relative">
+      {isTextarea ? (
+        <textarea
+          {...common}
+          rows={4}
+          className="w-full resize-y rounded-sm border border-primary bg-background px-2 py-1 text-[13px] leading-snug outline-none focus:ring-2 focus:ring-primary/30"
+          placeholder="Enter question…"
+        />
+      ) : (
+        <input
+          {...common}
+          type="text"
+          className="w-full rounded-sm border border-primary bg-background px-2 py-1 text-[13px] outline-none focus:ring-2 focus:ring-primary/30"
+          placeholder="https://…"
+        />
+      )}
+      {saving && (
+        <div className="pointer-events-none absolute right-1 top-1 flex items-center gap-1 rounded bg-background/90 px-1 py-0.5 text-[10px] text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" /> Saving
+        </div>
+      )}
+    </div>
   );
 }

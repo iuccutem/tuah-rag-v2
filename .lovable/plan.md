@@ -1,47 +1,35 @@
-# Plan
+## Goal
 
-## 1. Export JSON — add Malay→English translation
-Extend the existing AI prompt in `src/lib/rag-export.functions.ts` so the model also translates the `question` and chosen `answer` to English when the source text is Malay (or mixed). `intent` and `metadata` generation stay; URLs preserved inline.
+1. Make the **Question** column editable (inline edit) and persist via n8n.
+2. Add a new **URL** column (editable) and persist via n8n; use it as the `url` field on RAG JSON export (always — even when the answer text contains a URL).
 
-- Answer source unchanged from current behavior: AI picks/merges the best answer (web is the primary source for the final answer).
-- Prompt updated to add: "If the question or chosen answer is in Malay (or mixed Malay/English), translate to natural English. Keep proper nouns, acronyms (UTeM, FTKEK, etc.), and URLs as-is."
-- Output schema gains `question` (translated). Becomes `{ intent, question, answer, metadata }`.
-- Client `exportJson` in `_authenticated/index.tsx` uses the AI-returned `question` instead of the raw row question.
-- (Send me the Rag Gap prompt later and I'll swap it in verbatim.)
+## Scope
 
-## 2. Excel-upload Insert + un-hide button
-Replace the hidden "Sync Q&A sheet" external-form link with a visible **Import Excel** button that opens a dialog:
+- `src/components/qa-dashboard/QATable.tsx` — add `url` to `QARow`; let `Question`/`URL` cells become editable on double-click / Enter (textarea for question, input for URL). Blur or Enter commits; Esc cancels.
+- `src/components/qa-dashboard/qa-columns.tsx` — add `url` column right after Telegram/WhatsApp (label "URL", monospace, link rendering, empty state). Question stays where it is.
+- `src/routes/_authenticated/index.tsx`:
+  - Wire `onEditCell(rowId, col, value)` from the table. Optimistic local patch + toast on success/error; refetch after success (debounced).
+  - Build export payload: pass `url` per row to the export server fn and use it directly in the output.
+  - Excel column for the auto-generated workbook download now includes URL.
+- `src/lib/rag-export.functions.ts`:
+  - Accept `url?: string | null` per input row.
+  - Drop AI-extracted URL fallback. Output `url = (row.url ?? "").trim() || null` — always the user-typed value; empty stays `null`.
+  - Keep translation + intent + metadata behavior unchanged.
+- New server route `src/routes/api/n8n-update.ts` — proxies to either of:
+  - `https://tuah.utem.edu.my/agent/webhook/9f887e4b-b49f-4f98-b4a3-b545206bffa4` (question)
+  - `https://tuah.utem.edu.my/agent/webhook/18285d76-b8dd-42df-92d2-f3069f2e51db` (url)
+  Body in: `{ table, id, field: "question" | "url", value }`. Sends Basic auth (existing `N8N_WEBHOOK_USER` / `_PASSWORD` envs) and posts `{ table, id, <field>: value }` to the matching webhook. Returns `{ ok, error? }`. One field per request keeps the contract simple and lets each cell save independently.
 
-1. User picks `.xlsx`/`.xls`/`.csv` file.
-2. Parse client-side with `exceljs` (already a dep) → show preview of first sheet's headers/first row with a **column picker**.
-3. User selects which column holds questions → preview shows N detected questions, with "skip first row (header)" toggle and dedupe against existing rows.
-4. **Insert** posts to the same n8n insert webhook `QuestionPasteBox` uses (one question per row).
-5. Show progress, then refresh table.
+## UX details
 
-New: `src/components/qa-dashboard/ExcelImportBox.tsx`. Trigger added back into the desktop toolbar (and mobile overflow menu) where the hidden Sync button was.
-
-## 3. Rename + Delete sheet tabs
-Add a chevron/more menu on each sheet tab (the `tables.map` row at the bottom):
-
-- **Rename** → opens dialog, posts to new server route `/api/n8n-rename-table` → `https://tuah.utem.edu.my/agent/webhook/24d1ce41-0116-47ef-802f-40a3d7da7cb9` with body `{ name: "qatest-old", newName: "qatest-new" }`.
-- **Delete** → confirm dialog, posts to new server route `/api/n8n-delete-table` → `https://tuah.utem.edu.my/agent/webhook/3f944ef2-7d47-42b8-8500-b03ab19a71a6` with body `{ name: "qatest-x" }`.
-
-Both server routes use the existing `N8N_WEBHOOK_USER` / `N8N_WEBHOOK_PASSWORD` Basic-auth env vars (same pattern as `n8n-create-table.ts`). Full-screen loading overlay during the call; refetch tables list on success; if the deleted/renamed table was active, switch to the first remaining table (or the new name on rename).
-
-## 4. Telegram/WhatsApp — NO CHANGES
-Leaving WA/TG column and buttons as-is per your correction.
-
-## Files
-**Edit**
-- `src/lib/rag-export.functions.ts` — new prompt, schema adds `question`, output uses translated question
-- `src/routes/_authenticated/index.tsx` — un-hide & swap Sync button → Import Excel; sheet-tab context menu (rename/delete); use translated question on export
-
-**New**
-- `src/components/qa-dashboard/ExcelImportBox.tsx` — file picker, column preview, insert
-- `src/routes/api/n8n-rename-table.ts` — Basic-auth proxy
-- `src/routes/api/n8n-delete-table.ts` — Basic-auth proxy
+- Double-click a Question or URL cell → editable. Visual: bordered input, sized to cell, autofocus, select-all.
+- Save: blur or Cmd/Ctrl+Enter (textarea) / Enter (URL). Cancel: Esc.
+- During save: subtle "Saving…" inline + disable input; on error toast and revert.
+- URL cell renders as a clickable link when not editing (reuses existing `LinkOrText`).
+- Export note next to the JSON export button updated: "Uses the URL column verbatim."
 
 ## Out of scope
-- No DB/schema changes
-- No new secrets (reuses `N8N_WEBHOOK_USER`/`N8N_WEBHOOK_PASSWORD`)
-- Legacy "Sync Q&A sheet" external-form link is removed (replaced by Excel import)
+
+- No DB / schema changes, no new secrets, no other column edits.
+- Telegram/WhatsApp behavior unchanged.
+- No bulk-edit; one cell at a time.
