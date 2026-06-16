@@ -384,3 +384,84 @@ function EmptySheetRow({ n }: { n: number }) {
     </tr>
   );
 }
+
+function EditableCell({
+  column,
+  initial,
+  onCommit,
+  onCancel,
+}: {
+  column: QAColumn;
+  initial: string;
+  onCommit: (value: string) => Promise<void> | void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const isTextarea = column.inputType === "textarea";
+
+  const commit = async () => {
+    if (saving) return;
+    if (value === initial) {
+      onCancel();
+      return;
+    }
+    setSaving(true);
+    try {
+      await onCommit(value);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      onCancel();
+    } else if (e.key === "Enter") {
+      if (isTextarea && !(e.metaKey || e.ctrlKey)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      void commit();
+    }
+  };
+
+  const common = {
+    autoFocus: true,
+    disabled: saving,
+    value,
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setValue(e.target.value),
+    onBlur: () => void commit(),
+    onKeyDown: onKey,
+    onClick: (e: React.MouseEvent) => e.stopPropagation(),
+    onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      e.currentTarget.select(),
+  };
+
+  return (
+    <div className="relative">
+      {isTextarea ? (
+        <textarea
+          {...common}
+          rows={4}
+          className="w-full resize-y rounded-sm border border-primary bg-background px-2 py-1 text-[13px] leading-snug outline-none focus:ring-2 focus:ring-primary/30"
+          placeholder="Enter question…"
+        />
+      ) : (
+        <input
+          {...common}
+          type="text"
+          className="w-full rounded-sm border border-primary bg-background px-2 py-1 text-[13px] outline-none focus:ring-2 focus:ring-primary/30"
+          placeholder="https://…"
+        />
+      )}
+      {saving && (
+        <div className="pointer-events-none absolute right-1 top-1 flex items-center gap-1 rounded bg-background/90 px-1 py-0.5 text-[10px] text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" /> Saving
+        </div>
+      )}
+    </div>
+  );
+}
