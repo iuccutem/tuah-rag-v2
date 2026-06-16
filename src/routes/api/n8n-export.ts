@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 const DEFAULT_WEBHOOK =
-  "https://tuah.utem.edu.my/agent/webhook-test/22f796c0-d27f-4e92-a914-a6dcde8a0c5f";
+  "https://tuah.utem.edu.my/agent/webhook/22f796c0-d27f-4e92-a914-a6dcde8a0c5f";
 
 export const Route = createFileRoute("/api/n8n-export")({
   server: {
