@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
-import { Route as ApiN8nUpdateRouteImport } from './routes/api/n8n-update'
 import { Route as ApiN8nTablesRouteImport } from './routes/api/n8n-tables'
 import { Route as ApiN8nRunRouteImport } from './routes/api/n8n-run'
 import { Route as ApiN8nRenameTableRouteImport } from './routes/api/n8n-rename-table'
@@ -38,11 +37,6 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const ApiN8nUpdateRoute = ApiN8nUpdateRouteImport.update({
-  id: '/api/n8n-update',
-  path: '/api/n8n-update',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiN8nTablesRoute = ApiN8nTablesRouteImport.update({
   id: '/api/n8n-tables',
@@ -114,7 +108,6 @@ export interface FileRoutesByFullPath {
   '/api/n8n-rename-table': typeof ApiN8nRenameTableRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
   '/api/n8n-tables': typeof ApiN8nTablesRoute
-  '/api/n8n-update': typeof ApiN8nUpdateRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -129,7 +122,6 @@ export interface FileRoutesByTo {
   '/api/n8n-rename-table': typeof ApiN8nRenameTableRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
   '/api/n8n-tables': typeof ApiN8nTablesRoute
-  '/api/n8n-update': typeof ApiN8nUpdateRoute
   '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
@@ -147,7 +139,6 @@ export interface FileRoutesById {
   '/api/n8n-rename-table': typeof ApiN8nRenameTableRoute
   '/api/n8n-run': typeof ApiN8nRunRoute
   '/api/n8n-tables': typeof ApiN8nTablesRoute
-  '/api/n8n-update': typeof ApiN8nUpdateRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
@@ -166,7 +157,6 @@ export interface FileRouteTypes {
     | '/api/n8n-rename-table'
     | '/api/n8n-run'
     | '/api/n8n-tables'
-    | '/api/n8n-update'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -181,7 +171,6 @@ export interface FileRouteTypes {
     | '/api/n8n-rename-table'
     | '/api/n8n-run'
     | '/api/n8n-tables'
-    | '/api/n8n-update'
     | '/'
   id:
     | '__root__'
@@ -198,7 +187,6 @@ export interface FileRouteTypes {
     | '/api/n8n-rename-table'
     | '/api/n8n-run'
     | '/api/n8n-tables'
-    | '/api/n8n-update'
     | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
@@ -216,7 +204,6 @@ export interface RootRouteChildren {
   ApiN8nRenameTableRoute: typeof ApiN8nRenameTableRoute
   ApiN8nRunRoute: typeof ApiN8nRunRoute
   ApiN8nTablesRoute: typeof ApiN8nTablesRoute
-  ApiN8nUpdateRoute: typeof ApiN8nUpdateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -241,13 +228,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/api/n8n-update': {
-      id: '/api/n8n-update'
-      path: '/api/n8n-update'
-      fullPath: '/api/n8n-update'
-      preLoaderRoute: typeof ApiN8nUpdateRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/api/n8n-tables': {
       id: '/api/n8n-tables'
@@ -354,7 +334,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiN8nRenameTableRoute: ApiN8nRenameTableRoute,
   ApiN8nRunRoute: ApiN8nRunRoute,
   ApiN8nTablesRoute: ApiN8nTablesRoute,
-  ApiN8nUpdateRoute: ApiN8nUpdateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
