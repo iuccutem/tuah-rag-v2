@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QA_COLUMNS, colLetter } from "./qa-columns";
+import { Loader2 } from "lucide-react";
+import { QA_COLUMNS, colLetter, type QAColumn } from "./qa-columns";
 
 export type QARow = {
   id?: number | string | null;
@@ -32,6 +33,7 @@ export function QATable({
   selectedRowIds,
   onToggleRow,
   onSelectAll,
+  onEditCell,
 }: {
   rows: QARow[];
   isLoading: boolean;
@@ -41,6 +43,11 @@ export function QATable({
   selectedRowIds: Set<string | number>;
   onToggleRow: (id: string | number) => void;
   onSelectAll: (select: boolean) => void;
+  onEditCell?: (
+    row: QARow,
+    col: QAColumn,
+    value: string,
+  ) => Promise<boolean> | boolean;
 }) {
 
   const skeletonRows = Array.from({ length: 8 });
