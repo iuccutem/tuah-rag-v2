@@ -277,6 +277,7 @@ export function QATable({
                         formats[formatKey(row.id ?? rIdx, c.key as string)] ?? {};
                       const fmtBg = fmt.highlight ? "!bg-yellow-200" : "";
                       const fmtText = fmt.error ? "!text-red-600 font-medium" : "";
+                      const canEdit = !!c.editable && !!onEditCell;
                       return (
                         <td
                           key={c.key}
@@ -292,15 +293,36 @@ export function QATable({
                               col: cIdx,
                             })
                           }
-                          className={`${c.width} relative cursor-cell border-r border-b border-[var(--sheets-grid)] px-3 py-2 align-top ${
+                          onDoubleClick={() => {
+                            if (canEdit)
+                              setEditing({ row: rIdx, col: cIdx });
+                          }}
+                          className={`${c.width} relative ${canEdit ? "cursor-text" : "cursor-cell"} border-r border-b border-[var(--sheets-grid)] px-3 py-2 align-top ${
                             selected
                               ? "bg-card outline outline-2 -outline-offset-2 outline-primary"
                               : inSelectedRowOrCol
                                 ? "bg-primary/[0.04]"
                                 : "bg-card hover:bg-[var(--sheets-row-hover)]"
                           } ${fmtBg} ${fmtText}`}
+                          title={canEdit ? "Double-click to edit" : undefined}
                         >
-                          {c.render(row, rIdx)}
+                          {canEdit &&
+                          editing &&
+                          editing.row === rIdx &&
+                          editing.col === cIdx ? (
+                            <EditableCell
+                              column={c}
+                              initial={c.raw(row)}
+                              onCancel={() => setEditing(null)}
+                              onCommit={async (value) => {
+                                if (!onEditCell) return;
+                                const ok = await onEditCell(row, c, value);
+                                if (ok) setEditing(null);
+                              }}
+                            />
+                          ) : (
+                            c.render(row, rIdx)
+                          )}
                         </td>
                       );
                     })}
