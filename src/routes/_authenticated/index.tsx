@@ -1360,7 +1360,9 @@ function DashboardPage() {
           selectedRowIds={selectedRowIds}
           onToggleRow={toggleRow}
           onSelectAll={selectAllRows}
+          onEditCell={handleEditCell}
         />
+
       </div>
 
 
