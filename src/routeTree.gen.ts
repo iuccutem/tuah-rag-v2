@@ -19,6 +19,7 @@ import { Route as ApiN8nRenameTableRouteImport } from './routes/api/n8n-rename-t
 import { Route as ApiN8nQaRouteImport } from './routes/api/n8n-qa'
 import { Route as ApiN8nProcessRouteImport } from './routes/api/n8n-process'
 import { Route as ApiN8nFlagRouteImport } from './routes/api/n8n-flag'
+import { Route as ApiN8nExportRouteImport } from './routes/api/n8n-export'
 import { Route as ApiN8nEmailRouteImport } from './routes/api/n8n-email'
 import { Route as ApiN8nDeleteTableRouteImport } from './routes/api/n8n-delete-table'
 import { Route as ApiN8nDeleteRouteImport } from './routes/api/n8n-delete'
@@ -73,6 +74,11 @@ const ApiN8nFlagRoute = ApiN8nFlagRouteImport.update({
   path: '/api/n8n-flag',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiN8nExportRoute = ApiN8nExportRouteImport.update({
+  id: '/api/n8n-export',
+  path: '/api/n8n-export',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiN8nEmailRoute = ApiN8nEmailRouteImport.update({
   id: '/api/n8n-email',
   path: '/api/n8n-email',
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-delete-table': typeof ApiN8nDeleteTableRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
+  '/api/n8n-export': typeof ApiN8nExportRoute
   '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-delete-table': typeof ApiN8nDeleteTableRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
+  '/api/n8n-export': typeof ApiN8nExportRoute
   '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-delete-table': typeof ApiN8nDeleteTableRoute
   '/api/n8n-email': typeof ApiN8nEmailRoute
+  '/api/n8n-export': typeof ApiN8nExportRoute
   '/api/n8n-flag': typeof ApiN8nFlagRoute
   '/api/n8n-process': typeof ApiN8nProcessRoute
   '/api/n8n-qa': typeof ApiN8nQaRoute
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/api/n8n-delete'
     | '/api/n8n-delete-table'
     | '/api/n8n-email'
+    | '/api/n8n-export'
     | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
     | '/api/n8n-delete'
     | '/api/n8n-delete-table'
     | '/api/n8n-email'
+    | '/api/n8n-export'
     | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/api/n8n-delete'
     | '/api/n8n-delete-table'
     | '/api/n8n-email'
+    | '/api/n8n-export'
     | '/api/n8n-flag'
     | '/api/n8n-process'
     | '/api/n8n-qa'
@@ -197,6 +209,7 @@ export interface RootRouteChildren {
   ApiN8nDeleteRoute: typeof ApiN8nDeleteRoute
   ApiN8nDeleteTableRoute: typeof ApiN8nDeleteTableRoute
   ApiN8nEmailRoute: typeof ApiN8nEmailRoute
+  ApiN8nExportRoute: typeof ApiN8nExportRoute
   ApiN8nFlagRoute: typeof ApiN8nFlagRoute
   ApiN8nProcessRoute: typeof ApiN8nProcessRoute
   ApiN8nQaRoute: typeof ApiN8nQaRoute
@@ -278,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiN8nFlagRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/n8n-export': {
+      id: '/api/n8n-export'
+      path: '/api/n8n-export'
+      fullPath: '/api/n8n-export'
+      preLoaderRoute: typeof ApiN8nExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/n8n-email': {
       id: '/api/n8n-email'
       path: '/api/n8n-email'
@@ -327,6 +347,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiN8nDeleteRoute: ApiN8nDeleteRoute,
   ApiN8nDeleteTableRoute: ApiN8nDeleteTableRoute,
   ApiN8nEmailRoute: ApiN8nEmailRoute,
+  ApiN8nExportRoute: ApiN8nExportRoute,
   ApiN8nFlagRoute: ApiN8nFlagRoute,
   ApiN8nProcessRoute: ApiN8nProcessRoute,
   ApiN8nQaRoute: ApiN8nQaRoute,

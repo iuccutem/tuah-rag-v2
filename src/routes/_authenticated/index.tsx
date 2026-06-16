@@ -244,7 +244,6 @@ function DashboardPage() {
     return result;
   }, [rows, searchQuery, dateFrom, dateTo]);
 
-  const exportRagFn = useServerFn(exportRowsAsRag);
   const exportJson = async () => {
     try {
       const selected =
@@ -267,10 +266,25 @@ function DashboardPage() {
         return;
       }
       const tId = toast.loading(
-        `Formatting ${inputRows.length} row${inputRows.length === 1 ? "" : "s"} with AI…`,
+        `Sending ${inputRows.length} row${inputRows.length === 1 ? "" : "s"} to n8n…`,
       );
-      const { rows: ragRows } = await exportRagFn({ data: { rows: inputRows } });
+      const res = await fetch("/api/n8n-export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          table: activeTable || "all",
+          rows: inputRows,
+        }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as {
+        rows?: unknown;
+        error?: string;
+      };
       toast.dismiss(tId);
+      if (!res.ok || !Array.isArray(payload.rows)) {
+        throw new Error(payload.error || `Export failed (${res.status})`);
+      }
+      const ragRows = payload.rows;
 
       const json = JSON.stringify(ragRows, null, 2);
       const blob = new Blob([json], { type: "application/json" });
