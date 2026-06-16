@@ -260,6 +260,7 @@ function DashboardPage() {
           question: r.question ?? "",
           web: r.web ?? "",
           telegram_whatsapp: r.telegram_whatsapp ?? "",
+          url: r.url ?? "",
         }));
       if (inputRows.length === 0) {
         toast.error("No rows with a question to export.");
