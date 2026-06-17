@@ -651,10 +651,11 @@ function DashboardPage() {
 
     if (colKey !== "web" && colKey !== "telegram_whatsapp" && colKey !== "question") {
       toast.error(
-        `Only "Question", "Web" and "Telegram/WhatsApp" cells can be flagged. Selected: ${col.label}.`,
+        `Only "Question" and "Text Chat" cells can be flagged. Selected: ${col.label}.`,
       );
       return;
     }
+
 
     const rowId = (row.id ?? "") as string | number;
     if (rowId === "" || rowId == null) {
