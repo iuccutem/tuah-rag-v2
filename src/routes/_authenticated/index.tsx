@@ -309,8 +309,11 @@ function DashboardPage() {
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to export JSON.");
+    } finally {
+      setExportingJson(false);
     }
   };
+
 
 
   const createSheet = async () => {
