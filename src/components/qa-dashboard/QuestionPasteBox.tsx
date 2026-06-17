@@ -55,9 +55,9 @@ export function QuestionPasteBox({
     [questions, existingSet],
   );
 
-  const [activeChannel, setActiveChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
+  const [activeChannel, setActiveChannel] = useState<"web" | null>(null);
 
-  const runAll = async (channel: "web" | "telegram_whatsapp" | "both") => {
+  const runAll = async (channel: "web") => {
     if (questions.length === 0) {
       toast.error("Paste at least one question.");
       return;
@@ -128,38 +128,23 @@ export function QuestionPasteBox({
     );
 
     setProcessing(true);
-    const channels: Array<"web" | "telegram_whatsapp"> =
-      channel === "both" ? ["web", "telegram_whatsapp"] : [channel];
-    // Only forward questions that were successfully inserted.
     try {
-      const results: Array<{ ch: "web" | "telegram_whatsapp"; question: string; ok: boolean; error?: string }> = [];
-      // Send each question one-by-one to each selected channel webhook.
-      for (const ch of channels) {
-        for (const question of insertedQuestions) {
-          const res = await fetch("/api/n8n-process", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(table ? { channel: ch, question, table } : { channel: ch, question }),
-          });
-
-          const json = (await res.json()) as { ok: boolean; error?: string };
-          results.push({ ch, question, ok: json.ok, error: json.error });
+      let ok = 0;
+      let fail = 0;
+      for (const question of insertedQuestions) {
+        const res = await fetch("/api/n8n-process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(table ? { channel, question, table } : { channel, question }),
+        });
+        const json = (await res.json()) as { ok: boolean; error?: string };
+        if (json.ok) ok++;
+        else {
+          fail++;
+          toast.error(`Text Chat · "${question.slice(0, 40)}": ${json.error ?? "Failed."}`);
         }
       }
-      const grouped = new Map<string, { ok: number; fail: number }>();
-      for (const r of results) {
-        const name = r.ch === "web" ? "Web Chat" : "Telegram/WhatsApp";
-        const g = grouped.get(name) ?? { ok: 0, fail: 0 };
-        if (r.ok) g.ok++;
-        else g.fail++;
-        grouped.set(name, g);
-        if (!r.ok) {
-          toast.error(`${name} · "${r.question.slice(0, 40)}": ${r.error ?? "Failed."}`);
-        }
-      }
-      for (const [name, g] of grouped) {
-        if (g.ok > 0) toast.success(`${name}: processed ${g.ok}/${g.ok + g.fail} question${g.ok + g.fail === 1 ? "" : "s"}.`);
-      }
+      if (ok > 0) toast.success(`Text Chat: processed ${ok}/${ok + fail} question${ok + fail === 1 ? "" : "s"}.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to trigger processing.");
     } finally {
@@ -168,6 +153,8 @@ export function QuestionPasteBox({
       onComplete?.();
     }
   };
+
+
 
 
   const removeDuplicatesFromText = () => {
