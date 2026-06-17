@@ -150,6 +150,7 @@ function DashboardPage() {
 
 
   const [exporting, setExporting] = useState(false);
+  const [exportingJson, setExportingJson] = useState(false);
   const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
   const [pendingChannel, setPendingChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
   const [registerOpen, setRegisterOpen] = useState(false);
