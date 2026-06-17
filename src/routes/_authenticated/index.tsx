@@ -818,10 +818,11 @@ function DashboardPage() {
       channel === "both" ? ["web", "telegram_whatsapp"] : [channel];
     const label =
       channel === "web"
-        ? "Web Chat"
+        ? "Text Chat"
         : channel === "telegram_whatsapp"
-          ? "Telegram/WhatsApp"
-          : "both channels";
+          ? "Text Chat"
+          : "Text Chat";
+
 
     // Collect selected questions to forward into the webhook.
     const selectedQuestions: string[] = [];
