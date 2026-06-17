@@ -861,7 +861,7 @@ function DashboardPage() {
       } else {
         for (const r of results) {
           if (!r.ok) {
-            const name = r.ch === "web" ? "Web Chat" : "Telegram/WhatsApp";
+            const name = "Text Chat";
             toast.error(`${name} · "${r.question.slice(0, 40)}": ${r.error ?? "Failed to trigger."}`);
           }
         }
