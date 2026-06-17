@@ -1161,20 +1161,13 @@ function DashboardPage() {
               {selectedRowIds.size > 0 && (
                 <>
                   <DropdownMenuItem onClick={() => setPendingChannel("web")} disabled={runningChannel !== null}>
-                    <Globe className="mr-2 h-4 w-4 text-primary" />
-                    Run Web ({selectedRowIds.size})
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPendingChannel("telegram_whatsapp")} disabled={runningChannel !== null}>
                     <MessageSquare className="mr-2 h-4 w-4 text-primary" />
-                    Run WA/TG ({selectedRowIds.size})
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPendingChannel("both")} disabled={runningChannel !== null}>
-                    <Layers className="mr-2 h-4 w-4 text-primary" />
-                    Run Both
+                    Run Text Chat ({selectedRowIds.size})
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
+
               <DropdownMenuItem onClick={() => applyFormat({ highlight: true })}>
                 <Highlighter className="mr-2 h-4 w-4 text-yellow-500" />
                 Highlight cell
