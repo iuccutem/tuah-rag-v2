@@ -981,22 +981,32 @@ function DashboardPage() {
           <button
             type="button"
             onClick={exportXlsx}
-            disabled={exporting}
+            disabled={exporting || exportingJson}
             title="Export visible rows to Excel (.xlsx) with highlights and error marks preserved"
             className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted disabled:opacity-50"
           >
-            <Download className={exporting ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
             <span className="hidden sm:inline">{exporting ? "Exporting…" : "Export"}</span>
           </button>
           <button
             type="button"
             onClick={exportJson}
+            disabled={exporting || exportingJson}
             title="Export currently visible rows as a JSON file"
-            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted"
+            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted disabled:opacity-50"
           >
-            <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">Export JSON</span>
+            {exportingJson ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline">{exportingJson ? "Exporting…" : "Export JSON"}</span>
           </button>
+
           <button
             type="button"
             onClick={() => setRegisterOpen(true)}
