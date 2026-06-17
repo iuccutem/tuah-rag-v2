@@ -265,25 +265,6 @@ export function QuestionPasteBox({
           </span>
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              onClick={() => runAll("telegram_whatsapp")}
-              disabled={busy || newOnes.length === 0}
-              variant="outline"
-              className="gap-2"
-            >
-              {busy && activeChannel === "telegram_whatsapp" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <MessageSquare className="h-4 w-4" />
-              )}
-              {activeChannel === "telegram_whatsapp"
-                ? running
-                  ? "Inserting…"
-                  : processing
-                    ? "Processing…"
-                    : "Telegram / WhatsApp"
-                : "Telegram / WhatsApp"}
-            </Button>
-            <Button
               onClick={() => runAll("web")}
               disabled={busy || newOnes.length === 0}
               className="gap-2"
@@ -291,36 +272,17 @@ export function QuestionPasteBox({
               {busy && activeChannel === "web" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Globe className="h-4 w-4" />
+                <MessageSquare className="h-4 w-4" />
               )}
               {activeChannel === "web"
                 ? running
                   ? "Inserting…"
                   : processing
                     ? "Processing…"
-                    : "Web Chat"
-                : "Web Chat"}
+                    : "Run Text Chat"
+                : "Run Text Chat"}
             </Button>
-            <Button
-              onClick={() => runAll("both")}
-              disabled={busy || newOnes.length === 0}
-              variant="secondary"
-              className="gap-2"
-              title="Insert questions, then trigger BOTH Web Chat and Telegram/WhatsApp"
-            >
-              {busy && activeChannel === "both" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Layers className="h-4 w-4" />
-              )}
-              {activeChannel === "both"
-                ? running
-                  ? "Inserting…"
-                  : processing
-                    ? "Processing both…"
-                    : "Run Both"
-                : "Run Both"}
-            </Button>
+
           </div>
         </div>
 
