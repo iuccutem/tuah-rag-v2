@@ -1720,14 +1720,10 @@ function DashboardPage() {
           <DialogHeader>
             <DialogTitle>Run agent on selected rows?</DialogTitle>
             <DialogDescription>
-              {pendingChannel === "web"
-                ? "Re-run the Web Chat agent"
-                : pendingChannel === "telegram_whatsapp"
-                  ? "Re-run the Telegram/WhatsApp agent"
-                  : "Re-run both Web Chat and Telegram/WhatsApp agents"}
-              {" "}for {selectedRowIds.size} selected question
+              Re-run the Text Chat agent for {selectedRowIds.size} selected question
               {selectedRowIds.size === 1 ? "" : "s"}. Existing answers will be updated.
             </DialogDescription>
+
           </DialogHeader>
           {(() => {
             const qs = filteredRows
