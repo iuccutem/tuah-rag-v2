@@ -54,7 +54,7 @@ export const QA_COLUMNS: QAColumn[] = [
   {
 
     key: "web",
-    label: "Web",
+    label: "Text Chat",
     width: "w-[26rem]",
     render: (row) => (
       <div className="max-h-56 overflow-y-auto pr-1">
@@ -63,17 +63,7 @@ export const QA_COLUMNS: QAColumn[] = [
     ),
     raw: (row) => row.web ?? "",
   },
-  {
-    key: "telegram_whatsapp",
-    label: "Telegram / WhatsApp",
-    width: "w-[26rem]",
-    render: (row) => (
-      <div className="max-h-56 overflow-y-auto pr-1">
-        <LinkOrText value={row.telegram_whatsapp} />
-      </div>
-    ),
-    raw: (row) => row.telegram_whatsapp ?? "",
-  },
+
   {
     key: "url",
     label: "URL",
