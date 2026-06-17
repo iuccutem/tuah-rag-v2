@@ -1043,14 +1043,23 @@ function DashboardPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={exportXlsx} disabled={exporting}>
-                <Download className="mr-2 h-4 w-4" />
+              <DropdownMenuItem onClick={exportXlsx} disabled={exporting || exportingJson}>
+                {exporting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
                 {exporting ? "Exporting…" : "Export Excel"}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={exportJson}>
-                <Download className="mr-2 h-4 w-4" />
-                Export JSON
+              <DropdownMenuItem onClick={exportJson} disabled={exporting || exportingJson}>
+                {exportingJson ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {exportingJson ? "Exporting…" : "Export JSON"}
               </DropdownMenuItem>
+
               <DropdownMenuItem onClick={() => setExcelImportOpen(true)}>
                 <Upload className="mr-2 h-4 w-4" />
                 Upload Excel
