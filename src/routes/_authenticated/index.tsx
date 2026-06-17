@@ -150,6 +150,7 @@ function DashboardPage() {
 
 
   const [exporting, setExporting] = useState(false);
+  const [exportingJson, setExportingJson] = useState(false);
   const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
   const [pendingChannel, setPendingChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -246,6 +247,8 @@ function DashboardPage() {
   }, [rows, searchQuery, dateFrom, dateTo]);
 
   const exportJson = async () => {
+    if (exportingJson) return;
+    setExportingJson(true);
     try {
       const selected =
         selectedRowIds.size > 0
@@ -306,8 +309,11 @@ function DashboardPage() {
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to export JSON.");
+    } finally {
+      setExportingJson(false);
     }
   };
+
 
 
   const createSheet = async () => {
@@ -975,22 +981,32 @@ function DashboardPage() {
           <button
             type="button"
             onClick={exportXlsx}
-            disabled={exporting}
+            disabled={exporting || exportingJson}
             title="Export visible rows to Excel (.xlsx) with highlights and error marks preserved"
             className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted disabled:opacity-50"
           >
-            <Download className={exporting ? "h-4 w-4 animate-pulse" : "h-4 w-4"} />
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
             <span className="hidden sm:inline">{exporting ? "Exporting…" : "Export"}</span>
           </button>
           <button
             type="button"
             onClick={exportJson}
+            disabled={exporting || exportingJson}
             title="Export currently visible rows as a JSON file"
-            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted"
+            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted disabled:opacity-50"
           >
-            <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">Export JSON</span>
+            {exportingJson ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline">{exportingJson ? "Exporting…" : "Export JSON"}</span>
           </button>
+
           <button
             type="button"
             onClick={() => setRegisterOpen(true)}
@@ -1027,14 +1043,23 @@ function DashboardPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={exportXlsx} disabled={exporting}>
-                <Download className="mr-2 h-4 w-4" />
+              <DropdownMenuItem onClick={exportXlsx} disabled={exporting || exportingJson}>
+                {exporting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
                 {exporting ? "Exporting…" : "Export Excel"}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={exportJson}>
-                <Download className="mr-2 h-4 w-4" />
-                Export JSON
+              <DropdownMenuItem onClick={exportJson} disabled={exporting || exportingJson}>
+                {exportingJson ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {exportingJson ? "Exporting…" : "Export JSON"}
               </DropdownMenuItem>
+
               <DropdownMenuItem onClick={() => setExcelImportOpen(true)}>
                 <Upload className="mr-2 h-4 w-4" />
                 Upload Excel
