@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CheckCircle2, XCircle, Loader2, AlertTriangle, Scissors, MessageSquare, Globe, Layers } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, AlertTriangle, Scissors, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -55,9 +55,9 @@ export function QuestionPasteBox({
     [questions, existingSet],
   );
 
-  const [activeChannel, setActiveChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
+  const [activeChannel, setActiveChannel] = useState<"web" | null>(null);
 
-  const runAll = async (channel: "web" | "telegram_whatsapp" | "both") => {
+  const runAll = async (channel: "web") => {
     if (questions.length === 0) {
       toast.error("Paste at least one question.");
       return;
@@ -128,38 +128,23 @@ export function QuestionPasteBox({
     );
 
     setProcessing(true);
-    const channels: Array<"web" | "telegram_whatsapp"> =
-      channel === "both" ? ["web", "telegram_whatsapp"] : [channel];
-    // Only forward questions that were successfully inserted.
     try {
-      const results: Array<{ ch: "web" | "telegram_whatsapp"; question: string; ok: boolean; error?: string }> = [];
-      // Send each question one-by-one to each selected channel webhook.
-      for (const ch of channels) {
-        for (const question of insertedQuestions) {
-          const res = await fetch("/api/n8n-process", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(table ? { channel: ch, question, table } : { channel: ch, question }),
-          });
-
-          const json = (await res.json()) as { ok: boolean; error?: string };
-          results.push({ ch, question, ok: json.ok, error: json.error });
+      let ok = 0;
+      let fail = 0;
+      for (const question of insertedQuestions) {
+        const res = await fetch("/api/n8n-process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(table ? { channel, question, table } : { channel, question }),
+        });
+        const json = (await res.json()) as { ok: boolean; error?: string };
+        if (json.ok) ok++;
+        else {
+          fail++;
+          toast.error(`Text Chat · "${question.slice(0, 40)}": ${json.error ?? "Failed."}`);
         }
       }
-      const grouped = new Map<string, { ok: number; fail: number }>();
-      for (const r of results) {
-        const name = r.ch === "web" ? "Web Chat" : "Telegram/WhatsApp";
-        const g = grouped.get(name) ?? { ok: 0, fail: 0 };
-        if (r.ok) g.ok++;
-        else g.fail++;
-        grouped.set(name, g);
-        if (!r.ok) {
-          toast.error(`${name} · "${r.question.slice(0, 40)}": ${r.error ?? "Failed."}`);
-        }
-      }
-      for (const [name, g] of grouped) {
-        if (g.ok > 0) toast.success(`${name}: processed ${g.ok}/${g.ok + g.fail} question${g.ok + g.fail === 1 ? "" : "s"}.`);
-      }
+      if (ok > 0) toast.success(`Text Chat: processed ${ok}/${ok + fail} question${ok + fail === 1 ? "" : "s"}.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to trigger processing.");
     } finally {
@@ -168,6 +153,8 @@ export function QuestionPasteBox({
       onComplete?.();
     }
   };
+
+
 
 
   const removeDuplicatesFromText = () => {
@@ -209,17 +196,13 @@ export function QuestionPasteBox({
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-              {(activeChannel === "web" || activeChannel === "both") && (
+              {activeChannel === "web" && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs">
-                  <Globe className="h-3.5 w-3.5" /> Web Chat
-                </span>
-              )}
-              {(activeChannel === "telegram_whatsapp" || activeChannel === "both") && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs">
-                  <MessageSquare className="h-3.5 w-3.5" /> Telegram / WhatsApp
+                  <MessageSquare className="h-3.5 w-3.5" /> Text Chat
                 </span>
               )}
             </div>
+
             <div className="text-xs text-muted-foreground">Please wait — do not close this dialog.</div>
           </div>
         ) : (
@@ -282,25 +265,6 @@ export function QuestionPasteBox({
           </span>
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              onClick={() => runAll("telegram_whatsapp")}
-              disabled={busy || newOnes.length === 0}
-              variant="outline"
-              className="gap-2"
-            >
-              {busy && activeChannel === "telegram_whatsapp" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <MessageSquare className="h-4 w-4" />
-              )}
-              {activeChannel === "telegram_whatsapp"
-                ? running
-                  ? "Inserting…"
-                  : processing
-                    ? "Processing…"
-                    : "Telegram / WhatsApp"
-                : "Telegram / WhatsApp"}
-            </Button>
-            <Button
               onClick={() => runAll("web")}
               disabled={busy || newOnes.length === 0}
               className="gap-2"
@@ -308,36 +272,17 @@ export function QuestionPasteBox({
               {busy && activeChannel === "web" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Globe className="h-4 w-4" />
+                <MessageSquare className="h-4 w-4" />
               )}
               {activeChannel === "web"
                 ? running
                   ? "Inserting…"
                   : processing
                     ? "Processing…"
-                    : "Web Chat"
-                : "Web Chat"}
+                    : "Run Text Chat"
+                : "Run Text Chat"}
             </Button>
-            <Button
-              onClick={() => runAll("both")}
-              disabled={busy || newOnes.length === 0}
-              variant="secondary"
-              className="gap-2"
-              title="Insert questions, then trigger BOTH Web Chat and Telegram/WhatsApp"
-            >
-              {busy && activeChannel === "both" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Layers className="h-4 w-4" />
-              )}
-              {activeChannel === "both"
-                ? running
-                  ? "Inserting…"
-                  : processing
-                    ? "Processing both…"
-                    : "Run Both"
-                : "Run Both"}
-            </Button>
+
           </div>
         </div>
 

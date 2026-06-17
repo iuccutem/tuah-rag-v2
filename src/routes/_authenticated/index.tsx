@@ -651,10 +651,11 @@ function DashboardPage() {
 
     if (colKey !== "web" && colKey !== "telegram_whatsapp" && colKey !== "question") {
       toast.error(
-        `Only "Question", "Web" and "Telegram/WhatsApp" cells can be flagged. Selected: ${col.label}.`,
+        `Only "Question" and "Text Chat" cells can be flagged. Selected: ${col.label}.`,
       );
       return;
     }
+
 
     const rowId = (row.id ?? "") as string | number;
     if (rowId === "" || rowId == null) {
@@ -817,10 +818,11 @@ function DashboardPage() {
       channel === "both" ? ["web", "telegram_whatsapp"] : [channel];
     const label =
       channel === "web"
-        ? "Web Chat"
+        ? "Text Chat"
         : channel === "telegram_whatsapp"
-          ? "Telegram/WhatsApp"
-          : "both channels";
+          ? "Text Chat"
+          : "Text Chat";
+
 
     // Collect selected questions to forward into the webhook.
     const selectedQuestions: string[] = [];
@@ -859,7 +861,7 @@ function DashboardPage() {
       } else {
         for (const r of results) {
           if (!r.ok) {
-            const name = r.ch === "web" ? "Web Chat" : "Telegram/WhatsApp";
+            const name = "Text Chat";
             toast.error(`${name} · "${r.question.slice(0, 40)}": ${r.error ?? "Failed to trigger."}`);
           }
         }
@@ -1161,20 +1163,13 @@ function DashboardPage() {
               {selectedRowIds.size > 0 && (
                 <>
                   <DropdownMenuItem onClick={() => setPendingChannel("web")} disabled={runningChannel !== null}>
-                    <Globe className="mr-2 h-4 w-4 text-primary" />
-                    Run Web ({selectedRowIds.size})
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPendingChannel("telegram_whatsapp")} disabled={runningChannel !== null}>
                     <MessageSquare className="mr-2 h-4 w-4 text-primary" />
-                    Run WA/TG ({selectedRowIds.size})
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setPendingChannel("both")} disabled={runningChannel !== null}>
-                    <Layers className="mr-2 h-4 w-4 text-primary" />
-                    Run Both
+                    Run Text Chat ({selectedRowIds.size})
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
+
               <DropdownMenuItem onClick={() => applyFormat({ highlight: true })}>
                 <Highlighter className="mr-2 h-4 w-4 text-yellow-500" />
                 Highlight cell
@@ -1339,44 +1334,19 @@ function DashboardPage() {
               <ToolbarAction
                 onClick={() => setPendingChannel("web")}
                 disabled={runningChannel !== null}
-                title={`Run Web Chat agent (${selectedRowIds.size} selected)`}
+                title={`Run Text Chat agent (${selectedRowIds.size} selected)`}
                 icon={
                   runningChannel === "web" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Globe className="h-4 w-4 text-primary" />
-                  )
-                }
-                label="Run Web"
-                badge={selectedRowIds.size}
-              />
-              <ToolbarAction
-                onClick={() => setPendingChannel("telegram_whatsapp")}
-                disabled={runningChannel !== null}
-                title={`Run Telegram/WhatsApp agent (${selectedRowIds.size} selected)`}
-                icon={
-                  runningChannel === "telegram_whatsapp" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <MessageSquare className="h-4 w-4 text-primary" />
                   )
                 }
-                label="Run WA/TG"
+                label="Run Text Chat"
                 badge={selectedRowIds.size}
               />
-              <ToolbarAction
-                onClick={() => setPendingChannel("both")}
-                disabled={runningChannel !== null}
-                title="Run both Web Chat and Telegram/WhatsApp agents"
-                icon={
-                  runningChannel === "both" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Layers className="h-4 w-4 text-primary" />
-                  )
-                }
-                label="Run Both"
-              />
+
+
 
             </ToolbarGroup>
 
@@ -1750,14 +1720,10 @@ function DashboardPage() {
           <DialogHeader>
             <DialogTitle>Run agent on selected rows?</DialogTitle>
             <DialogDescription>
-              {pendingChannel === "web"
-                ? "Re-run the Web Chat agent"
-                : pendingChannel === "telegram_whatsapp"
-                  ? "Re-run the Telegram/WhatsApp agent"
-                  : "Re-run both Web Chat and Telegram/WhatsApp agents"}
-              {" "}for {selectedRowIds.size} selected question
+              Re-run the Text Chat agent for {selectedRowIds.size} selected question
               {selectedRowIds.size === 1 ? "" : "s"}. Existing answers will be updated.
             </DialogDescription>
+
           </DialogHeader>
           {(() => {
             const qs = filteredRows
@@ -1874,18 +1840,13 @@ function DashboardPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4 rounded-xl border border-[var(--sheets-grid)] bg-card p-8 shadow-xl">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              {runningChannel === "web" && <Globe className="h-6 w-6 text-primary animate-pulse" />}
-              {runningChannel === "telegram_whatsapp" && <MessageSquare className="h-6 w-6 text-primary animate-pulse" />}
-              {runningChannel === "both" && <Layers className="h-6 w-6 text-primary animate-pulse" />}
+              <MessageSquare className="h-6 w-6 text-primary animate-pulse" />
             </div>
             <div className="text-center">
               <p className="text-[15px] font-semibold text-foreground">
-                {runningChannel === "web"
-                  ? "Running Web Chat agent…"
-                  : runningChannel === "telegram_whatsapp"
-                    ? "Running Telegram/WhatsApp agent…"
-                    : "Running both agents…"}
+                Running Text Chat agent…
               </p>
+
               <p className="mt-1 text-[13px] text-muted-foreground">
                 Please wait while the answers are being generated.
               </p>
