@@ -247,6 +247,8 @@ function DashboardPage() {
   }, [rows, searchQuery, dateFrom, dateTo]);
 
   const exportJson = async () => {
+    if (exportingJson) return;
+    setExportingJson(true);
     try {
       const selected =
         selectedRowIds.size > 0
