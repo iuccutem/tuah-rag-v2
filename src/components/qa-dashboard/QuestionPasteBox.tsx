@@ -196,17 +196,13 @@ export function QuestionPasteBox({
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-              {(activeChannel === "web" || activeChannel === "both") && (
+              {activeChannel === "web" && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs">
-                  <Globe className="h-3.5 w-3.5" /> Web Chat
-                </span>
-              )}
-              {(activeChannel === "telegram_whatsapp" || activeChannel === "both") && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs">
-                  <MessageSquare className="h-3.5 w-3.5" /> Telegram / WhatsApp
+                  <MessageSquare className="h-3.5 w-3.5" /> Text Chat
                 </span>
               )}
             </div>
+
             <div className="text-xs text-muted-foreground">Please wait — do not close this dialog.</div>
           </div>
         ) : (
