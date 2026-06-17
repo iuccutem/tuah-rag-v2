@@ -1332,44 +1332,19 @@ function DashboardPage() {
               <ToolbarAction
                 onClick={() => setPendingChannel("web")}
                 disabled={runningChannel !== null}
-                title={`Run Web Chat agent (${selectedRowIds.size} selected)`}
+                title={`Run Text Chat agent (${selectedRowIds.size} selected)`}
                 icon={
                   runningChannel === "web" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Globe className="h-4 w-4 text-primary" />
-                  )
-                }
-                label="Run Web"
-                badge={selectedRowIds.size}
-              />
-              <ToolbarAction
-                onClick={() => setPendingChannel("telegram_whatsapp")}
-                disabled={runningChannel !== null}
-                title={`Run Telegram/WhatsApp agent (${selectedRowIds.size} selected)`}
-                icon={
-                  runningChannel === "telegram_whatsapp" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <MessageSquare className="h-4 w-4 text-primary" />
                   )
                 }
-                label="Run WA/TG"
+                label="Run Text Chat"
                 badge={selectedRowIds.size}
               />
-              <ToolbarAction
-                onClick={() => setPendingChannel("both")}
-                disabled={runningChannel !== null}
-                title="Run both Web Chat and Telegram/WhatsApp agents"
-                icon={
-                  runningChannel === "both" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Layers className="h-4 w-4 text-primary" />
-                  )
-                }
-                label="Run Both"
-              />
+
+
 
             </ToolbarGroup>
 
