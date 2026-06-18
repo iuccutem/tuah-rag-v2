@@ -1,26 +1,19 @@
-## Goal
-Give every workflow-triggering button a visible loading state while its async work is in flight. The Export JSON button is the obvious miss today — `exportJson` runs (uploading rows to n8n, downloading the response file) without disabling the button or showing a spinner.
+## Export JSON filename
 
-## Changes — `src/routes/_authenticated/index.tsx`
+In `src/routes/_authenticated/index.tsx` `exportJson`:
+- Replace stamp with `DDMMYY` only (e.g. `180626`).
+- Replace filename `rag-builder-${tableTag}-${stamp}.json` with `${tableTag}_${stamp}.json`, where `tableTag = (activeTable || "all").replace(/-/g, "_").replace(/[^a-zA-Z0-9_]/g, "_")` so `staff-dir` → `staff_dir_180626.json`.
 
-1. **Add `exportingJson` state** alongside the existing `exporting` flag (Excel). Keeping them separate so each button reflects only its own work and concurrent clicks of the other action stay possible.
+## Columns
 
-2. **Wrap `exportJson` in try/finally** that sets `setExportingJson(true)` at entry and `setExportingJson(false)` in `finally`. No logic change otherwise.
+In `src/components/qa-dashboard/qa-columns.tsx`:
+- Remove the `id` and `createdAt` column entries from `QA_COLUMNS` (hides ID and Created).
+- Add back a `telegram_whatsapp` column relabeled **"Expected Answer"**, made editable (double-click), `inputType: "textarea"`, width ~`w-[22rem]`, placed right after the `web` ("Text Chat") column.
 
-3. **Desktop "Export JSON" button** (around line 985): add `disabled={exportingJson}`, swap icon to `Loader2` with `animate-spin` while loading, and change the label to "Exporting…".
-
-4. **Mobile menu "Export JSON" item** (around line 1034): add `disabled={exportingJson}`, swap icon to `Loader2 animate-spin` while loading, label "Exporting…".
-
-5. **Cross-disable during any export**: while either `exporting` or `exportingJson` is true, disable both export buttons (desktop + mobile, Excel + JSON) so the user can't fire a second export mid-flight.
-
-## Audit of other workflow buttons (already covered, no change needed)
-- Excel export (`exporting`) — already shows "Exporting…" + disabled.
-- Run agent (`runningChannel`) — already shows spinner icon + disabled state, plus the full-screen processing overlay.
-- Insert questions (`QuestionPasteBox`) — already shows Loader2 + "Inserting…/Processing…" on the Run Text Chat button.
-- Delete rows (`deleting`), Create sheet (`creatingSheet`), Register user (`registering`), Refresh (`refreshing`) — already have loading states.
-
-If you spot another action button you want covered, name it and I'll fold it in.
+In `src/routes/_authenticated/index.tsx` `handleEditCell`:
+- Extend the allowed `field` map to include `telegram_whatsapp` so edits go through the same `/api/n8n-flag` update webhook (existing payload already carries the value via `buildRowPayload`).
+- Update the success toast label to say "Expected Answer updated." for that field.
 
 ## Out of scope
-- No changes to webhook payloads, server functions, or business logic.
-- No restyling beyond the loading icon/text swap.
+
+No backend / webhook schema changes (DB still stores `telegram_whatsapp`; Export JSON still includes that field in the payload). Flagging logic (`applyFormat`) is untouched.

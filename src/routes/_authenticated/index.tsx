@@ -296,10 +296,12 @@ function DashboardPage() {
       const a = document.createElement("a");
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
-      const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
-      const tableTag = (activeTable || "all").replace(/[^a-zA-Z0-9_-]/g, "_");
+      const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
+      const tableTag = (activeTable || "all")
+        .replace(/-/g, "_")
+        .replace(/[^a-zA-Z0-9_]/g, "_");
       a.href = url;
-      a.download = `rag-builder-${tableTag}-${stamp}.json`;
+      a.download = `${tableTag}_${stamp}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -586,7 +588,14 @@ function DashboardPage() {
     col: { key: keyof QARow },
     value: string,
   ): Promise<boolean> => {
-    const field = col.key === "question" ? "question" : col.key === "url" ? "url" : null;
+    const field =
+      col.key === "question"
+        ? "question"
+        : col.key === "url"
+          ? "url"
+          : col.key === "telegram_whatsapp"
+            ? "telegram_whatsapp"
+            : null;
     if (!field) return false;
     const rowId = row.id;
     if (rowId == null || rowId === "") {
@@ -620,7 +629,9 @@ function DashboardPage() {
       });
       const json = (await res.json()) as { ok: boolean; error?: string };
       if (!json.ok) throw new Error(json.error || "Failed to save.");
-      toast.success(`${field === "question" ? "Question" : "URL"} updated.`);
+      toast.success(
+        `${field === "question" ? "Question" : field === "url" ? "URL" : "Expected Answer"} updated.`,
+      );
       // background refresh
       void refetch();
       return true;
