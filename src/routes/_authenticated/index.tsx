@@ -296,10 +296,12 @@ function DashboardPage() {
       const a = document.createElement("a");
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
-      const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
-      const tableTag = (activeTable || "all").replace(/[^a-zA-Z0-9_-]/g, "_");
+      const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
+      const tableTag = (activeTable || "all")
+        .replace(/-/g, "_")
+        .replace(/[^a-zA-Z0-9_]/g, "_");
       a.href = url;
-      a.download = `rag-builder-${tableTag}-${stamp}.json`;
+      a.download = `${tableTag}_${stamp}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
