@@ -629,7 +629,9 @@ function DashboardPage() {
       });
       const json = (await res.json()) as { ok: boolean; error?: string };
       if (!json.ok) throw new Error(json.error || "Failed to save.");
-      toast.success(`${field === "question" ? "Question" : "URL"} updated.`);
+      toast.success(
+        `${field === "question" ? "Question" : field === "url" ? "URL" : "Expected Answer"} updated.`,
+      );
       // background refresh
       void refetch();
       return true;
