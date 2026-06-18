@@ -588,7 +588,14 @@ function DashboardPage() {
     col: { key: keyof QARow },
     value: string,
   ): Promise<boolean> => {
-    const field = col.key === "question" ? "question" : col.key === "url" ? "url" : null;
+    const field =
+      col.key === "question"
+        ? "question"
+        : col.key === "url"
+          ? "url"
+          : col.key === "telegram_whatsapp"
+            ? "telegram_whatsapp"
+            : null;
     if (!field) return false;
     const rowId = row.id;
     if (rowId == null || rowId === "") {
