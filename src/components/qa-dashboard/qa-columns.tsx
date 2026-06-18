@@ -25,17 +25,6 @@ const fmtDate = (v: unknown) => {
 
 export const QA_COLUMNS: QAColumn[] = [
   {
-    key: "id",
-    label: "ID",
-    width: "w-20",
-    render: (row, idx) => (
-      <span className="font-mono text-[13px] text-muted-foreground">
-        {row.id ?? idx + 1}
-      </span>
-    ),
-    raw: (row) => (row.id == null ? "" : String(row.id)),
-  },
-  {
     key: "question",
     label: "Question",
     width: "w-[22rem]",
@@ -52,7 +41,6 @@ export const QA_COLUMNS: QAColumn[] = [
     raw: (row) => row.question ?? "",
   },
   {
-
     key: "web",
     label: "Text Chat",
     width: "w-[26rem]",
@@ -63,7 +51,22 @@ export const QA_COLUMNS: QAColumn[] = [
     ),
     raw: (row) => row.web ?? "",
   },
-
+  {
+    key: "telegram_whatsapp",
+    label: "Expected Answer",
+    width: "w-[22rem]",
+    editable: true,
+    inputType: "textarea",
+    render: (row) =>
+      row.telegram_whatsapp ? (
+        <span className="whitespace-pre-wrap break-words leading-snug">
+          {row.telegram_whatsapp}
+        </span>
+      ) : (
+        <EmptyCell />
+      ),
+    raw: (row) => row.telegram_whatsapp ?? "",
+  },
   {
     key: "url",
     label: "URL",
@@ -72,13 +75,6 @@ export const QA_COLUMNS: QAColumn[] = [
     inputType: "text",
     render: (row) => <LinkOrText value={row.url} />,
     raw: (row) => row.url ?? "",
-  },
-  {
-    key: "createdAt",
-    label: "Created",
-    width: "w-44",
-    render: (row) => <DateCell value={row.createdAt} />,
-    raw: (row) => fmtDate(row.createdAt),
   },
   {
     key: "updatedAt",
