@@ -1,38 +1,27 @@
-## 1. Mount Sonner Toaster globally (fixes missing "Select rows to export." toast)
+## Change: preview BEFORE sending to webhook
 
-Root cause: `src/components/ui/sonner.tsx` exports a `Toaster`, but no file mounts it. Every `toast(...)` call in the app silently no-ops, including the new "Select rows to export." error in `exportJson`. Whatever popups the user has seen were likely browser confirms or dialogs, not Sonner toasts.
+Currently `exportJson` calls `/api/n8n-export` first, then opens a preview of the AI-generated rows, then downloads. The user wants the preview to happen *before* the webhook runs, showing the raw question + expected answer (from the `telegram_whatsapp` column) so they can confirm what gets sent.
 
-Fix in `src/routes/__root.tsx` `RootComponent`:
-- Import `Toaster` from `@/components/ui/sonner`.
-- Render `<Toaster position="top-center" richColors closeButton />` inside `<QueryClientProvider>` next to `<Outlet />`.
+## Flow
 
-After this, the existing guard in `exportJson` (`if (selectedRowIds.size === 0) toast.error("Select rows to export.")`) actually shows. No changes to `exportJson` logic needed.
+1. **Click Export JSON** → if no rows selected, toast error. Otherwise open a preview dialog immediately (no webhook call yet).
+2. **Preview dialog** lists each selected row:
+   - `Question` (from `question`)
+   - `Expected Answer` (from `telegram_whatsapp`)
+   - Rows with empty question are flagged / excluded from send count.
+   - Footer: Cancel, **Send & Download JSON** (primary).
+3. **Send & Download JSON** click → close preview, call `/api/n8n-export` with the same selected rows, show loading toast / button spinner, then on success build the JSON blob and trigger the download with filename `q&a_<tableTag>_<DDMMYY>.json` (unchanged).
 
-## 2. Mobile toolbar — mirror full desktop toolbar
+## Implementation (`src/routes/_authenticated/index.tsx`)
 
-Current mobile toolbar (`src/routes/_authenticated/index.tsx`, `flex md:hidden` block around line 1126) is missing several desktop actions. Restructure it so every desktop toolbar capability is reachable on mobile.
-
-Visible buttons (left-to-right): Refresh, Insert, Delete (with badge), Import Excel, Run Text Chat (only when rows selected, with badge), Filters popover (search + dates), and a single overflow `⋮` on the right.
-
-Overflow `⋮` (mobile toolbar) keeps formatting actions: Highlight, Mark error, Clear formatting. Plus a new "Sheets" submenu / section (see #3).
-
-Remove the now-redundant duplicates from the header `⋮` (Upload Excel) — keep header `⋮` focused on account-level actions: Export Excel, Export JSON, Register user, Sign out. Export buttons stay in the header `⋮` on mobile (matching desktop where they're top-right).
-
-Use icon-only buttons with `title=` tooltips to fit narrow widths; labels appear only when there's room (`hidden xs:inline` not needed — just rely on icons + badge).
-
-## 3. Sheet management on mobile
-
-The per-tab `ChevronDown` menu (rename / delete) and `+` add button already exist in the bottom sheet-tabs strip and are shared with desktop, but they're cramped on mobile.
-
-Add a dedicated **Sheets** entry in the mobile toolbar's overflow `⋮` that opens a dropdown listing:
-- "New sheet…" → opens `setNewSheetOpen(true)`.
-- A separator, then each table in `tables`: clicking switches to it (same logic as the tab button); each row has inline rename + delete icon buttons that trigger `setRenameOpen` / `setDeleteSheetConfirm` the same way the tab dropdown does. Active sheet is marked with a check.
-
-This gives full sheet CRUD from the mobile toolbar without depending on the tiny tab-strip chevrons.
+- Rename existing `exportPreview` state to hold the *input* rows (question + expected answer + url + id) instead of AI-generated rows. Shape: `{ open: boolean; rows: Array<{ id, question, expected_answer, url }> }`.
+- Replace `exportJson` body: build `inputRows` from selected rows, guard empty, set preview state and open dialog. No fetch.
+- Add `confirmExportJson`: takes `exportPreview.rows`, posts to `/api/n8n-export` (payload: `{ table, rows }` where each row has `id`, `question`, `web: ""`, `telegram_whatsapp: expected_answer`, `url`), receives `ragRows`, builds blob, downloads with the existing filename pattern, closes dialog.
+- `exportingJson` loading state stays — now spans only the confirm step. Disable Send button while loading.
+- Remove the existing post-fetch preview dialog body that renders `intent` / `metadata` / `answer`; replace with a list of `Question` + `Expected Answer` cards. Empty `expected_answer` shows a muted "(no expected answer)" warning so the user knows that row will likely come back blank.
 
 ## Out of scope
 
-- No design system / color changes.
-- No webhook, export logic, or data-flow changes.
-- Desktop toolbar untouched.
-- Tab strip at the bottom stays as-is (still works as a quick switcher).
+- No webhook schema changes.
+- No changes to the AI prompt in `src/lib/rag-export.functions.ts`.
+- Desktop / mobile toolbars unchanged.
