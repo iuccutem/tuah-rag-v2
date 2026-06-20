@@ -1,19 +1,37 @@
-## Export JSON filename
+## 1. JSON answer source = Expected Answer
+
+In `src/lib/rag-export.functions.ts` `formatOne`:
+- Drop the "merge Web + Telegram/WhatsApp" logic.
+- Use `telegram_whatsapp` (the Expected Answer column) as the sole source for the `answer` field. The prompt instructs the model to:
+  - Translate the Expected Answer to natural English if it is Malay / mixed.
+  - Preserve proper nouns, acronyms, URLs, emails.
+  - Strip channel noise (greetings, signatures, emojis) but keep facts complete.
+- `intent` and `metadata` are still derived from question + expected answer.
+- Fallback (on AI error): use `telegram_whatsapp` (not `web`) as the raw answer.
+- The `web` field is still accepted in the input schema (for context) but is no longer used to compose the answer.
+
+## 2. Filename pattern
 
 In `src/routes/_authenticated/index.tsx` `exportJson`:
-- Replace stamp with `DDMMYY` only (e.g. `180626`).
-- Replace filename `rag-builder-${tableTag}-${stamp}.json` with `${tableTag}_${stamp}.json`, where `tableTag = (activeTable || "all").replace(/-/g, "_").replace(/[^a-zA-Z0-9_]/g, "_")` so `staff-dir` → `staff_dir_180626.json`.
+- Change download name to `q&a_${tableTag}_${stamp}.json` (e.g. `q&a_faix_200626.json`).
+- `tableTag` derivation unchanged (strip `qatest-` prefix if present so `qatest-faix` → `faix`; otherwise sanitize as today).
+- `stamp` stays `DDMMYY`.
 
-## Columns
+## 3. Require row selection + preview before export
 
-In `src/components/qa-dashboard/qa-columns.tsx`:
-- Remove the `id` and `createdAt` column entries from `QA_COLUMNS` (hides ID and Created).
-- Add back a `telegram_whatsapp` column relabeled **"Expected Answer"**, made editable (double-click), `inputType: "textarea"`, width ~`w-[22rem]`, placed right after the `web` ("Text Chat") column.
-
-In `src/routes/_authenticated/index.tsx` `handleEditCell`:
-- Extend the allowed `field` map to include `telegram_whatsapp` so edits go through the same `/api/n8n-flag` update webhook (existing payload already carries the value via `buildRowPayload`).
-- Update the success toast label to say "Expected Answer updated." for that field.
+In `src/routes/_authenticated/index.tsx`:
+- `exportJson` no longer falls back to all `filteredRows`. If `selectedRowIds.size === 0`, show `toast.error("Select rows to export.")` and return.
+- Split the flow into two steps:
+  1. **Generate** — POST selected rows to `/api/n8n-export`, receive `ragRows`, store them in new state `previewRows` and open a new `<Dialog>` (`exportPreviewOpen`).
+  2. **Confirm & download** — inside the dialog, a "Download JSON" button triggers the blob download using the filename from step 2; "Cancel" closes without downloading.
+- Preview dialog content:
+  - Title: "Preview export (N rows)".
+  - Scrollable list of cards, each showing: `question`, `answer`, small muted line for `intent` • `metadata` • optional `url`.
+  - Footer: Cancel, Download JSON (primary).
+- Loading state on the Export JSON trigger button (`exportingJson`) covers only the generate step; downloading from the preview is synchronous.
 
 ## Out of scope
 
-No backend / webhook schema changes (DB still stores `telegram_whatsapp`; Export JSON still includes that field in the payload). Flagging logic (`applyFormat`) is untouched.
+- No webhook / DB schema changes.
+- No changes to flagging, Excel export, or other columns.
+- Auth, RLS, and other routes untouched.
