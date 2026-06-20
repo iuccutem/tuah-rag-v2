@@ -172,3 +172,8 @@
     display: none;
   }
 }
+
+@utility cell-highlight {
+  box-shadow: inset 0 0 0 1.5px var(--sheets-highlight-border);
+  background-color: var(--sheets-highlight-bg) !important;
+}
