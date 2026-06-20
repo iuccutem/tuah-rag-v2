@@ -102,7 +102,7 @@ export const exportRowsAsRag = createServerFn({ method: "POST" })
             };
           } catch (e) {
             const question = (row.question ?? "").trim();
-            const fallback = ((row.web ?? row.telegram_whatsapp) ?? "").trim();
+            const fallback = (row.telegram_whatsapp ?? "").trim();
             return {
               lang: "en" as const,
               intent: "",
