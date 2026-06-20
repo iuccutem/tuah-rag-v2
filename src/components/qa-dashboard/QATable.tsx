@@ -276,7 +276,7 @@ export function QATable({
                         rowActive || isColActive(cIdx);
                       const fmt =
                         formats[formatKey(row.id ?? rIdx, c.key as string)] ?? {};
-                      const fmtBg = fmt.highlight ? "!bg-yellow-200" : "";
+                      const fmtBg = fmt.highlight ? "cell-highlight" : "";
                       const fmtText = fmt.error ? "!text-red-600 font-medium" : "";
                       const canEdit = !!c.editable && !!onEditCell;
                       return (

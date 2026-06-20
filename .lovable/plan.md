@@ -1,17 +1,41 @@
-## Plan
+## Problem
+When a cell is flagged as "highlighted" in the spreadsheet, the current styling applies `!bg-yellow-200` unconditionally. In dark mode the text is white, so white-on-light-yellow is completely unreadable.
 
-**File:** `src/routes/auth.tsx`
+## Solution
+Switch to a **border-only highlight**: the primary visual cue is a colored inset border, with only a very subtle background tint. This preserves text contrast in both themes.
 
-1. **Password preview toggle**
-   - Add `showPassword` state (boolean, default false).
-   - Wrap the password `<Input>` in a relative container; render an `Eye` / `EyeOff` icon button (lucide-react) positioned absolute right-2.
-   - Toggle `type` between `"password"` and `"text"` based on `showPassword`.
-   - Add right padding to the input so text doesn't sit under the icon.
-   - Icon button is `type="button"`, with `aria-label` "Show password" / "Hide password".
+### Files to change
 
-2. **Light/dark mode toggle on login page**
-   - Import `useTheme` from `@/hooks/use-theme` and `Sun` / `Moon` from `lucide-react`.
-   - Add a small icon button in the top-right corner of the auth page (absolute positioned, or in the card header) that calls `toggle()` and swaps Sun/Moon based on current theme.
-   - Reuses the same hook/behaviour as the dashboard toggle for consistency.
+#### 1. `src/styles.css`
+Add two new sheets-specific tokens to `:root` and `.dark`, plus a custom `@utility`:
 
-**Out of scope:** no changes to auth logic, sign-in flow, or styling system.
+```css
+/* in :root (light) */
+--sheets-highlight-border: oklch(0.70 0.12 80);
+--sheets-highlight-bg: oklch(0.97 0.02 80);
+
+/* in .dark */
+--sheets-highlight-border: oklch(0.65 0.14 80);
+--sheets-highlight-bg: oklch(0.20 0.03 80);
+
+/* new utility */
+@utility cell-highlight {
+  box-shadow: inset 0 0 0 1.5px var(--sheets-highlight-border);
+  background-color: var(--sheets-highlight-bg);
+}
+```
+
+#### 2. `src/components/qa-dashboard/QATable.tsx`
+Replace the hardcoded yellow background on line ~279:
+
+```tsx
+// Before
+const fmtBg = fmt.highlight ? "!bg-yellow-200" : "";
+
+// After
+const fmtHighlight = fmt.highlight ? "cell-highlight" : "";
+```
+
+Update the `className` on the `<td>` to use `fmtHighlight` instead of `fmtBg`.
+
+No other UI logic changes required — the highlight toggle, format persistence, and export behaviour remain untouched.
