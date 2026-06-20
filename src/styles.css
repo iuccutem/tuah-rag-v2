@@ -150,6 +150,8 @@
   --sheets-toolbar-bg: oklch(0.18 0.04 265);
   --sheets-row-hover: oklch(0.28 0.05 200);
   --sheets-selected: oklch(0.36 0.08 200);
+  --sheets-highlight-border: oklch(0.75 0.16 80);
+  --sheets-highlight-bg: oklch(0.22 0.04 80);
 }
 
 @layer base {
