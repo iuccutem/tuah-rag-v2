@@ -26,6 +26,7 @@ import {
   Upload,
   Pencil,
   ChevronDown,
+  Check,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -1124,18 +1125,21 @@ function DashboardPage() {
 
       {/* Mobile toolbar */}
       <div className="flex md:hidden shrink-0 flex-col gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
-        <div className="flex items-center gap-1.5">
-          <ToolbarButton
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
             onClick={handleRefresh}
             disabled={refreshing || isFetching}
             title="Refresh data"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/80 hover:bg-muted disabled:opacity-50"
           >
             <RefreshCw className={refreshing || isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
-          </ToolbarButton>
+          </button>
 
           <button
             type="button"
             onClick={() => setInsertOpen(true)}
+            title="Insert questions"
             className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-2.5 text-[13px] font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
           >
             <ListPlus className="h-4 w-4" />
@@ -1147,7 +1151,7 @@ function DashboardPage() {
             onClick={deleteSelectedRows}
             disabled={selectedRowIds.size === 0}
             title={selectedRowIds.size === 0 ? "Select rows to delete" : `Delete ${selectedRowIds.size}`}
-            className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-foreground/90 hover:bg-muted disabled:opacity-50"
+            className="flex h-8 items-center gap-1 rounded-md px-2 text-[13px] font-medium text-foreground/90 hover:bg-muted disabled:opacity-50"
           >
             <Trash2 className="h-4 w-4 text-destructive" />
             {selectedRowIds.size > 0 ? (
@@ -1157,16 +1161,45 @@ function DashboardPage() {
             ) : null}
           </button>
 
+          <button
+            type="button"
+            onClick={() => setExcelImportOpen(true)}
+            disabled={!activeTable}
+            title="Import Excel/CSV"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/80 hover:bg-muted disabled:opacity-50"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-primary" />
+          </button>
+
+          {selectedRowIds.size > 0 ? (
+            <button
+              type="button"
+              onClick={() => setPendingChannel("web")}
+              disabled={runningChannel !== null}
+              title={`Run Text Chat (${selectedRowIds.size} selected)`}
+              className="flex h-8 items-center gap-1 rounded-md px-2 text-[13px] font-medium text-foreground/90 hover:bg-muted disabled:opacity-50"
+            >
+              {runningChannel === "web" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageSquare className="h-4 w-4 text-primary" />
+              )}
+              <span className="rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary tabular-nums">
+                {selectedRowIds.size}
+              </span>
+            </button>
+          ) : null}
+
           <Popover>
             <PopoverTrigger asChild>
               <button
                 type="button"
                 title="Filters"
-                className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-foreground/90 hover:bg-muted"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
               >
                 <SlidersHorizontal className="h-4 w-4" />
                 {(searchQuery || dateFrom || dateTo) && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  <span className="absolute mt-4 ml-4 h-1.5 w-1.5 rounded-full bg-primary" />
                 )}
               </button>
             </PopoverTrigger>
@@ -1221,17 +1254,7 @@ function DashboardPage() {
                 <MoreVertical className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              {selectedRowIds.size > 0 && (
-                <>
-                  <DropdownMenuItem onClick={() => setPendingChannel("web")} disabled={runningChannel !== null}>
-                    <MessageSquare className="mr-2 h-4 w-4 text-primary" />
-                    Run Text Chat ({selectedRowIds.size})
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-
+            <DropdownMenuContent align="end" className="w-56 max-h-[70vh] overflow-y-auto">
               <DropdownMenuItem onClick={() => applyFormat({ highlight: true })}>
                 <Highlighter className="mr-2 h-4 w-4 text-yellow-500" />
                 Highlight cell
@@ -1244,10 +1267,74 @@ function DashboardPage() {
                 <Eraser className="mr-2 h-4 w-4" />
                 Clear formatting
               </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Sheets
+              </div>
+              <DropdownMenuItem onClick={() => setNewSheetOpen(true)}>
+                <Plus className="mr-2 h-4 w-4 text-primary" />
+                New sheet…
+              </DropdownMenuItem>
+              {tables.length > 0 && <DropdownMenuSeparator />}
+              {tables.map((t) => {
+                const active = t === activeTable;
+                return (
+                  <div
+                    key={t}
+                    className="flex items-center gap-1 px-1 py-0.5"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (t === activeTable) return;
+                        queryClient.removeQueries({ queryKey: ["qa-rows", t], exact: true });
+                        setActiveTable(t);
+                        setSelection(null);
+                        setSelectedRowIds(new Set());
+                      }}
+                      className={
+                        active
+                          ? "flex flex-1 items-center gap-2 truncate rounded px-2 py-1.5 text-[13px] font-medium text-foreground bg-muted"
+                          : "flex flex-1 items-center gap-2 truncate rounded px-2 py-1.5 text-[13px] text-foreground/90 hover:bg-muted"
+                      }
+                      title={t}
+                    >
+                      <Check className={active ? "h-3.5 w-3.5 text-primary" : "h-3.5 w-3.5 opacity-0"} />
+                      <span className="truncate">{formatTableLabel(t)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRenameValue(t.replace(/^qatest-/, ""));
+                        setRenameOpen({ open: true, from: t });
+                      }}
+                      title="Rename sheet"
+                      className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteSheetConfirm({ open: true, name: t });
+                      }}
+                      title="Delete sheet"
+                      className="flex h-7 w-7 items-center justify-center rounded text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
+
+
 
       {/* Desktop Toolbar */}
       <div className="hidden md:flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">

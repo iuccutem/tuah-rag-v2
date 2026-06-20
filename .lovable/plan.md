@@ -1,37 +1,38 @@
-## 1. JSON answer source = Expected Answer
+## 1. Mount Sonner Toaster globally (fixes missing "Select rows to export." toast)
 
-In `src/lib/rag-export.functions.ts` `formatOne`:
-- Drop the "merge Web + Telegram/WhatsApp" logic.
-- Use `telegram_whatsapp` (the Expected Answer column) as the sole source for the `answer` field. The prompt instructs the model to:
-  - Translate the Expected Answer to natural English if it is Malay / mixed.
-  - Preserve proper nouns, acronyms, URLs, emails.
-  - Strip channel noise (greetings, signatures, emojis) but keep facts complete.
-- `intent` and `metadata` are still derived from question + expected answer.
-- Fallback (on AI error): use `telegram_whatsapp` (not `web`) as the raw answer.
-- The `web` field is still accepted in the input schema (for context) but is no longer used to compose the answer.
+Root cause: `src/components/ui/sonner.tsx` exports a `Toaster`, but no file mounts it. Every `toast(...)` call in the app silently no-ops, including the new "Select rows to export." error in `exportJson`. Whatever popups the user has seen were likely browser confirms or dialogs, not Sonner toasts.
 
-## 2. Filename pattern
+Fix in `src/routes/__root.tsx` `RootComponent`:
+- Import `Toaster` from `@/components/ui/sonner`.
+- Render `<Toaster position="top-center" richColors closeButton />` inside `<QueryClientProvider>` next to `<Outlet />`.
 
-In `src/routes/_authenticated/index.tsx` `exportJson`:
-- Change download name to `q&a_${tableTag}_${stamp}.json` (e.g. `q&a_faix_200626.json`).
-- `tableTag` derivation unchanged (strip `qatest-` prefix if present so `qatest-faix` → `faix`; otherwise sanitize as today).
-- `stamp` stays `DDMMYY`.
+After this, the existing guard in `exportJson` (`if (selectedRowIds.size === 0) toast.error("Select rows to export.")`) actually shows. No changes to `exportJson` logic needed.
 
-## 3. Require row selection + preview before export
+## 2. Mobile toolbar — mirror full desktop toolbar
 
-In `src/routes/_authenticated/index.tsx`:
-- `exportJson` no longer falls back to all `filteredRows`. If `selectedRowIds.size === 0`, show `toast.error("Select rows to export.")` and return.
-- Split the flow into two steps:
-  1. **Generate** — POST selected rows to `/api/n8n-export`, receive `ragRows`, store them in new state `previewRows` and open a new `<Dialog>` (`exportPreviewOpen`).
-  2. **Confirm & download** — inside the dialog, a "Download JSON" button triggers the blob download using the filename from step 2; "Cancel" closes without downloading.
-- Preview dialog content:
-  - Title: "Preview export (N rows)".
-  - Scrollable list of cards, each showing: `question`, `answer`, small muted line for `intent` • `metadata` • optional `url`.
-  - Footer: Cancel, Download JSON (primary).
-- Loading state on the Export JSON trigger button (`exportingJson`) covers only the generate step; downloading from the preview is synchronous.
+Current mobile toolbar (`src/routes/_authenticated/index.tsx`, `flex md:hidden` block around line 1126) is missing several desktop actions. Restructure it so every desktop toolbar capability is reachable on mobile.
+
+Visible buttons (left-to-right): Refresh, Insert, Delete (with badge), Import Excel, Run Text Chat (only when rows selected, with badge), Filters popover (search + dates), and a single overflow `⋮` on the right.
+
+Overflow `⋮` (mobile toolbar) keeps formatting actions: Highlight, Mark error, Clear formatting. Plus a new "Sheets" submenu / section (see #3).
+
+Remove the now-redundant duplicates from the header `⋮` (Upload Excel) — keep header `⋮` focused on account-level actions: Export Excel, Export JSON, Register user, Sign out. Export buttons stay in the header `⋮` on mobile (matching desktop where they're top-right).
+
+Use icon-only buttons with `title=` tooltips to fit narrow widths; labels appear only when there's room (`hidden xs:inline` not needed — just rely on icons + badge).
+
+## 3. Sheet management on mobile
+
+The per-tab `ChevronDown` menu (rename / delete) and `+` add button already exist in the bottom sheet-tabs strip and are shared with desktop, but they're cramped on mobile.
+
+Add a dedicated **Sheets** entry in the mobile toolbar's overflow `⋮` that opens a dropdown listing:
+- "New sheet…" → opens `setNewSheetOpen(true)`.
+- A separator, then each table in `tables`: clicking switches to it (same logic as the tab button); each row has inline rename + delete icon buttons that trigger `setRenameOpen` / `setDeleteSheetConfirm` the same way the tab dropdown does. Active sheet is marked with a check.
+
+This gives full sheet CRUD from the mobile toolbar without depending on the tiny tab-strip chevrons.
 
 ## Out of scope
 
-- No webhook / DB schema changes.
-- No changes to flagging, Excel export, or other columns.
-- Auth, RLS, and other routes untouched.
+- No design system / color changes.
+- No webhook, export logic, or data-flow changes.
+- Desktop toolbar untouched.
+- Tab strip at the bottom stays as-is (still works as a quick switcher).
