@@ -27,6 +27,8 @@ import {
   Pencil,
   ChevronDown,
   Check,
+  Sun,
+  Moon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,6 +44,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { registerUser } from "@/lib/admin-users.functions";
+import { useTheme } from "@/hooks/use-theme";
 
 
 
