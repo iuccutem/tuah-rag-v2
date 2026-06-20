@@ -140,6 +140,14 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+
+  /* Sheets-specific tokens (dark) */
+  --sheets-grid: oklch(1 0 0 / 12%);
+  --sheets-header-bg: oklch(0.24 0.04 265);
+  --sheets-header-fg: oklch(0.78 0.02 250);
+  --sheets-toolbar-bg: oklch(0.18 0.04 265);
+  --sheets-row-hover: oklch(0.28 0.05 200);
+  --sheets-selected: oklch(0.36 0.08 200);
 }
 
 @layer base {

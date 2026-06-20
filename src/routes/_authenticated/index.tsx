@@ -27,6 +27,8 @@ import {
   Pencil,
   ChevronDown,
   Check,
+  Sun,
+  Moon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,6 +44,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { registerUser } from "@/lib/admin-users.functions";
+import { useTheme } from "@/hooks/use-theme";
 
 
 
@@ -118,6 +121,7 @@ function formatTableLabel(raw: string): string {
 
 function DashboardPage() {
   const navigate = useNavigate();
+  const { theme, toggle: toggleTheme } = useTheme();
   const queryClient = useQueryClient();
   const [activeTable, setActiveTable] = useState<string>("");
   const [refreshing, setRefreshing] = useState(false);
@@ -292,7 +296,6 @@ function DashboardPage() {
       const inputRows = previewRows.map((r) => ({
         id: r.id,
         question: r.question,
-        web: "",
         telegram_whatsapp: r.expected_answer,
         url: r.url,
       }));
@@ -1058,6 +1061,15 @@ function DashboardPage() {
           <div className="mx-1 h-5 w-px bg-[var(--sheets-grid)]" />
           <button
             type="button"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
             onClick={async () => {
               await supabase.auth.signOut();
               navigate({ to: "/auth" });
@@ -1082,6 +1094,15 @@ function DashboardPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={toggleTheme}>
+                {theme === "dark" ? (
+                  <Sun className="mr-2 h-4 w-4" />
+                ) : (
+                  <Moon className="mr-2 h-4 w-4" />
+                )}
+                {theme === "dark" ? "Light mode" : "Dark mode"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={exportXlsx} disabled={exporting || exportingJson}>
                 {exporting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1603,7 +1624,8 @@ function DashboardPage() {
 
 
       {/* Sheet tabs */}
-      <div className="flex shrink-0 flex-nowrap items-center gap-1 overflow-x-auto hide-scrollbar border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
+      <div className="sticky bottom-0 z-10 flex shrink-0 flex-nowrap items-center gap-1 overflow-x-auto hide-scrollbar border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
+
         {tables.length === 0 ? (
           <div className="flex h-7 items-center px-3 text-[12px] text-muted-foreground">
             {tablesQuery.isLoading ? "Loading sheets…" : "No sheets yet"}
