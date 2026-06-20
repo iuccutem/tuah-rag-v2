@@ -292,7 +292,6 @@ function DashboardPage() {
       const inputRows = previewRows.map((r) => ({
         id: r.id,
         question: r.question,
-        web: "",
         telegram_whatsapp: r.expected_answer,
         url: r.url,
       }));

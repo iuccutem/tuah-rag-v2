@@ -9,7 +9,6 @@ const InputSchema = z.object({
       z.object({
         id: z.union([z.string(), z.number()]).nullable().optional(),
         question: z.string().nullable().optional(),
-        web: z.string().nullable().optional(),
         telegram_whatsapp: z.string().nullable().optional(),
         url: z.string().nullable().optional(),
       }),
@@ -41,7 +40,7 @@ function cleanUrl(raw: string | null | undefined): string | null {
 
 async function formatOne(
   model: ReturnType<ReturnType<typeof createLovableAiGatewayProvider>>,
-  row: { question?: string | null; web?: string | null; telegram_whatsapp?: string | null },
+  row: { question?: string | null; telegram_whatsapp?: string | null },
 ): Promise<{ intent: string; question: string; answer: string; metadata: string }> {
   const question = (row.question ?? "").trim();
   const expected = (row.telegram_whatsapp ?? "").trim();
