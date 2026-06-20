@@ -121,6 +121,7 @@ function formatTableLabel(raw: string): string {
 
 function DashboardPage() {
   const navigate = useNavigate();
+  const { theme, toggle: toggleTheme } = useTheme();
   const queryClient = useQueryClient();
   const [activeTable, setActiveTable] = useState<string>("");
   const [refreshing, setRefreshing] = useState(false);
@@ -1058,6 +1059,15 @@ function DashboardPage() {
             <span className="hidden sm:inline">Register</span>
           </button>
           <div className="mx-1 h-5 w-px bg-[var(--sheets-grid)]" />
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
           <button
             type="button"
             onClick={async () => {
