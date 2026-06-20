@@ -155,12 +155,10 @@ function DashboardPage() {
   const [exportPreview, setExportPreview] = useState<{
     open: boolean;
     rows: Array<{
-      lang?: string;
-      intent: string;
+      id: string | number | null;
       question: string;
-      answer: string;
-      metadata: string;
-      url: string | null;
+      expected_answer: string;
+      url: string;
     }>;
   }>({ open: false, rows: [] });
   const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
@@ -258,33 +256,46 @@ function DashboardPage() {
     return result;
   }, [rows, searchQuery, dateFrom, dateTo]);
 
-  const exportJson = async () => {
+  const exportJson = () => {
     if (exportingJson) return;
     if (selectedRowIds.size === 0) {
       toast.error("Select rows to export.");
       return;
     }
+    const selected = filteredRows.filter((r) =>
+      selectedRowIds.has(r.id ?? r.question ?? ""),
+    );
+    const previewRows = selected
+      .filter((r) => (r.question ?? "").trim().length > 0)
+      .map((r) => ({
+        id: (r.id ?? null) as string | number | null,
+        question: r.question ?? "",
+        expected_answer: r.telegram_whatsapp ?? "",
+        url: r.url ?? "",
+      }));
+    if (previewRows.length === 0) {
+      toast.error("No rows with a question to export.");
+      return;
+    }
+    setExportPreview({ open: true, rows: previewRows });
+  };
+
+  const confirmExportJson = async () => {
+    if (exportingJson) return;
+    const previewRows = exportPreview.rows;
+    if (previewRows.length === 0) return;
     setExportingJson(true);
+    const tId = toast.loading(
+      `Generating ${previewRows.length} row${previewRows.length === 1 ? "" : "s"}…`,
+    );
     try {
-      const selected = filteredRows.filter((r) =>
-        selectedRowIds.has(r.id ?? r.question ?? ""),
-      );
-      const inputRows = selected
-        .filter((r) => (r.question ?? "").trim().length > 0)
-        .map((r) => ({
-          id: (r.id ?? null) as string | number | null,
-          question: r.question ?? "",
-          web: r.web ?? "",
-          telegram_whatsapp: r.telegram_whatsapp ?? "",
-          url: r.url ?? "",
-        }));
-      if (inputRows.length === 0) {
-        toast.error("No rows with a question to export.");
-        return;
-      }
-      const tId = toast.loading(
-        `Generating ${inputRows.length} row${inputRows.length === 1 ? "" : "s"}…`,
-      );
+      const inputRows = previewRows.map((r) => ({
+        id: r.id,
+        question: r.question,
+        web: "",
+        telegram_whatsapp: r.expected_answer,
+        url: r.url,
+      }));
       const res = await fetch("/api/n8n-export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -294,53 +305,43 @@ function DashboardPage() {
         }),
       });
       const payload = (await res.json().catch(() => ({}))) as {
-        rows?: Array<{
-          lang?: string;
-          intent: string;
-          question: string;
-          answer: string;
-          metadata: string;
-          url: string | null;
-        }>;
+        rows?: unknown;
         error?: string;
       };
       toast.dismiss(tId);
       if (!res.ok || !Array.isArray(payload.rows)) {
         throw new Error(payload.error || `Export failed (${res.status})`);
       }
-      setExportPreview({ open: true, rows: payload.rows });
+      const ragRows = payload.rows;
+      const json = JSON.stringify(ragRows, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
+      const rawTable = (activeTable || "all").replace(/^qatest-/, "");
+      const tableTag = rawTable
+        .replace(/-/g, "_")
+        .replace(/[^a-zA-Z0-9_]/g, "_");
+      a.href = url;
+      a.download = `q&a_${tableTag}_${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(
+        `Exported ${ragRows.length} row${ragRows.length === 1 ? "" : "s"}.`,
+      );
+      setExportPreview({ open: false, rows: [] });
     } catch (e) {
+      toast.dismiss(tId);
       toast.error(e instanceof Error ? e.message : "Failed to export JSON.");
     } finally {
       setExportingJson(false);
     }
   };
 
-  const downloadExportJson = () => {
-    const ragRows = exportPreview.rows;
-    if (ragRows.length === 0) return;
-    const json = JSON.stringify(ragRows, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
-    const rawTable = (activeTable || "all").replace(/^qatest-/, "");
-    const tableTag = rawTable
-      .replace(/-/g, "_")
-      .replace(/[^a-zA-Z0-9_]/g, "_");
-    a.href = url;
-    a.download = `q&a_${tableTag}_${stamp}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    toast.success(
-      `Exported ${ragRows.length} row${ragRows.length === 1 ? "" : "s"}.`,
-    );
-    setExportPreview({ open: false, rows: [] });
-  };
 
 
 
@@ -1866,33 +1867,42 @@ function DashboardPage() {
       >
         <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Preview export ({exportPreview.rows.length} row{exportPreview.rows.length === 1 ? "" : "s"})</DialogTitle>
+            <DialogTitle>Confirm export ({exportPreview.rows.length} row{exportPreview.rows.length === 1 ? "" : "s"})</DialogTitle>
             <DialogDescription>
-              Review the generated Q&amp;A entries before downloading the JSON file.
+              Review the questions and expected answers below. On confirm, these are sent to the export webhook and the JSON file is downloaded.
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-auto rounded-md border border-[var(--sheets-grid)] bg-muted/30 p-2 space-y-2">
             {exportPreview.rows.length === 0 ? (
               <p className="text-[12px] text-muted-foreground">No rows.</p>
             ) : (
-              exportPreview.rows.map((r, i) => (
-                <div key={i} className="rounded border border-[var(--sheets-grid)] bg-background p-3 text-[13px]">
-                  <div className="font-medium text-foreground break-words">{r.question}</div>
-                  <div className="mt-1 whitespace-pre-wrap break-words text-foreground/90">{r.answer}</div>
-                  <div className="mt-2 text-[11px] text-muted-foreground break-words">
-                    {[r.intent, r.metadata, r.url].filter(Boolean).join(" • ")}
+              exportPreview.rows.map((r, i) => {
+                const hasAnswer = r.expected_answer.trim().length > 0;
+                return (
+                  <div key={i} className="rounded border border-[var(--sheets-grid)] bg-background p-3 text-[13px]">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Question</div>
+                    <div className="mt-0.5 font-medium text-foreground break-words">{r.question}</div>
+                    <div className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Expected Answer</div>
+                    {hasAnswer ? (
+                      <div className="mt-0.5 whitespace-pre-wrap break-words text-foreground/90">{r.expected_answer}</div>
+                    ) : (
+                      <div className="mt-0.5 text-[12px] italic text-amber-600 dark:text-amber-400">(no expected answer — output may be blank)</div>
+                    )}
+                    {r.url ? (
+                      <div className="mt-2 truncate text-[11px] text-muted-foreground" title={r.url}>{r.url}</div>
+                    ) : null}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setExportPreview({ open: false, rows: [] })}>
+            <Button variant="outline" onClick={() => setExportPreview({ open: false, rows: [] })} disabled={exportingJson}>
               Cancel
             </Button>
-            <Button onClick={downloadExportJson} disabled={exportPreview.rows.length === 0} className="gap-2">
-              <Download className="h-4 w-4" />
-              Download JSON
+            <Button onClick={confirmExportJson} disabled={exportPreview.rows.length === 0 || exportingJson} className="gap-2">
+              {exportingJson ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {exportingJson ? "Sending…" : "Send & Download JSON"}
             </Button>
           </DialogFooter>
         </DialogContent>
