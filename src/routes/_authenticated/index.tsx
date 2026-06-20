@@ -259,14 +259,15 @@ function DashboardPage() {
 
   const exportJson = async () => {
     if (exportingJson) return;
+    if (selectedRowIds.size === 0) {
+      toast.error("Select rows to export.");
+      return;
+    }
     setExportingJson(true);
     try {
-      const selected =
-        selectedRowIds.size > 0
-          ? filteredRows.filter((r) =>
-              selectedRowIds.has(r.id ?? r.question ?? ""),
-            )
-          : filteredRows;
+      const selected = filteredRows.filter((r) =>
+        selectedRowIds.has(r.id ?? r.question ?? ""),
+      );
       const inputRows = selected
         .filter((r) => (r.question ?? "").trim().length > 0)
         .map((r) => ({
@@ -281,7 +282,7 @@ function DashboardPage() {
         return;
       }
       const tId = toast.loading(
-        `Sending ${inputRows.length} row${inputRows.length === 1 ? "" : "s"} to n8n…`,
+        `Generating ${inputRows.length} row${inputRows.length === 1 ? "" : "s"}…`,
       );
       const res = await fetch("/api/n8n-export", {
         method: "POST",
@@ -292,40 +293,54 @@ function DashboardPage() {
         }),
       });
       const payload = (await res.json().catch(() => ({}))) as {
-        rows?: unknown;
+        rows?: Array<{
+          lang?: string;
+          intent: string;
+          question: string;
+          answer: string;
+          metadata: string;
+          url: string | null;
+        }>;
         error?: string;
       };
       toast.dismiss(tId);
       if (!res.ok || !Array.isArray(payload.rows)) {
         throw new Error(payload.error || `Export failed (${res.status})`);
       }
-      const ragRows = payload.rows;
-
-      const json = JSON.stringify(ragRows, null, 2);
-      const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const now = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
-      const tableTag = (activeTable || "all")
-        .replace(/-/g, "_")
-        .replace(/[^a-zA-Z0-9_]/g, "_");
-      a.href = url;
-      a.download = `${tableTag}_${stamp}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      toast.success(
-        `Exported ${ragRows.length} row${ragRows.length === 1 ? "" : "s"}.`,
-      );
+      setExportPreview({ open: true, rows: payload.rows });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to export JSON.");
     } finally {
       setExportingJson(false);
     }
   };
+
+  const downloadExportJson = () => {
+    const ragRows = exportPreview.rows;
+    if (ragRows.length === 0) return;
+    const json = JSON.stringify(ragRows, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
+    const rawTable = (activeTable || "all").replace(/^qatest-/, "");
+    const tableTag = rawTable
+      .replace(/-/g, "_")
+      .replace(/[^a-zA-Z0-9_]/g, "_");
+    a.href = url;
+    a.download = `q&a_${tableTag}_${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success(
+      `Exported ${ragRows.length} row${ragRows.length === 1 ? "" : "s"}.`,
+    );
+    setExportPreview({ open: false, rows: [] });
+  };
+
 
 
 
