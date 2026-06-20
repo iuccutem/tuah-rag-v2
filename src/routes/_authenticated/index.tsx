@@ -1867,33 +1867,42 @@ function DashboardPage() {
       >
         <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Preview export ({exportPreview.rows.length} row{exportPreview.rows.length === 1 ? "" : "s"})</DialogTitle>
+            <DialogTitle>Confirm export ({exportPreview.rows.length} row{exportPreview.rows.length === 1 ? "" : "s"})</DialogTitle>
             <DialogDescription>
-              Review the generated Q&amp;A entries before downloading the JSON file.
+              Review the questions and expected answers below. On confirm, these are sent to the export webhook and the JSON file is downloaded.
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-auto rounded-md border border-[var(--sheets-grid)] bg-muted/30 p-2 space-y-2">
             {exportPreview.rows.length === 0 ? (
               <p className="text-[12px] text-muted-foreground">No rows.</p>
             ) : (
-              exportPreview.rows.map((r, i) => (
-                <div key={i} className="rounded border border-[var(--sheets-grid)] bg-background p-3 text-[13px]">
-                  <div className="font-medium text-foreground break-words">{r.question}</div>
-                  <div className="mt-1 whitespace-pre-wrap break-words text-foreground/90">{r.answer}</div>
-                  <div className="mt-2 text-[11px] text-muted-foreground break-words">
-                    {[r.intent, r.metadata, r.url].filter(Boolean).join(" • ")}
+              exportPreview.rows.map((r, i) => {
+                const hasAnswer = r.expected_answer.trim().length > 0;
+                return (
+                  <div key={i} className="rounded border border-[var(--sheets-grid)] bg-background p-3 text-[13px]">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Question</div>
+                    <div className="mt-0.5 font-medium text-foreground break-words">{r.question}</div>
+                    <div className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Expected Answer</div>
+                    {hasAnswer ? (
+                      <div className="mt-0.5 whitespace-pre-wrap break-words text-foreground/90">{r.expected_answer}</div>
+                    ) : (
+                      <div className="mt-0.5 text-[12px] italic text-amber-600 dark:text-amber-400">(no expected answer — output may be blank)</div>
+                    )}
+                    {r.url ? (
+                      <div className="mt-2 truncate text-[11px] text-muted-foreground" title={r.url}>{r.url}</div>
+                    ) : null}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setExportPreview({ open: false, rows: [] })}>
+            <Button variant="outline" onClick={() => setExportPreview({ open: false, rows: [] })} disabled={exportingJson}>
               Cancel
             </Button>
-            <Button onClick={downloadExportJson} disabled={exportPreview.rows.length === 0} className="gap-2">
-              <Download className="h-4 w-4" />
-              Download JSON
+            <Button onClick={confirmExportJson} disabled={exportPreview.rows.length === 0 || exportingJson} className="gap-2">
+              {exportingJson ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {exportingJson ? "Sending…" : "Send & Download JSON"}
             </Button>
           </DialogFooter>
         </DialogContent>
