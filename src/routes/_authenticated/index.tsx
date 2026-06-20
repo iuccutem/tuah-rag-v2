@@ -1624,7 +1624,8 @@ function DashboardPage() {
 
 
       {/* Sheet tabs */}
-      <div className="flex shrink-0 flex-nowrap items-center gap-1 overflow-x-auto hide-scrollbar border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
+      <div className="sticky bottom-0 z-10 flex shrink-0 flex-nowrap items-center gap-1 overflow-x-auto hide-scrollbar border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
+
         {tables.length === 0 ? (
           <div className="flex h-7 items-center px-3 text-[12px] text-muted-foreground">
             {tablesQuery.isLoading ? "Loading sheets…" : "No sheets yet"}
