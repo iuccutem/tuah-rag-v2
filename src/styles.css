@@ -104,6 +104,8 @@
   --sheets-toolbar-bg: oklch(0.97 0.005 250);
   --sheets-row-hover: oklch(0.96 0.02 152);
   --sheets-selected: oklch(0.93 0.06 152);
+  --sheets-highlight-border: oklch(0.70 0.12 80);
+  --sheets-highlight-bg: oklch(0.97 0.02 80);
 }
 
 
