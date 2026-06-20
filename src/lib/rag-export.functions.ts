@@ -44,16 +44,15 @@ async function formatOne(
   row: { question?: string | null; web?: string | null; telegram_whatsapp?: string | null },
 ): Promise<{ intent: string; question: string; answer: string; metadata: string }> {
   const question = (row.question ?? "").trim();
-  const webText = (row.web ?? "").trim();
-  const tgText = (row.telegram_whatsapp ?? "").trim();
+  const expected = (row.telegram_whatsapp ?? "").trim();
 
   const prompt = `You are formatting Q&A entries for a RAG knowledge base.
 
-Given a QUESTION and up to two candidate answers (Web and Telegram/WhatsApp), produce four fields. The Web answer is the primary source — prefer it when both are present; merge in Telegram/WhatsApp content only if it adds clearly useful facts not already in Web.
+Given a QUESTION and an EXPECTED ANSWER, produce four fields. The Expected Answer is the sole source of truth for the answer — do not invent facts, do not merge in outside information.
 
 OUTPUT FIELDS:
 1. "question": the original question, translated to natural English if it is in Malay or mixed Malay/English. If already in English, keep as-is (light cleanup only). Preserve proper nouns and acronyms (UTeM, FTKEK, FAIX, ACCESS, etc.) unchanged.
-2. "answer": the single best answer in English. Translate from Malay if needed. Use the Web answer as the base; merge from Telegram/WhatsApp only if it adds value. Strip channel-specific noise (greetings, signatures, "Click here" boilerplate, emojis). Preserve URLs inline exactly as written. Keep it factual, complete, and readable.
+2. "answer": the Expected Answer, translated to natural English if it is Malay / mixed. Strip channel-specific noise (greetings, signatures, "Click here" boilerplate, emojis) but keep all facts complete. Preserve URLs and email addresses inline exactly as written. Do not add facts that are not in the Expected Answer.
 3. "intent": a short dotted slug describing the question's intent, like "staff.director", "accommodation.count", "admissions.office". Lowercase, 2-3 dot-separated segments, snake_case if needed within a segment.
 4. "metadata": 2-4 short topical tags joined with "; " (semicolon + space). Example: "education; university_administration; UTeM ACCESS".
 
@@ -65,11 +64,8 @@ TRANSLATION RULES:
 QUESTION:
 ${question}
 
-WEB ANSWER:
-${webText || "(none)"}
-
-TELEGRAM/WHATSAPP ANSWER:
-${tgText || "(none)"}`;
+EXPECTED ANSWER:
+${expected || "(none)"}`;
 
   const { experimental_output } = await generateText({
     model,
@@ -106,7 +102,7 @@ export const exportRowsAsRag = createServerFn({ method: "POST" })
             };
           } catch (e) {
             const question = (row.question ?? "").trim();
-            const fallback = ((row.web ?? row.telegram_whatsapp) ?? "").trim();
+            const fallback = (row.telegram_whatsapp ?? "").trim();
             return {
               lang: "en" as const,
               intent: "",
