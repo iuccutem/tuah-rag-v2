@@ -155,12 +155,10 @@ function DashboardPage() {
   const [exportPreview, setExportPreview] = useState<{
     open: boolean;
     rows: Array<{
-      lang?: string;
-      intent: string;
+      id: string | number | null;
       question: string;
-      answer: string;
-      metadata: string;
-      url: string | null;
+      expected_answer: string;
+      url: string;
     }>;
   }>({ open: false, rows: [] });
   const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
