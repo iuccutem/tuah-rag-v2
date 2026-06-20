@@ -26,6 +26,7 @@ import {
   Upload,
   Pencil,
   ChevronDown,
+  Check,
 } from "lucide-react";
 import {
   DropdownMenu,
