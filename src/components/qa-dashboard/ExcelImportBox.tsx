@@ -57,12 +57,20 @@ export function ExcelImportBox({
     [existingQuestions],
   );
 
-  const questions = useMemo(() => {
+  const entries = useMemo(() => {
     const src = skipHeader ? allRows.slice(1) : allRows;
+    const get = (r: string[], idx: number) =>
+      idx >= 0 ? (r[idx] ?? "").toString().trim() : "";
     return src
-      .map((r) => (r[selectedCol] ?? "").toString().trim())
-      .filter((q) => q.length > 0);
-  }, [allRows, selectedCol, skipHeader]);
+      .map((r) => ({
+        question: get(r, selectedCol),
+        telegram_whatsapp: get(r, expectedCol),
+        url: get(r, urlCol),
+      }))
+      .filter((e) => e.question.length > 0);
+  }, [allRows, selectedCol, expectedCol, urlCol, skipHeader]);
+
+  const questions = useMemo(() => entries.map((e) => e.question), [entries]);
 
   const duplicates = useMemo(
     () => questions.filter((q) => existingSet.has(q.toLowerCase())),
