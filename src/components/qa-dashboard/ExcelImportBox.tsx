@@ -219,7 +219,7 @@ export function ExcelImportBox({
           {fileName ? fileName : "Click to choose an .xlsx, .xls, or .csv file"}
         </div>
         <div className="text-xs text-muted-foreground">
-          The first worksheet will be used. You'll pick the column next.
+          The first worksheet will be used. You'll map Question, Expected Answer, and URL columns next.
         </div>
         <input
           type="file"
