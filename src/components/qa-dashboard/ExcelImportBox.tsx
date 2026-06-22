@@ -97,12 +97,13 @@ export function ExcelImportBox({
         const maxCols = rows.reduce((m, r) => Math.max(m, r.length), 0);
         setColumnCount(maxCols);
         setAllRows(rows);
-        setGrid(rows.slice(0, 6));
+        setGrid(rows.slice(0, 4));
       } else {
         await wb.xlsx.load(buf);
         const ws = wb.worksheets[0];
         if (!ws) throw new Error("Workbook has no sheets.");
         const rows: string[][] = [];
+
         let maxCols = 0;
         ws.eachRow({ includeEmpty: false }, (row) => {
           const cells: string[] = [];

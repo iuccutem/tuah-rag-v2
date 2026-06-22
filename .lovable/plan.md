@@ -1,45 +1,46 @@
 ## Goal
-Extend the **Import Excel** flow to import not only the `Question` column, but also `Expected Answer` (→ `telegram_whatsapp`) and `URL` (→ `url`) from the spreadsheet.
+Remove the horizontal scrollbar inside the Excel import dialog and make the whole flow (file picker, column mappers, preview, summary, insert button) visible without horizontal scrolling. Keep all current functionality (file parse, Q/A/URL mapping, header skip, duplicate detection, per-row insert progress).
 
-## UX changes — `src/components/qa-dashboard/ExcelImportBox.tsx`
+## Changes — `src/components/qa-dashboard/ExcelImportBox.tsx`
 
-Replace the single "Question column" selector with **three column pickers** stacked on one row:
+### 1. Column-picker row — stack into a responsive grid
+Currently three `w-[220px]` selects + a checkbox in a `flex flex-wrap`, which wraps awkwardly at dialog width.
 
-| Field | Required | Maps to |
-|---|---|---|
-| Question column | yes | `question` |
-| Expected Answer column | no (None option) | `telegram_whatsapp` |
-| URL column | no (None option) | `url` |
+Replace with a 1-column → 3-column responsive grid; selects become full-width inside their cell; header-skip checkbox moves onto its own row below.
 
-- Each `<Select>` lists the same column letters/headers from the file; the Expected Answer and URL selects also include a `— None —` option so users can skip them.
-- Auto-pick on first parse: column 0 = Question, column 1 = Expected Answer (if exists), column 2 = URL (if exists). User can change.
-- Duplicate detection still uses the Question value only (unchanged behavior).
-- The preview table highlights the currently-selected Question column (same primary tint as today); Expected Answer and URL columns get a lighter secondary tint so the mapping is visible.
-- Per-row payload built in `runImport` becomes:
-  ```ts
-  { question, table, telegram_whatsapp?: string, url?: string }
-  ```
-  Empty/whitespace values for the optional fields are omitted.
-- The status list under the progress area shows the question text (as today). No extra columns shown there — keeps it scannable.
-
-## API change — `src/routes/api/n8n-run.ts`
-
-Extend the request body type and the upstream payload to forward the two optional fields when present:
-
-```ts
-let body: { question?: string; table?: string; telegram_whatsapp?: string; url?: string } = {};
-...
-const upstream: Record<string, unknown> = { question };
-if (table) upstream.table = table;
-const expected = (body.telegram_whatsapp ?? "").trim();
-const url = (body.url ?? "").trim();
-if (expected) upstream.telegram_whatsapp = expected;
-if (url) upstream.url = url;
+```tsx
+<div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+  {fields.map(...) => (
+    <div className="flex flex-col gap-1">
+      <label className="text-[12px] font-medium text-muted-foreground">{field.label}</label>
+      <Select ...>
+        <SelectTrigger className="h-8 w-full"> ... </SelectTrigger>
+        ...
+      </Select>
+    </div>
+  ))}
+</div>
+<label className="flex items-center gap-1.5 text-[13px]">
+  <input type="checkbox" ... /> First row is a header (skip it)
+</label>
 ```
 
-No other changes (auth, error handling, response shape unchanged). The n8n webhook already accepts these field names (see `/api/n8n-flag` payload shape).
+### 2. Preview table — fit-to-width, no horizontal scroll
+Today the `<table className="w-max min-w-full">` plus `max-w-[260px]` cells forces overflow. Switch to a fixed-layout table sized to the container, with proportional column widths and truncation already in place.
+
+- Container: drop `overflow-auto`; keep border + rounded.
+- Table: `w-full table-fixed text-[12px]`.
+- Row-number `<th>/<td>`: `w-10`.
+- Data columns: set `style={{ width: \`\${100 / columnCount}%\` }}` (or use `w-auto` with `table-fixed` so they share remaining space equally).
+- Cells: keep `truncate` + `title={cell}` so long values are readable on hover; drop `max-w-[260px]`.
+- Reduce preview rows from 6 to 4 to keep vertical height comfortable inside the dialog.
+
+If `columnCount` is large (>6), render only the columns currently mapped (Q / Expected / URL) plus the first 2 unmapped, with a small "+N more columns" hint — guarantees the preview never needs to scroll sideways regardless of file width. Mapping dropdowns still list every column from `colOptions`, so functionality is preserved.
+
+### 3. Summary row stays as-is
+Already wraps cleanly; no change.
 
 ## Out of scope
-- No change to `QuestionPasteBox`, manual single-question add, or the `/api/n8n-flag` / `/api/n8n-process` endpoints.
-- No change to the QA table or export logic.
-- No change to duplicate-detection rules.
+- No changes to `runImport`, payload shape, or `/api/n8n-run`.
+- No changes to parsing logic, `entries`/`questions`/duplicate computation, or the per-row status list.
+- No changes to the dialog wrapper in `src/routes/_authenticated/index.tsx` (its `max-w-3xl` + `max-h-[90vh] overflow-y-auto` already handle vertical scroll on very small screens).
