@@ -78,6 +78,7 @@ export function ExcelImportBox({
   const [expectedCol, setExpectedCol] = useState<number>(-1);
   const [urlCol, setUrlCol] = useState<number>(-1);
   const [skipHeader, setSkipHeader] = useState(true);
+  const [autoDetected, setAutoDetected] = useState(false);
   const [running, setRunning] = useState(false);
   const [items, setItems] = useState<RunItem[]>([]);
 
