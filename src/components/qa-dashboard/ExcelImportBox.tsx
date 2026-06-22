@@ -120,21 +120,17 @@ export function ExcelImportBox({
     try {
       const buf = await file.arrayBuffer();
       const wb = new ExcelJS.Workbook();
+      let parsedRows: string[][] = [];
+      let parsedMaxCols = 0;
       if (file.name.toLowerCase().endsWith(".csv")) {
         const text = new TextDecoder().decode(buf);
         const lines = text.split(/\r?\n/);
-        const rows = lines.map((ln) => parseCsvLine(ln));
-        const maxCols = rows.reduce((m, r) => Math.max(m, r.length), 0);
-        setColumnCount(maxCols);
-        setAllRows(rows);
-        setGrid(rows.slice(0, 4));
+        parsedRows = lines.map((ln) => parseCsvLine(ln));
+        parsedMaxCols = parsedRows.reduce((m, r) => Math.max(m, r.length), 0);
       } else {
         await wb.xlsx.load(buf);
         const ws = wb.worksheets[0];
         if (!ws) throw new Error("Workbook has no sheets.");
-        const rows: string[][] = [];
-
-        let maxCols = 0;
         ws.eachRow({ includeEmpty: false }, (row) => {
           const cells: string[] = [];
           row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
@@ -153,16 +149,15 @@ export function ExcelImportBox({
             cells[colNumber - 1] = s;
           });
           for (let i = 0; i < cells.length; i++) if (cells[i] == null) cells[i] = "";
-          maxCols = Math.max(maxCols, cells.length);
-          rows.push(cells);
+          parsedMaxCols = Math.max(parsedMaxCols, cells.length);
+          parsedRows.push(cells);
         });
-        setColumnCount(maxCols);
-        setAllRows(rows);
-        setGrid(rows.slice(0, 4));
       }
-      // Auto-pick mapping: Question = col 0, Expected = col 1, URL = col 2
+      setColumnCount(parsedMaxCols);
+      setAllRows(parsedRows);
+      setGrid(parsedRows.slice(0, 4));
       // Auto-detect mapping from header row, with positional fallback.
-      const headers = (allRowsLocal[0] ?? []) as string[];
+      const headers = (parsedRows[0] ?? []) as string[];
       const qIdx = detectColumn(headers, HEADER_KEYWORDS.question);
       const eIdx = detectColumn(headers, HEADER_KEYWORDS.expected);
       const uIdx = detectColumn(headers, HEADER_KEYWORDS.url);
@@ -170,7 +165,7 @@ export function ExcelImportBox({
       setSelectedCol(qIdx >= 0 ? qIdx : 0);
       setExpectedCol(eIdx >= 0 ? eIdx : qIdx === 1 ? 2 : 1);
       setUrlCol(uIdx >= 0 ? uIdx : 2);
-      setSkipHeader(matched ? true : skipHeader);
+      if (matched) setSkipHeader(true);
       setAutoDetected(matched);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to read file.");
