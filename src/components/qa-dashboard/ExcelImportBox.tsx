@@ -46,6 +46,8 @@ export function ExcelImportBox({
   const [allRows, setAllRows] = useState<string[][]>([]); // full data (no header skipping)
   const [columnCount, setColumnCount] = useState(0);
   const [selectedCol, setSelectedCol] = useState<number>(0);
+  const [expectedCol, setExpectedCol] = useState<number>(-1);
+  const [urlCol, setUrlCol] = useState<number>(-1);
   const [skipHeader, setSkipHeader] = useState(true);
   const [running, setRunning] = useState(false);
   const [items, setItems] = useState<RunItem[]>([]);
@@ -55,12 +57,20 @@ export function ExcelImportBox({
     [existingQuestions],
   );
 
-  const questions = useMemo(() => {
+  const entries = useMemo(() => {
     const src = skipHeader ? allRows.slice(1) : allRows;
+    const get = (r: string[], idx: number) =>
+      idx >= 0 ? (r[idx] ?? "").toString().trim() : "";
     return src
-      .map((r) => (r[selectedCol] ?? "").toString().trim())
-      .filter((q) => q.length > 0);
-  }, [allRows, selectedCol, skipHeader]);
+      .map((r) => ({
+        question: get(r, selectedCol),
+        telegram_whatsapp: get(r, expectedCol),
+        url: get(r, urlCol),
+      }))
+      .filter((e) => e.question.length > 0);
+  }, [allRows, selectedCol, expectedCol, urlCol, skipHeader]);
+
+  const questions = useMemo(() => entries.map((e) => e.question), [entries]);
 
   const duplicates = useMemo(
     () => questions.filter((q) => existingSet.has(q.toLowerCase())),
@@ -119,8 +129,10 @@ export function ExcelImportBox({
         setAllRows(rows);
         setGrid(rows.slice(0, 6));
       }
-      // Auto-pick first column with header that looks like a question
+      // Auto-pick mapping: Question = col 0, Expected = col 1, URL = col 2
       setSelectedCol(0);
+      setExpectedCol(1);
+      setUrlCol(2);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to read file.");
     } finally {
@@ -144,14 +156,18 @@ export function ExcelImportBox({
     }));
     setItems(initial);
     let ok = 0;
-    for (let i = 0; i < questions.length; i++) {
-      const q = questions[i];
+    for (let i = 0; i < entries.length; i++) {
+      const e = entries[i];
+      const q = e.question;
       if (existingSet.has(q.toLowerCase())) continue;
       try {
+        const payload: Record<string, unknown> = { question: q, table };
+        if (e.telegram_whatsapp) payload.telegram_whatsapp = e.telegram_whatsapp;
+        if (e.url) payload.url = e.url;
         const res = await fetch("/api/n8n-run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: q, table }),
+          body: JSON.stringify(payload),
         });
         const json = (await res.json()) as { ok: boolean; error?: string };
         if (json.ok) ok++;
@@ -203,7 +219,7 @@ export function ExcelImportBox({
           {fileName ? fileName : "Click to choose an .xlsx, .xls, or .csv file"}
         </div>
         <div className="text-xs text-muted-foreground">
-          The first worksheet will be used. You'll pick the column next.
+          The first worksheet will be used. You'll map Question, Expected Answer, and URL columns next.
         </div>
         <input
           type="file"
@@ -228,25 +244,36 @@ export function ExcelImportBox({
       {!parsing && allRows.length > 0 && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <label className="text-[13px] font-medium">Question column:</label>
-              <Select
-                value={String(selectedCol)}
-                onValueChange={(v) => setSelectedCol(Number(v))}
-                disabled={running}
-              >
-                <SelectTrigger className="h-8 w-[220px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {colOptions.map((c) => (
-                    <SelectItem key={c.idx} value={String(c.idx)}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {(
+              [
+                { label: "Question column", value: selectedCol, set: setSelectedCol, required: true },
+                { label: "Expected Answer column", value: expectedCol, set: setExpectedCol, required: false },
+                { label: "URL column", value: urlCol, set: setUrlCol, required: false },
+              ] as const
+            ).map((field) => (
+              <div key={field.label} className="flex items-center gap-2">
+                <label className="text-[13px] font-medium">{field.label}:</label>
+                <Select
+                  value={String(field.value)}
+                  onValueChange={(v) => field.set(Number(v))}
+                  disabled={running}
+                >
+                  <SelectTrigger className="h-8 w-[220px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {!field.required && (
+                      <SelectItem value="-1">— None —</SelectItem>
+                    )}
+                    {colOptions.map((c) => (
+                      <SelectItem key={c.idx} value={String(c.idx)}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
             <label className="flex items-center gap-1.5 text-[13px]">
               <input
                 type="checkbox"
@@ -266,14 +293,32 @@ export function ExcelImportBox({
                   <th className="border-r border-[var(--sheets-grid)] px-2 py-1 text-left text-muted-foreground">
                     #
                   </th>
-                  {Array.from({ length: columnCount }).map((_, i) => (
-                    <th
-                      key={i}
-                      className={`border-r border-[var(--sheets-grid)] px-2 py-1 text-left ${i === selectedCol ? "bg-primary/15 text-primary" : ""}`}
-                    >
-                      {colLetter(i)}
-                    </th>
-                  ))}
+                  {Array.from({ length: columnCount }).map((_, i) => {
+                    const isQ = i === selectedCol;
+                    const isMap = i === expectedCol || i === urlCol;
+                    const tint = isQ
+                      ? "bg-primary/15 text-primary"
+                      : isMap
+                        ? "bg-primary/[0.08] text-primary/80"
+                        : "";
+                    const tag =
+                      i === selectedCol
+                        ? " · Q"
+                        : i === expectedCol
+                          ? " · A"
+                          : i === urlCol
+                            ? " · URL"
+                            : "";
+                    return (
+                      <th
+                        key={i}
+                        className={`border-r border-[var(--sheets-grid)] px-2 py-1 text-left ${tint}`}
+                      >
+                        {colLetter(i)}
+                        {tag}
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -282,15 +327,24 @@ export function ExcelImportBox({
                     <td className="border-r border-t border-[var(--sheets-grid)] px-2 py-1 text-muted-foreground">
                       {ri + 1}
                     </td>
-                    {Array.from({ length: columnCount }).map((_, ci) => (
-                      <td
-                        key={ci}
-                        className={`max-w-[260px] truncate border-r border-t border-[var(--sheets-grid)] px-2 py-1 ${ci === selectedCol ? "bg-primary/[0.06]" : ""}`}
-                        title={r[ci] ?? ""}
-                      >
-                        {r[ci] ?? ""}
-                      </td>
-                    ))}
+                    {Array.from({ length: columnCount }).map((_, ci) => {
+                      const isQ = ci === selectedCol;
+                      const isMap = ci === expectedCol || ci === urlCol;
+                      const tint = isQ
+                        ? "bg-primary/[0.06]"
+                        : isMap
+                          ? "bg-primary/[0.03]"
+                          : "";
+                      return (
+                        <td
+                          key={ci}
+                          className={`max-w-[260px] truncate border-r border-t border-[var(--sheets-grid)] px-2 py-1 ${tint}`}
+                          title={r[ci] ?? ""}
+                        >
+                          {r[ci] ?? ""}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>

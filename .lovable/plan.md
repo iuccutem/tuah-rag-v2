@@ -1,41 +1,45 @@
-## Problem
-When a cell is flagged as "highlighted" in the spreadsheet, the current styling applies `!bg-yellow-200` unconditionally. In dark mode the text is white, so white-on-light-yellow is completely unreadable.
+## Goal
+Extend the **Import Excel** flow to import not only the `Question` column, but also `Expected Answer` (→ `telegram_whatsapp`) and `URL` (→ `url`) from the spreadsheet.
 
-## Solution
-Switch to a **border-only highlight**: the primary visual cue is a colored inset border, with only a very subtle background tint. This preserves text contrast in both themes.
+## UX changes — `src/components/qa-dashboard/ExcelImportBox.tsx`
 
-### Files to change
+Replace the single "Question column" selector with **three column pickers** stacked on one row:
 
-#### 1. `src/styles.css`
-Add two new sheets-specific tokens to `:root` and `.dark`, plus a custom `@utility`:
+| Field | Required | Maps to |
+|---|---|---|
+| Question column | yes | `question` |
+| Expected Answer column | no (None option) | `telegram_whatsapp` |
+| URL column | no (None option) | `url` |
 
-```css
-/* in :root (light) */
---sheets-highlight-border: oklch(0.70 0.12 80);
---sheets-highlight-bg: oklch(0.97 0.02 80);
+- Each `<Select>` lists the same column letters/headers from the file; the Expected Answer and URL selects also include a `— None —` option so users can skip them.
+- Auto-pick on first parse: column 0 = Question, column 1 = Expected Answer (if exists), column 2 = URL (if exists). User can change.
+- Duplicate detection still uses the Question value only (unchanged behavior).
+- The preview table highlights the currently-selected Question column (same primary tint as today); Expected Answer and URL columns get a lighter secondary tint so the mapping is visible.
+- Per-row payload built in `runImport` becomes:
+  ```ts
+  { question, table, telegram_whatsapp?: string, url?: string }
+  ```
+  Empty/whitespace values for the optional fields are omitted.
+- The status list under the progress area shows the question text (as today). No extra columns shown there — keeps it scannable.
 
-/* in .dark */
---sheets-highlight-border: oklch(0.65 0.14 80);
---sheets-highlight-bg: oklch(0.20 0.03 80);
+## API change — `src/routes/api/n8n-run.ts`
 
-/* new utility */
-@utility cell-highlight {
-  box-shadow: inset 0 0 0 1.5px var(--sheets-highlight-border);
-  background-color: var(--sheets-highlight-bg);
-}
+Extend the request body type and the upstream payload to forward the two optional fields when present:
+
+```ts
+let body: { question?: string; table?: string; telegram_whatsapp?: string; url?: string } = {};
+...
+const upstream: Record<string, unknown> = { question };
+if (table) upstream.table = table;
+const expected = (body.telegram_whatsapp ?? "").trim();
+const url = (body.url ?? "").trim();
+if (expected) upstream.telegram_whatsapp = expected;
+if (url) upstream.url = url;
 ```
 
-#### 2. `src/components/qa-dashboard/QATable.tsx`
-Replace the hardcoded yellow background on line ~279:
+No other changes (auth, error handling, response shape unchanged). The n8n webhook already accepts these field names (see `/api/n8n-flag` payload shape).
 
-```tsx
-// Before
-const fmtBg = fmt.highlight ? "!bg-yellow-200" : "";
-
-// After
-const fmtHighlight = fmt.highlight ? "cell-highlight" : "";
-```
-
-Update the `className` on the `<td>` to use `fmtHighlight` instead of `fmtBg`.
-
-No other UI logic changes required — the highlight toggle, format persistence, and export behaviour remain untouched.
+## Out of scope
+- No change to `QuestionPasteBox`, manual single-question add, or the `/api/n8n-flag` / `/api/n8n-process` endpoints.
+- No change to the QA table or export logic.
+- No change to duplicate-detection rules.
