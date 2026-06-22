@@ -131,8 +131,8 @@ export function ExcelImportBox({
       }
       // Auto-pick mapping: Question = col 0, Expected = col 1, URL = col 2
       setSelectedCol(0);
-      setExpectedCol((prev) => (columnCount > 1 || allRows[0]?.length ? 1 : -1));
-      setUrlCol((prev) => (columnCount > 2 || (allRows[0]?.length ?? 0) > 2 ? 2 : -1));
+      setExpectedCol(1);
+      setUrlCol(2);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to read file.");
     } finally {
