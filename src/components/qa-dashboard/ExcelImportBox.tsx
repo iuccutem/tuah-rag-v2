@@ -129,8 +129,10 @@ export function ExcelImportBox({
         setAllRows(rows);
         setGrid(rows.slice(0, 6));
       }
-      // Auto-pick first column with header that looks like a question
+      // Auto-pick mapping: Question = col 0, Expected = col 1, URL = col 2
       setSelectedCol(0);
+      setExpectedCol((prev) => (columnCount > 1 || allRows[0]?.length ? 1 : -1));
+      setUrlCol((prev) => (columnCount > 2 || (allRows[0]?.length ?? 0) > 2 ? 2 : -1));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to read file.");
     } finally {
