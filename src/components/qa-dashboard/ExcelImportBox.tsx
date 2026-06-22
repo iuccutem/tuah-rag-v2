@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 
 type RunStatus = "pending" | "ok" | "error" | "skipped";
@@ -29,6 +30,34 @@ function colLetter(i: number) {
     n = Math.floor(n / 26) - 1;
   }
   return s;
+}
+
+const HEADER_KEYWORDS = {
+  question: ["question", "questions", "q", "prompt", "query", "pertanyaan"],
+  expected: [
+    "expected",
+    "expected answer",
+    "answer",
+    "answers",
+    "jawaban",
+    "telegram",
+    "whatsapp",
+    "telegram_whatsapp",
+  ],
+  url: ["url", "urls", "link", "links", "source", "reference", "ref"],
+} as const;
+
+function detectColumn(headers: string[], keywords: readonly string[]): number {
+  const norm = headers.map((h) => (h ?? "").toString().trim().toLowerCase());
+  // exact match first
+  for (let i = 0; i < norm.length; i++) {
+    if (keywords.includes(norm[i] as never)) return i;
+  }
+  // contains match
+  for (let i = 0; i < norm.length; i++) {
+    if (norm[i] && keywords.some((k) => norm[i].includes(k))) return i;
+  }
+  return -1;
 }
 
 export function ExcelImportBox({
