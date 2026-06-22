@@ -244,6 +244,22 @@ export function ExcelImportBox({
 
   return (
     <div className="space-y-3">
+      {/* Step-by-step guide */}
+      <ol className="flex flex-col gap-1.5 rounded-md border border-[var(--sheets-grid)] bg-muted/40 p-3 text-[12px] sm:flex-row sm:items-start sm:gap-3">
+        {[
+          "Upload your .xlsx, .xls, or .csv file",
+          "Confirm the Question / Expected Answer / URL columns (auto-detected from headers)",
+          'Click "Insert questions" to import',
+        ].map((text, i) => (
+          <li key={i} className="flex flex-1 items-start gap-2">
+            <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-semibold text-primary">
+              {i + 1}
+            </span>
+            <span className="text-foreground/80">{text}</span>
+          </li>
+        ))}
+      </ol>
+
       {/* File picker */}
       <label
         className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-[var(--sheets-grid)] bg-muted/30 px-4 py-6 text-center text-sm hover:bg-muted/50 ${parsing || running ? "pointer-events-none opacity-60" : ""}`}
