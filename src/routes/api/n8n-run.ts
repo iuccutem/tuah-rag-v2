@@ -17,7 +17,12 @@ export const Route = createFileRoute("/api/n8n-run")({
           );
         }
 
-        let body: { question?: string; table?: string } = {};
+        let body: {
+          question?: string;
+          table?: string;
+          telegram_whatsapp?: string;
+          url?: string;
+        } = {};
         try {
           body = await request.json();
         } catch {
@@ -28,6 +33,8 @@ export const Route = createFileRoute("/api/n8n-run")({
         }
         const question = (body.question ?? "").trim();
         const table = (body.table ?? "").trim();
+        const expected = (body.telegram_whatsapp ?? "").trim();
+        const url = (body.url ?? "").trim();
         if (!question) {
           return Response.json(
             { ok: false, error: "Question is empty." },
@@ -39,6 +46,8 @@ export const Route = createFileRoute("/api/n8n-run")({
         try {
           const upstream: Record<string, unknown> = { question };
           if (table) upstream.table = table;
+          if (expected) upstream.telegram_whatsapp = expected;
+          if (url) upstream.url = url;
           const res = await fetch(WEBHOOK_URL, {
             method: "POST",
             headers: {
