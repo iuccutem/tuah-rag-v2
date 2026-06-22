@@ -156,14 +156,18 @@ export function ExcelImportBox({
     }));
     setItems(initial);
     let ok = 0;
-    for (let i = 0; i < questions.length; i++) {
-      const q = questions[i];
+    for (let i = 0; i < entries.length; i++) {
+      const e = entries[i];
+      const q = e.question;
       if (existingSet.has(q.toLowerCase())) continue;
       try {
+        const payload: Record<string, unknown> = { question: q, table };
+        if (e.telegram_whatsapp) payload.telegram_whatsapp = e.telegram_whatsapp;
+        if (e.url) payload.url = e.url;
         const res = await fetch("/api/n8n-run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: q, table }),
+          body: JSON.stringify(payload),
         });
         const json = (await res.json()) as { ok: boolean; error?: string };
         if (json.ok) ok++;
