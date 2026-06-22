@@ -161,9 +161,17 @@ export function ExcelImportBox({
         setGrid(rows.slice(0, 4));
       }
       // Auto-pick mapping: Question = col 0, Expected = col 1, URL = col 2
-      setSelectedCol(0);
-      setExpectedCol(1);
-      setUrlCol(2);
+      // Auto-detect mapping from header row, with positional fallback.
+      const headers = (allRowsLocal[0] ?? []) as string[];
+      const qIdx = detectColumn(headers, HEADER_KEYWORDS.question);
+      const eIdx = detectColumn(headers, HEADER_KEYWORDS.expected);
+      const uIdx = detectColumn(headers, HEADER_KEYWORDS.url);
+      const matched = qIdx >= 0 || eIdx >= 0 || uIdx >= 0;
+      setSelectedCol(qIdx >= 0 ? qIdx : 0);
+      setExpectedCol(eIdx >= 0 ? eIdx : qIdx === 1 ? 2 : 1);
+      setUrlCol(uIdx >= 0 ? uIdx : 2);
+      setSkipHeader(matched ? true : skipHeader);
+      setAutoDetected(matched);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to read file.");
     } finally {
