@@ -293,12 +293,28 @@ export function ExcelImportBox({
       {/* Preview + column picker */}
       {!parsing && allRows.length > 0 && (
         <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[12px] text-muted-foreground">
+              Confirm or adjust the column mapping — preview updates live.
+            </p>
+            {autoDetected ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                <Sparkles className="h-3 w-3" />
+                Auto-detected from headers
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/15 px-2 py-0.5 text-[11px] font-medium text-yellow-700 dark:text-yellow-300">
+                <AlertTriangle className="h-3 w-3" />
+                Please confirm the Question column
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {(
               [
-                { label: "Question column", value: selectedCol, set: setSelectedCol, required: true },
-                { label: "Expected Answer column", value: expectedCol, set: setExpectedCol, required: false },
-                { label: "URL column", value: urlCol, set: setUrlCol, required: false },
+                { label: "Question column", help: "Required — the prompt that will be sent.", value: selectedCol, set: setSelectedCol, required: true },
+                { label: "Expected Answer column", help: "Optional — sent alongside the question.", value: expectedCol, set: setExpectedCol, required: false },
+                { label: "URL column", help: "Optional — sent alongside the question.", value: urlCol, set: setUrlCol, required: false },
               ] as const
             ).map((field) => (
               <div key={field.label} className="flex flex-col gap-1 min-w-0">
@@ -322,9 +338,11 @@ export function ExcelImportBox({
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-[11px] text-muted-foreground">{field.help}</p>
               </div>
             ))}
           </div>
+
           <label className="flex items-center gap-1.5 text-[13px]">
             <input
               type="checkbox"
