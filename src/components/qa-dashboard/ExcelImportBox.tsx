@@ -46,6 +46,8 @@ export function ExcelImportBox({
   const [allRows, setAllRows] = useState<string[][]>([]); // full data (no header skipping)
   const [columnCount, setColumnCount] = useState(0);
   const [selectedCol, setSelectedCol] = useState<number>(0);
+  const [expectedCol, setExpectedCol] = useState<number>(-1);
+  const [urlCol, setUrlCol] = useState<number>(-1);
   const [skipHeader, setSkipHeader] = useState(true);
   const [running, setRunning] = useState(false);
   const [items, setItems] = useState<RunItem[]>([]);
