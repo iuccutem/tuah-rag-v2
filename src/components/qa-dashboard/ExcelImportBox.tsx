@@ -128,7 +128,7 @@ export function ExcelImportBox({
         });
         setColumnCount(maxCols);
         setAllRows(rows);
-        setGrid(rows.slice(0, 6));
+        setGrid(rows.slice(0, 4));
       }
       // Auto-pick mapping: Question = col 0, Expected = col 1, URL = col 2
       setSelectedCol(0);
