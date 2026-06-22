@@ -293,14 +293,32 @@ export function ExcelImportBox({
                   <th className="border-r border-[var(--sheets-grid)] px-2 py-1 text-left text-muted-foreground">
                     #
                   </th>
-                  {Array.from({ length: columnCount }).map((_, i) => (
-                    <th
-                      key={i}
-                      className={`border-r border-[var(--sheets-grid)] px-2 py-1 text-left ${i === selectedCol ? "bg-primary/15 text-primary" : ""}`}
-                    >
-                      {colLetter(i)}
-                    </th>
-                  ))}
+                  {Array.from({ length: columnCount }).map((_, i) => {
+                    const isQ = i === selectedCol;
+                    const isMap = i === expectedCol || i === urlCol;
+                    const tint = isQ
+                      ? "bg-primary/15 text-primary"
+                      : isMap
+                        ? "bg-primary/[0.08] text-primary/80"
+                        : "";
+                    const tag =
+                      i === selectedCol
+                        ? " · Q"
+                        : i === expectedCol
+                          ? " · A"
+                          : i === urlCol
+                            ? " · URL"
+                            : "";
+                    return (
+                      <th
+                        key={i}
+                        className={`border-r border-[var(--sheets-grid)] px-2 py-1 text-left ${tint}`}
+                      >
+                        {colLetter(i)}
+                        {tag}
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -309,15 +327,24 @@ export function ExcelImportBox({
                     <td className="border-r border-t border-[var(--sheets-grid)] px-2 py-1 text-muted-foreground">
                       {ri + 1}
                     </td>
-                    {Array.from({ length: columnCount }).map((_, ci) => (
-                      <td
-                        key={ci}
-                        className={`max-w-[260px] truncate border-r border-t border-[var(--sheets-grid)] px-2 py-1 ${ci === selectedCol ? "bg-primary/[0.06]" : ""}`}
-                        title={r[ci] ?? ""}
-                      >
-                        {r[ci] ?? ""}
-                      </td>
-                    ))}
+                    {Array.from({ length: columnCount }).map((_, ci) => {
+                      const isQ = ci === selectedCol;
+                      const isMap = ci === expectedCol || ci === urlCol;
+                      const tint = isQ
+                        ? "bg-primary/[0.06]"
+                        : isMap
+                          ? "bg-primary/[0.03]"
+                          : "";
+                      return (
+                        <td
+                          key={ci}
+                          className={`max-w-[260px] truncate border-r border-t border-[var(--sheets-grid)] px-2 py-1 ${tint}`}
+                          title={r[ci] ?? ""}
+                        >
+                          {r[ci] ?? ""}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
