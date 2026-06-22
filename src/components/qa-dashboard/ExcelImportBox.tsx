@@ -97,12 +97,13 @@ export function ExcelImportBox({
         const maxCols = rows.reduce((m, r) => Math.max(m, r.length), 0);
         setColumnCount(maxCols);
         setAllRows(rows);
-        setGrid(rows.slice(0, 6));
+        setGrid(rows.slice(0, 4));
       } else {
         await wb.xlsx.load(buf);
         const ws = wb.worksheets[0];
         if (!ws) throw new Error("Workbook has no sheets.");
         const rows: string[][] = [];
+
         let maxCols = 0;
         ws.eachRow({ includeEmpty: false }, (row) => {
           const cells: string[] = [];
@@ -127,7 +128,7 @@ export function ExcelImportBox({
         });
         setColumnCount(maxCols);
         setAllRows(rows);
-        setGrid(rows.slice(0, 6));
+        setGrid(rows.slice(0, 4));
       }
       // Auto-pick mapping: Question = col 0, Expected = col 1, URL = col 2
       setSelectedCol(0);
@@ -243,7 +244,7 @@ export function ExcelImportBox({
       {/* Preview + column picker */}
       {!parsing && allRows.length > 0 && (
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {(
               [
                 { label: "Question column", value: selectedCol, set: setSelectedCol, required: true },
@@ -251,14 +252,14 @@ export function ExcelImportBox({
                 { label: "URL column", value: urlCol, set: setUrlCol, required: false },
               ] as const
             ).map((field) => (
-              <div key={field.label} className="flex items-center gap-2">
-                <label className="text-[13px] font-medium">{field.label}:</label>
+              <div key={field.label} className="flex flex-col gap-1 min-w-0">
+                <label className="text-[12px] font-medium text-muted-foreground">{field.label}</label>
                 <Select
                   value={String(field.value)}
                   onValueChange={(v) => field.set(Number(v))}
                   disabled={running}
                 >
-                  <SelectTrigger className="h-8 w-[220px]">
+                  <SelectTrigger className="h-8 w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -274,82 +275,104 @@ export function ExcelImportBox({
                 </Select>
               </div>
             ))}
-            <label className="flex items-center gap-1.5 text-[13px]">
-              <input
-                type="checkbox"
-                checked={skipHeader}
-                onChange={(e) => setSkipHeader(e.target.checked)}
-                disabled={running}
-              />
-              First row is a header (skip it)
-            </label>
           </div>
+          <label className="flex items-center gap-1.5 text-[13px]">
+            <input
+              type="checkbox"
+              checked={skipHeader}
+              onChange={(e) => setSkipHeader(e.target.checked)}
+              disabled={running}
+            />
+            First row is a header (skip it)
+          </label>
 
-          {/* Preview table */}
-          <div className="overflow-auto rounded-md border border-[var(--sheets-grid)]">
-            <table className="w-max min-w-full text-[12px]">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="border-r border-[var(--sheets-grid)] px-2 py-1 text-left text-muted-foreground">
-                    #
-                  </th>
-                  {Array.from({ length: columnCount }).map((_, i) => {
-                    const isQ = i === selectedCol;
-                    const isMap = i === expectedCol || i === urlCol;
-                    const tint = isQ
-                      ? "bg-primary/15 text-primary"
-                      : isMap
-                        ? "bg-primary/[0.08] text-primary/80"
-                        : "";
-                    const tag =
-                      i === selectedCol
-                        ? " · Q"
-                        : i === expectedCol
-                          ? " · A"
-                          : i === urlCol
-                            ? " · URL"
-                            : "";
-                    return (
-                      <th
-                        key={i}
-                        className={`border-r border-[var(--sheets-grid)] px-2 py-1 text-left ${tint}`}
-                      >
-                        {colLetter(i)}
-                        {tag}
+          {/* Preview table — fits dialog width, no horizontal scroll */}
+          {(() => {
+            const mapped = [selectedCol, expectedCol, urlCol].filter((i) => i >= 0);
+            const unmapped: number[] = [];
+            for (let i = 0; i < columnCount && unmapped.length < Math.max(0, 5 - mapped.length); i++) {
+              if (!mapped.includes(i)) unmapped.push(i);
+            }
+            const visibleCols = Array.from(
+              new Set([...mapped, ...unmapped]),
+            ).sort((a, b) => a - b);
+            const hiddenCount = columnCount - visibleCols.length;
+            const colWidth = visibleCols.length > 0 ? `${100 / visibleCols.length}%` : undefined;
+            return (
+              <div className="rounded-md border border-[var(--sheets-grid)]">
+                <table className="w-full table-fixed text-[12px]">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="w-10 border-r border-[var(--sheets-grid)] px-2 py-1 text-left text-muted-foreground">
+                        #
                       </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {grid.map((r, ri) => (
-                  <tr key={ri} className={ri === 0 && skipHeader ? "bg-muted/50" : ""}>
-                    <td className="border-r border-t border-[var(--sheets-grid)] px-2 py-1 text-muted-foreground">
-                      {ri + 1}
-                    </td>
-                    {Array.from({ length: columnCount }).map((_, ci) => {
-                      const isQ = ci === selectedCol;
-                      const isMap = ci === expectedCol || ci === urlCol;
-                      const tint = isQ
-                        ? "bg-primary/[0.06]"
-                        : isMap
-                          ? "bg-primary/[0.03]"
-                          : "";
-                      return (
-                        <td
-                          key={ci}
-                          className={`max-w-[260px] truncate border-r border-t border-[var(--sheets-grid)] px-2 py-1 ${tint}`}
-                          title={r[ci] ?? ""}
-                        >
-                          {r[ci] ?? ""}
+                      {visibleCols.map((i) => {
+                        const isQ = i === selectedCol;
+                        const isMap = i === expectedCol || i === urlCol;
+                        const tint = isQ
+                          ? "bg-primary/15 text-primary"
+                          : isMap
+                            ? "bg-primary/[0.08] text-primary/80"
+                            : "";
+                        const tag =
+                          i === selectedCol
+                            ? " · Q"
+                            : i === expectedCol
+                              ? " · A"
+                              : i === urlCol
+                                ? " · URL"
+                                : "";
+                        return (
+                          <th
+                            key={i}
+                            style={{ width: colWidth }}
+                            className={`truncate border-r border-[var(--sheets-grid)] px-2 py-1 text-left ${tint}`}
+                          >
+                            {colLetter(i)}
+                            {tag}
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {grid.map((r, ri) => (
+                      <tr key={ri} className={ri === 0 && skipHeader ? "bg-muted/50" : ""}>
+                        <td className="w-10 border-r border-t border-[var(--sheets-grid)] px-2 py-1 text-muted-foreground">
+                          {ri + 1}
                         </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        {visibleCols.map((ci) => {
+                          const isQ = ci === selectedCol;
+                          const isMap = ci === expectedCol || ci === urlCol;
+                          const tint = isQ
+                            ? "bg-primary/[0.06]"
+                            : isMap
+                              ? "bg-primary/[0.03]"
+                              : "";
+                          return (
+                            <td
+                              key={ci}
+                              style={{ width: colWidth }}
+                              className={`truncate border-r border-t border-[var(--sheets-grid)] px-2 py-1 ${tint}`}
+                              title={r[ci] ?? ""}
+                            >
+                              {r[ci] ?? ""}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {hiddenCount > 0 && (
+                  <div className="border-t border-[var(--sheets-grid)] bg-muted/40 px-2 py-1 text-[11px] text-muted-foreground">
+                    +{hiddenCount} more column{hiddenCount === 1 ? "" : "s"} hidden from preview (still selectable above)
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
 
           {/* Summary */}
           <div className="flex flex-wrap items-center gap-2 text-[13px]">
