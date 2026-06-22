@@ -244,25 +244,36 @@ export function ExcelImportBox({
       {!parsing && allRows.length > 0 && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <label className="text-[13px] font-medium">Question column:</label>
-              <Select
-                value={String(selectedCol)}
-                onValueChange={(v) => setSelectedCol(Number(v))}
-                disabled={running}
-              >
-                <SelectTrigger className="h-8 w-[220px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {colOptions.map((c) => (
-                    <SelectItem key={c.idx} value={String(c.idx)}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {(
+              [
+                { label: "Question column", value: selectedCol, set: setSelectedCol, required: true },
+                { label: "Expected Answer column", value: expectedCol, set: setExpectedCol, required: false },
+                { label: "URL column", value: urlCol, set: setUrlCol, required: false },
+              ] as const
+            ).map((field) => (
+              <div key={field.label} className="flex items-center gap-2">
+                <label className="text-[13px] font-medium">{field.label}:</label>
+                <Select
+                  value={String(field.value)}
+                  onValueChange={(v) => field.set(Number(v))}
+                  disabled={running}
+                >
+                  <SelectTrigger className="h-8 w-[220px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {!field.required && (
+                      <SelectItem value="-1">— None —</SelectItem>
+                    )}
+                    {colOptions.map((c) => (
+                      <SelectItem key={c.idx} value={String(c.idx)}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
             <label className="flex items-center gap-1.5 text-[13px]">
               <input
                 type="checkbox"
