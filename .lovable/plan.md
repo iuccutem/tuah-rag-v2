@@ -1,46 +1,46 @@
 ## Goal
-Remove the horizontal scrollbar inside the Excel import dialog and make the whole flow (file picker, column mappers, preview, summary, insert button) visible without horizontal scrolling. Keep all current functionality (file parse, Q/A/URL mapping, header skip, duplicate detection, per-row insert progress).
 
-## Changes — `src/components/qa-dashboard/ExcelImportBox.tsx`
+Make `ExcelImportBox` self-explanatory so a first-time user knows exactly what to do without external help. Two changes: smart column auto-detection from headers, and inline numbered steps.
 
-### 1. Column-picker row — stack into a responsive grid
-Currently three `w-[220px]` selects + a checkbox in a `flex flex-wrap`, which wraps awkwardly at dialog width.
+## Changes (single file: `src/components/qa-dashboard/ExcelImportBox.tsx`)
 
-Replace with a 1-column → 3-column responsive grid; selects become full-width inside their cell; header-skip checkbox moves onto its own row below.
+### 1. Header-based auto-detect mapping
 
-```tsx
-<div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-  {fields.map(...) => (
-    <div className="flex flex-col gap-1">
-      <label className="text-[12px] font-medium text-muted-foreground">{field.label}</label>
-      <Select ...>
-        <SelectTrigger className="h-8 w-full"> ... </SelectTrigger>
-        ...
-      </Select>
-    </div>
-  ))}
-</div>
-<label className="flex items-center gap-1.5 text-[13px]">
-  <input type="checkbox" ... /> First row is a header (skip it)
-</label>
+Replace the current hard-coded `setSelectedCol(0); setExpectedCol(1); setUrlCol(2)` in `onFile` with a header-matching helper:
+
+- Read `rows[0]` (the header row) after parsing.
+- Match each header (lowercased, trimmed) against keyword sets:
+  - Question: `question`, `q`, `prompt`, `query`, `pertanyaan`
+  - Expected Answer: `expected`, `expected answer`, `answer`, `jawaban`, `telegram`, `whatsapp`
+  - URL: `url`, `link`, `source`, `reference`
+- Fall back to positional defaults (0/1/2) only when no header match found per field.
+- Auto-enable `skipHeader` when at least one header matched.
+
+### 2. Inline step-by-step guide
+
+Add a small numbered banner at the top of the dialog (always visible) with 3 short steps:
+
+```
+1. Upload your .xlsx, .xls, or .csv file
+2. Confirm the Question / Expected Answer / URL columns (auto-detected from headers)
+3. Click "Insert N questions" to import
 ```
 
-### 2. Preview table — fit-to-width, no horizontal scroll
-Today the `<table className="w-max min-w-full">` plus `max-w-[260px]` cells forces overflow. Switch to a fixed-layout table sized to the container, with proportional column widths and truncation already in place.
+Styled as a compact `rounded-md border bg-muted/40 p-3 text-[12px]` block with primary-tinted step numbers in circles.
 
-- Container: drop `overflow-auto`; keep border + rounded.
-- Table: `w-full table-fixed text-[12px]`.
-- Row-number `<th>/<td>`: `w-10`.
-- Data columns: set `style={{ width: \`\${100 / columnCount}%\` }}` (or use `w-auto` with `table-fixed` so they share remaining space equally).
-- Cells: keep `truncate` + `title={cell}` so long values are readable on hover; drop `max-w-[260px]`.
-- Reduce preview rows from 6 to 4 to keep vertical height comfortable inside the dialog.
+### 3. Contextual hints in the column-picker area
 
-If `columnCount` is large (>6), render only the columns currently mapped (Q / Expected / URL) plus the first 2 unmapped, with a small "+N more columns" hint — guarantees the preview never needs to scroll sideways regardless of file width. Mapping dropdowns still list every column from `colOptions`, so functionality is preserved.
+- Above the three column selects, add a one-line caption: "Confirm or adjust the column mapping below — preview updates live."
+- When auto-detection succeeded, show a small green chip "Auto-detected from headers ✓"; otherwise show "Please select the Question column" in amber to draw attention to the required field.
+- Add a tiny help line under the Question select: "Required — the prompt that will be sent."
+- Add a help line under Expected Answer and URL: "Optional — sent alongside the question."
 
-### 3. Summary row stays as-is
-Already wraps cleanly; no change.
+### 4. Empty-state nudge after file load but before run
+
+Right above the Insert button, when `selectedCol < 0` or `questions.length === 0`, show a muted hint: "Pick the Question column to enable import."
 
 ## Out of scope
-- No changes to `runImport`, payload shape, or `/api/n8n-run`.
-- No changes to parsing logic, `entries`/`questions`/duplicate computation, or the per-row status list.
-- No changes to the dialog wrapper in `src/routes/_authenticated/index.tsx` (its `max-w-3xl` + `max-h-[90vh] overflow-y-auto` already handle vertical scroll on very small screens).
+
+- No changes to `runImport`, payload shape, `/api/n8n-run`, or the dialog wrapper.
+- No template file download.
+- No new dependencies.

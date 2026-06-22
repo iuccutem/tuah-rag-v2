@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 
 type RunStatus = "pending" | "ok" | "error" | "skipped";
@@ -29,6 +30,34 @@ function colLetter(i: number) {
     n = Math.floor(n / 26) - 1;
   }
   return s;
+}
+
+const HEADER_KEYWORDS = {
+  question: ["question", "questions", "q", "prompt", "query", "pertanyaan"],
+  expected: [
+    "expected",
+    "expected answer",
+    "answer",
+    "answers",
+    "jawaban",
+    "telegram",
+    "whatsapp",
+    "telegram_whatsapp",
+  ],
+  url: ["url", "urls", "link", "links", "source", "reference", "ref"],
+} as const;
+
+function detectColumn(headers: string[], keywords: readonly string[]): number {
+  const norm = headers.map((h) => (h ?? "").toString().trim().toLowerCase());
+  // exact match first
+  for (let i = 0; i < norm.length; i++) {
+    if (keywords.includes(norm[i] as never)) return i;
+  }
+  // contains match
+  for (let i = 0; i < norm.length; i++) {
+    if (norm[i] && keywords.some((k) => norm[i].includes(k))) return i;
+  }
+  return -1;
 }
 
 export function ExcelImportBox({
@@ -49,6 +78,7 @@ export function ExcelImportBox({
   const [expectedCol, setExpectedCol] = useState<number>(-1);
   const [urlCol, setUrlCol] = useState<number>(-1);
   const [skipHeader, setSkipHeader] = useState(true);
+  const [autoDetected, setAutoDetected] = useState(false);
   const [running, setRunning] = useState(false);
   const [items, setItems] = useState<RunItem[]>([]);
 
@@ -90,21 +120,17 @@ export function ExcelImportBox({
     try {
       const buf = await file.arrayBuffer();
       const wb = new ExcelJS.Workbook();
+      let parsedRows: string[][] = [];
+      let parsedMaxCols = 0;
       if (file.name.toLowerCase().endsWith(".csv")) {
         const text = new TextDecoder().decode(buf);
         const lines = text.split(/\r?\n/);
-        const rows = lines.map((ln) => parseCsvLine(ln));
-        const maxCols = rows.reduce((m, r) => Math.max(m, r.length), 0);
-        setColumnCount(maxCols);
-        setAllRows(rows);
-        setGrid(rows.slice(0, 4));
+        parsedRows = lines.map((ln) => parseCsvLine(ln));
+        parsedMaxCols = parsedRows.reduce((m, r) => Math.max(m, r.length), 0);
       } else {
         await wb.xlsx.load(buf);
         const ws = wb.worksheets[0];
         if (!ws) throw new Error("Workbook has no sheets.");
-        const rows: string[][] = [];
-
-        let maxCols = 0;
         ws.eachRow({ includeEmpty: false }, (row) => {
           const cells: string[] = [];
           row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
@@ -123,17 +149,24 @@ export function ExcelImportBox({
             cells[colNumber - 1] = s;
           });
           for (let i = 0; i < cells.length; i++) if (cells[i] == null) cells[i] = "";
-          maxCols = Math.max(maxCols, cells.length);
-          rows.push(cells);
+          parsedMaxCols = Math.max(parsedMaxCols, cells.length);
+          parsedRows.push(cells);
         });
-        setColumnCount(maxCols);
-        setAllRows(rows);
-        setGrid(rows.slice(0, 4));
       }
-      // Auto-pick mapping: Question = col 0, Expected = col 1, URL = col 2
-      setSelectedCol(0);
-      setExpectedCol(1);
-      setUrlCol(2);
+      setColumnCount(parsedMaxCols);
+      setAllRows(parsedRows);
+      setGrid(parsedRows.slice(0, 4));
+      // Auto-detect mapping from header row, with positional fallback.
+      const headers = (parsedRows[0] ?? []) as string[];
+      const qIdx = detectColumn(headers, HEADER_KEYWORDS.question);
+      const eIdx = detectColumn(headers, HEADER_KEYWORDS.expected);
+      const uIdx = detectColumn(headers, HEADER_KEYWORDS.url);
+      const matched = qIdx >= 0 || eIdx >= 0 || uIdx >= 0;
+      setSelectedCol(qIdx >= 0 ? qIdx : 0);
+      setExpectedCol(eIdx >= 0 ? eIdx : qIdx === 1 ? 2 : 1);
+      setUrlCol(uIdx >= 0 ? uIdx : 2);
+      if (matched) setSkipHeader(true);
+      setAutoDetected(matched);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to read file.");
     } finally {
@@ -211,6 +244,22 @@ export function ExcelImportBox({
 
   return (
     <div className="space-y-3">
+      {/* Step-by-step guide */}
+      <ol className="flex flex-col gap-1.5 rounded-md border border-[var(--sheets-grid)] bg-muted/40 p-3 text-[12px] sm:flex-row sm:items-start sm:gap-3">
+        {[
+          "Upload your .xlsx, .xls, or .csv file",
+          "Confirm the Question / Expected Answer / URL columns (auto-detected from headers)",
+          'Click "Insert questions" to import',
+        ].map((text, i) => (
+          <li key={i} className="flex flex-1 items-start gap-2">
+            <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-semibold text-primary">
+              {i + 1}
+            </span>
+            <span className="text-foreground/80">{text}</span>
+          </li>
+        ))}
+      </ol>
+
       {/* File picker */}
       <label
         className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-[var(--sheets-grid)] bg-muted/30 px-4 py-6 text-center text-sm hover:bg-muted/50 ${parsing || running ? "pointer-events-none opacity-60" : ""}`}
@@ -244,12 +293,28 @@ export function ExcelImportBox({
       {/* Preview + column picker */}
       {!parsing && allRows.length > 0 && (
         <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[12px] text-muted-foreground">
+              Confirm or adjust the column mapping — preview updates live.
+            </p>
+            {autoDetected ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                <Sparkles className="h-3 w-3" />
+                Auto-detected from headers
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/15 px-2 py-0.5 text-[11px] font-medium text-yellow-700 dark:text-yellow-300">
+                <AlertTriangle className="h-3 w-3" />
+                Please confirm the Question column
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {(
               [
-                { label: "Question column", value: selectedCol, set: setSelectedCol, required: true },
-                { label: "Expected Answer column", value: expectedCol, set: setExpectedCol, required: false },
-                { label: "URL column", value: urlCol, set: setUrlCol, required: false },
+                { label: "Question column", help: "Required — the prompt that will be sent.", value: selectedCol, set: setSelectedCol, required: true },
+                { label: "Expected Answer column", help: "Optional — sent alongside the question.", value: expectedCol, set: setExpectedCol, required: false },
+                { label: "URL column", help: "Optional — sent alongside the question.", value: urlCol, set: setUrlCol, required: false },
               ] as const
             ).map((field) => (
               <div key={field.label} className="flex flex-col gap-1 min-w-0">
@@ -273,9 +338,11 @@ export function ExcelImportBox({
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-[11px] text-muted-foreground">{field.help}</p>
               </div>
             ))}
           </div>
+
           <label className="flex items-center gap-1.5 text-[13px]">
             <input
               type="checkbox"
