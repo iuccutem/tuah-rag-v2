@@ -1018,7 +1018,7 @@ function DashboardPage() {
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="truncate text-[15px] sm:text-[17px] font-medium leading-tight text-foreground">
-            RAG Builder
+            RAG Evaluation Builder
           </h1>
           <div className="mt-0.5 hidden sm:block text-[12px] text-muted-foreground">
             Last edit was at {lastUpdated}
