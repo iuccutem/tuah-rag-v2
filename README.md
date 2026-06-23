@@ -36,7 +36,7 @@
 
 ## 🚀 About
 
-**RAG Builder** is an internal tool for the UTeM team to build, review, and export
+**RAG Evaluation Builder** is an internal tool for the UTeM team to build, review, and export
 Retrieval-Augmented Generation (RAG) knowledge bases. It provides an Excel-like
 interface backed by an n8n agent pipeline, with one-click answer generation across
 **Web Chat** and **Telegram/WhatsApp** channels.
