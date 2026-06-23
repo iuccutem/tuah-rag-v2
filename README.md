@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧠 RAG Builder
+# 🧠 RAG Evaluation Builder
 
 ### A spreadsheet-style workspace for curating Q&A knowledge across faculties and messaging channels — powered by AI.
 
@@ -14,7 +14,7 @@
 
 [Live Preview](https://tuah-rag.lovable.app) · [Custom Domain](https://rag.ainibot.com) · [Docs](./docs)
 
-![RAG Builder hero screenshot](./docs/screenshots/hero.png)
+![RAG Evaluation Builder hero screenshot](./docs/screenshots/hero.png)
 
 </div>
 
@@ -36,7 +36,7 @@
 
 ## 🚀 About
 
-**RAG Builder** is an internal tool for the UTeM team to build, review, and export
+**RAG Evaluation Builder** is an internal tool for the UTeM team to build, review, and export
 Retrieval-Augmented Generation (RAG) knowledge bases. It provides an Excel-like
 interface backed by an n8n agent pipeline, with one-click answer generation across
 **Web Chat** and **Telegram/WhatsApp** channels.
