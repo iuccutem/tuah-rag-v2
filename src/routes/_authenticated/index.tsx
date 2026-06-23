@@ -78,11 +78,11 @@ import { ExcelImportBox } from "@/components/qa-dashboard/ExcelImportBox";
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "RAG Builder" },
+      { title: "RAG Evaluation Builder" },
       {
         name: "description",
         content:
-          "RAG Builder — spreadsheet-style workspace to curate Q&A across faculties and messaging channels.",
+          "RAG Evaluation Builder — spreadsheet-style workspace to curate Q&A across faculties and messaging channels.",
       },
     ],
   }),
