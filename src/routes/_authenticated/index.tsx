@@ -328,7 +328,7 @@ function DashboardPage() {
         .replace(/-/g, "_")
         .replace(/[^a-zA-Z0-9_]/g, "_");
       a.href = url;
-      a.download = `q&a_${tableTag}_${stamp}.json`;
+      a.download = `${tableTag}_q&a_${stamp}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
