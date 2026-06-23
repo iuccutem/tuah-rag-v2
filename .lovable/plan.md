@@ -1,46 +1,34 @@
-## Goal
+## Changes to `src/routes/_authenticated/index.tsx`
 
-Make `ExcelImportBox` self-explanatory so a first-time user knows exactly what to do without external help. Two changes: smart column auto-detection from headers, and inline numbered steps.
+### 1. Excel export filename (line ~991-993)
+Replace ISO timestamp stamp with the same DDMMYY stamp used by JSON export, and prefix with the active table tag:
 
-## Changes (single file: `src/components/qa-dashboard/ExcelImportBox.tsx`)
-
-### 1. Header-based auto-detect mapping
-
-Replace the current hard-coded `setSelectedCol(0); setExpectedCol(1); setUrlCol(2)` in `onFile` with a header-matching helper:
-
-- Read `rows[0]` (the header row) after parsing.
-- Match each header (lowercased, trimmed) against keyword sets:
-  - Question: `question`, `q`, `prompt`, `query`, `pertanyaan`
-  - Expected Answer: `expected`, `expected answer`, `answer`, `jawaban`, `telegram`, `whatsapp`
-  - URL: `url`, `link`, `source`, `reference`
-- Fall back to positional defaults (0/1/2) only when no header match found per field.
-- Auto-enable `skipHeader` when at least one header matched.
-
-### 2. Inline step-by-step guide
-
-Add a small numbered banner at the top of the dialog (always visible) with 3 short steps:
-
+```ts
+const now = new Date();
+const pad = (n: number) => String(n).padStart(2, "0");
+const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
+const rawTable = (activeTable || "all").replace(/^qatest-/, "");
+const tableTag = rawTable.replace(/-/g, "_").replace(/[^a-zA-Z0-9_]/g, "_");
+a.download = `${tableTag}_q&a_eval_${stamp}.xlsx`;
 ```
-1. Upload your .xlsx, .xls, or .csv file
-2. Confirm the Question / Expected Answer / URL columns (auto-detected from headers)
-3. Click "Insert N questions" to import
+Result for today (23 Jun 2026) with table `perolehanict`: `perolehanict_q&a_eval_230626.xlsx`.
+
+### 2. JSON export filename (line ~331)
+Reorder from `q&a_${tableTag}_${stamp}.json` to put the table tag first:
+
+```ts
+a.download = `${tableTag}_q&a_${stamp}.json`;
 ```
+Result: `perolehanict_q&a_230626.json`.
 
-Styled as a compact `rounded-md border bg-muted/40 p-3 text-[12px]` block with primary-tinted step numbers in circles.
+### 3. App name rename "RAG Builder" → "RAG Evaluation Builder"
+Update three spots:
+- Line 81: `title: "RAG Evaluation Builder"`
+- Line 85: meta description text prefix
+- Line 1015: `<h1>` heading
 
-### 3. Contextual hints in the column-picker area
+### Note on date
+The user wrote `220622` in the example but today is 23 Jun 2026, so the DDMMYY stamp will render as `230626`. The existing JSON export already uses DDMMYY of "today" — keeping that same format so both files share one timestamp scheme. Let me know if you wanted YYMMDD (`260623`) instead.
 
-- Above the three column selects, add a one-line caption: "Confirm or adjust the column mapping below — preview updates live."
-- When auto-detection succeeded, show a small green chip "Auto-detected from headers ✓"; otherwise show "Please select the Question column" in amber to draw attention to the required field.
-- Add a tiny help line under the Question select: "Required — the prompt that will be sent."
-- Add a help line under Expected Answer and URL: "Optional — sent alongside the question."
-
-### 4. Empty-state nudge after file load but before run
-
-Right above the Insert button, when `selectedCol < 0` or `questions.length === 0`, show a muted hint: "Pick the Question column to enable import."
-
-## Out of scope
-
-- No changes to `runImport`, payload shape, `/api/n8n-run`, or the dialog wrapper.
-- No template file download.
-- No new dependencies.
+### Out of scope
+No backend, payload, or column changes. ExcelImportBox untouched.
