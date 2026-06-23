@@ -937,7 +937,7 @@ function DashboardPage() {
     try {
       const wb = new ExcelJS.Workbook();
       wb.created = new Date();
-      const ws = wb.addWorksheet("Q&A Evaluation");
+      const ws = wb.addWorksheet("RAG Evaluation Builder");
 
       ws.columns = QA_COLUMNS.map((c) => ({
         header: c.label,
