@@ -14,7 +14,7 @@
 
 [Live Preview](https://tuah-rag.lovable.app) · [Custom Domain](https://rag.ainibot.com) · [Docs](./docs)
 
-![RAG Builder hero screenshot](./docs/screenshots/hero.png)
+![RAG Evaluation Builder hero screenshot](./docs/screenshots/hero.png)
 
 </div>
 
