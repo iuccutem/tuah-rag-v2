@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧠 RAG Builder
+# 🧠 RAG Evaluation Builder
 
 ### A spreadsheet-style workspace for curating Q&A knowledge across faculties and messaging channels — powered by AI.
 
