@@ -78,11 +78,11 @@ import { ExcelImportBox } from "@/components/qa-dashboard/ExcelImportBox";
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "RAG Builder" },
+      { title: "RAG Evaluation Builder" },
       {
         name: "description",
         content:
-          "RAG Builder — spreadsheet-style workspace to curate Q&A across faculties and messaging channels.",
+          "RAG Evaluation Builder — spreadsheet-style workspace to curate Q&A across faculties and messaging channels.",
       },
     ],
   }),
@@ -328,7 +328,7 @@ function DashboardPage() {
         .replace(/-/g, "_")
         .replace(/[^a-zA-Z0-9_]/g, "_");
       a.href = url;
-      a.download = `q&a_${tableTag}_${stamp}.json`;
+      a.download = `${tableTag}_q&a_${stamp}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -988,9 +988,15 @@ function DashboardPage() {
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
+      const rawTable = (activeTable || "all").replace(/^qatest-/, "");
+      const tableTag = rawTable
+        .replace(/-/g, "_")
+        .replace(/[^a-zA-Z0-9_]/g, "_");
       a.href = url;
-      a.download = `qa-evaluation-${stamp}.xlsx`;
+      a.download = `${tableTag}_q&a_eval_${stamp}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -1012,7 +1018,7 @@ function DashboardPage() {
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="truncate text-[15px] sm:text-[17px] font-medium leading-tight text-foreground">
-            RAG Builder
+            RAG Evaluation Builder
           </h1>
           <div className="mt-0.5 hidden sm:block text-[12px] text-muted-foreground">
             Last edit was at {lastUpdated}
