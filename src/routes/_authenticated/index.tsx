@@ -988,9 +988,15 @@ function DashboardPage() {
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
+      const rawTable = (activeTable || "all").replace(/^qatest-/, "");
+      const tableTag = rawTable
+        .replace(/-/g, "_")
+        .replace(/[^a-zA-Z0-9_]/g, "_");
       a.href = url;
-      a.download = `qa-evaluation-${stamp}.xlsx`;
+      a.download = `${tableTag}_q&a_eval_${stamp}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
