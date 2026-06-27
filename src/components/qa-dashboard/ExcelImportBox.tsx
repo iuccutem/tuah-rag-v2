@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import ExcelJS from "exceljs";
+import readXlsxFile from "read-excel-file";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -21,6 +22,7 @@ import {
 
 type RunStatus = "pending" | "ok" | "error" | "skipped";
 type RunItem = { question: string; status: RunStatus; error?: string };
+type ParsedWorkbook = { rows: string[][]; maxCols: number };
 
 function colLetter(i: number) {
   let s = "";
@@ -58,6 +60,83 @@ function detectColumn(headers: string[], keywords: readonly string[]): number {
     if (norm[i] && keywords.some((k) => norm[i].includes(k))) return i;
   }
   return -1;
+}
+
+function stringifyCellValue(value: unknown): string {
+  if (value == null) return "";
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (typeof value === "object" && "text" in value) {
+    return String((value as { text: unknown }).text ?? "");
+  }
+  if (typeof value === "object" && "richText" in value) {
+    return (value as { richText: Array<{ text: string }> }).richText
+      .map((r) => r.text)
+      .join("");
+  }
+  if (typeof value === "object" && "result" in value) {
+    return stringifyCellValue((value as { result: unknown }).result);
+  }
+  return String(value);
+}
+
+function normalizeParsedRows(rows: string[][]): ParsedWorkbook {
+  const cleaned = rows
+    .map((row) => {
+      const next = [...row];
+      while (next.length > 0 && (next[next.length - 1] ?? "").trim() === "") {
+        next.pop();
+      }
+      return next;
+    })
+    .filter((row) => row.some((cell) => (cell ?? "").trim().length > 0));
+  return {
+    rows: cleaned,
+    maxCols: cleaned.reduce((m, r) => Math.max(m, r.length), 0),
+  };
+}
+
+async function parseWorkbookWithExcelJs(buf: ArrayBuffer): Promise<ParsedWorkbook> {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buf);
+  const ws = wb.worksheets[0];
+  if (!ws) throw new Error("Workbook has no sheets.");
+  const parsedRows: string[][] = [];
+  ws.eachRow({ includeEmpty: false }, (row) => {
+    const cells: string[] = [];
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      cells[colNumber - 1] = stringifyCellValue(cell.value);
+    });
+    for (let i = 0; i < cells.length; i++) if (cells[i] == null) cells[i] = "";
+    parsedRows.push(cells);
+  });
+  return normalizeParsedRows(parsedRows);
+}
+
+async function parseWorkbookWithFallback(file: File): Promise<ParsedWorkbook> {
+  const rows = await readXlsxFile(file, { sheet: 1 });
+  return normalizeParsedRows(
+    rows.map((row) => row.map((value) => stringifyCellValue(value))),
+  );
+}
+
+async function parseExcelFile(file: File, buf: ArrayBuffer): Promise<ParsedWorkbook> {
+  try {
+    return await parseWorkbookWithExcelJs(buf);
+  } catch (excelJsError) {
+    try {
+      return await parseWorkbookWithFallback(file);
+    } catch {
+      const rawMessage = excelJsError instanceof Error ? excelJsError.message : "";
+      if (/sheets|bookViews|undefined/i.test(rawMessage)) {
+        throw new Error(
+          "This workbook format is missing readable sheet metadata. Please open it in Excel or Google Sheets, save it again as .xlsx or .csv, then retry.",
+        );
+      }
+      throw new Error(
+        "No readable worksheet found. Please save the file again as .xlsx or .csv and retry.",
+      );
+    }
+  }
 }
 
 export function ExcelImportBox({
@@ -125,33 +204,18 @@ export function ExcelImportBox({
       if (file.name.toLowerCase().endsWith(".csv")) {
         const text = new TextDecoder().decode(buf);
         const lines = text.split(/\r?\n/);
-        parsedRows = lines.map((ln) => parseCsvLine(ln));
-        parsedMaxCols = parsedRows.reduce((m, r) => Math.max(m, r.length), 0);
+        const parsed = normalizeParsedRows(lines.map((ln) => parseCsvLine(ln)));
+        parsedRows = parsed.rows;
+        parsedMaxCols = parsed.maxCols;
       } else {
-        await wb.xlsx.load(buf);
-        const ws = wb.worksheets[0];
-        if (!ws) throw new Error("Workbook has no sheets.");
-        ws.eachRow({ includeEmpty: false }, (row) => {
-          const cells: string[] = [];
-          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-            const v = cell.value;
-            let s = "";
-            if (v == null) s = "";
-            else if (typeof v === "object" && "text" in (v as object)) {
-              s = String((v as { text: unknown }).text ?? "");
-            } else if (typeof v === "object" && "richText" in (v as object)) {
-              s = (v as { richText: Array<{ text: string }> }).richText
-                .map((r) => r.text)
-                .join("");
-            } else {
-              s = String(v);
-            }
-            cells[colNumber - 1] = s;
-          });
-          for (let i = 0; i < cells.length; i++) if (cells[i] == null) cells[i] = "";
-          parsedMaxCols = Math.max(parsedMaxCols, cells.length);
-          parsedRows.push(cells);
-        });
+        const parsed = await parseExcelFile(file, buf);
+        parsedRows = parsed.rows;
+        parsedMaxCols = parsed.maxCols;
+      }
+      if (parsedRows.length === 0 || parsedMaxCols === 0) {
+        throw new Error(
+          "No readable worksheet found. Please save the file again as .xlsx or .csv and retry.",
+        );
       }
       setColumnCount(parsedMaxCols);
       setAllRows(parsedRows);
