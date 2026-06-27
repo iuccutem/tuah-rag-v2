@@ -1,30 +1,18 @@
-## Problem
+## Plan
 
-Importing a file produced by our own "Export Excel" throws `undefined is not an object (evaluating 'V.sheets')`. This is an ExcelJS reader bug: when the `.xlsx` has no workbook-level `<bookViews>` element, its `workbook-view-xform` reconcile step crashes dereferencing `view.sheets`.
+1. **Replace the fragile XLSX read path**
+   - Keep the current CSV handling.
+   - For `.xlsx` / `.xls`, stop relying only on `wb.worksheets[0]`, because this file is crashing inside ExcelJS with missing `sheets` metadata.
+   - Add a safer workbook-loader helper that can recover when ExcelJS returns incomplete workbook metadata.
 
-Our `exportXlsx` in `src/routes/_authenticated/index.tsx` sets `ws.views` (worksheet view, frozen header) but never sets `wb.views` (workbook view). ExcelJS therefore writes no `<bookViews>`, and re-importing the same file blows up in `ExcelImportBox` at `wb.xlsx.load(buf)`.
+2. **Add a compatibility fallback for problematic Excel files**
+   - If `workbook.xlsx.load()` throws errors like `reading 'sheets'` or `evaluating 'e4.sheets'`, retry with a browser-safe parser fallback.
+   - Extract the first worksheet rows into the same `string[][]` shape the UI already expects, so the existing mapping/preview/import logic remains unchanged.
 
-## Fix
+3. **Improve the user-facing import error**
+   - If the file truly has no readable worksheet, show a clear message such as: `No readable worksheet found. Please save the file again as .xlsx or .csv and retry.`
+   - Avoid showing raw technical errors like `undefined is not an object`.
 
-In `exportXlsx` (around line ~940, right after `wb.created = new Date();`), add a workbook view so the written file includes `<bookViews>`:
-
-```ts
-wb.views = [
-  {
-    x: 0,
-    y: 0,
-    width: 10000,
-    height: 20000,
-    firstSheet: 0,
-    activeTab: 0,
-    visibility: "visible",
-  },
-];
-```
-
-No other changes. Worksheet frozen-header view stays. JSON export and ExcelImportBox parsing untouched.
-
-## Verification
-
-- Export Excel from any sheet → re-upload via "Import Excel" → preview renders without the toast error and rows parse normally.
-- Existing third-party `.xlsx`/`.csv` imports keep working (unchanged code path).
+4. **Verify with the current import flow**
+   - Confirm the dialog proceeds from upload to the column-mapping preview instead of stopping at the toast.
+   - Confirm Question, Expected Answer, and URL mapping still work after the parser change.
