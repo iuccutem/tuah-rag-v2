@@ -937,6 +937,17 @@ function DashboardPage() {
     try {
       const wb = new ExcelJS.Workbook();
       wb.created = new Date();
+      wb.views = [
+        {
+          x: 0,
+          y: 0,
+          width: 10000,
+          height: 20000,
+          firstSheet: 0,
+          activeTab: 0,
+          visibility: "visible",
+        },
+      ];
       const ws = wb.addWorksheet("RAG Evaluation Builder");
 
       ws.columns = QA_COLUMNS.map((c) => ({
