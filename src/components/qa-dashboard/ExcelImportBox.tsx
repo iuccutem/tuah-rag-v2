@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import ExcelJS from "exceljs";
-import readXlsxFile from "read-excel-file/browser";
+import { readSheet } from "read-excel-file/browser";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -113,7 +113,7 @@ async function parseWorkbookWithExcelJs(buf: ArrayBuffer): Promise<ParsedWorkboo
 }
 
 async function parseWorkbookWithFallback(file: File): Promise<ParsedWorkbook> {
-  const rows: unknown[][] = await readXlsxFile(file, { sheet: 1 });
+  const rows: unknown[][] = await readSheet(file, 1);
   return normalizeParsedRows(
     rows.map((row: unknown[]) => row.map((value: unknown) => stringifyCellValue(value))),
   );
