@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import ExcelJS from "exceljs";
-import readXlsxFile from "read-excel-file";
+import readXlsxFile from "read-excel-file/browser";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -113,9 +113,9 @@ async function parseWorkbookWithExcelJs(buf: ArrayBuffer): Promise<ParsedWorkboo
 }
 
 async function parseWorkbookWithFallback(file: File): Promise<ParsedWorkbook> {
-  const rows = await readXlsxFile(file, { sheet: 1 });
+  const rows: unknown[][] = await readXlsxFile(file, { sheet: 1 });
   return normalizeParsedRows(
-    rows.map((row) => row.map((value) => stringifyCellValue(value))),
+    rows.map((row: unknown[]) => row.map((value: unknown) => stringifyCellValue(value))),
   );
 }
 
@@ -198,7 +198,6 @@ export function ExcelImportBox({
     setItems([]);
     try {
       const buf = await file.arrayBuffer();
-      const wb = new ExcelJS.Workbook();
       let parsedRows: string[][] = [];
       let parsedMaxCols = 0;
       if (file.name.toLowerCase().endsWith(".csv")) {
