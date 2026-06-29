@@ -8,7 +8,7 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 // When self-hosting (e.g. on tuah.utem.edu.my/rag-builder under Node),
 // set DEPLOY_TARGET=node and BASE_PATH=/rag-builder/ at build time:
-//   DEPLOY_TARGET=node BASE_PATH=/rag-builder/ bun run build
+//   DEPLOY_TARGET=node BASE_PATH=/rag-builder/ npm run build
 // Inside Lovable's own build, these vars are unset so the Cloudflare preset
 // is used as usual (Lovable forces the preset internally anyway).
 const isNodeSelfHost = process.env.DEPLOY_TARGET === "node";
@@ -24,11 +24,6 @@ export default defineConfig({
     ? {
         nitro: {
           preset: "node-server",
-          output: {
-            dir: "dist",
-            serverDir: "dist/server",
-            publicDir: "dist/public",
-          },
         },
       }
     : {}),
