@@ -18,10 +18,19 @@ export function QuestionPasteBox({
   onComplete,
   existingQuestions = [],
   table,
+  processEndpoint = "/api/n8n-process",
+  extraProcessBody,
+  disabledReason,
 }: {
   onComplete?: () => void;
   existingQuestions?: string[];
   table?: string;
+  /** Override the agent-processing endpoint (e.g. dev pipeline). */
+  processEndpoint?: string;
+  /** Extra fields merged into the process request body (e.g. { vector_id }). */
+  extraProcessBody?: Record<string, unknown>;
+  /** When set, the Run button is disabled and this message is shown. */
+  disabledReason?: string | null;
   /** @deprecated kept for compatibility */
   onDeleteDuplicates?: (questions: string[]) => Promise<void> | void;
 }) {
