@@ -126,7 +126,46 @@ function formatTableLabel(raw: string): string {
   return stripped.charAt(0).toUpperCase() + stripped.slice(1);
 }
 
-function DashboardPage() {
+export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {}) {
+  const isDev = mode === "dev";
+  const processEndpoint = isDev ? "/api/n8n-dev-process" : "/api/n8n-process";
+  const VECTOR_STORAGE_KEY = "rag-dev-vector-id";
+  const [vectorId, setVectorId] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(VECTOR_STORAGE_KEY) ?? "";
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (vectorId) localStorage.setItem(VECTOR_STORAGE_KEY, vectorId);
+  }, [vectorId]);
+  const vectorsQuery = useQuery({
+    queryKey: ["vector-list"],
+    queryFn: async () => {
+      const res = await fetch(`/api/n8n-vector-list?ts=${Date.now()}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+      return (await res.json()) as {
+        vectors: Array<{ id: string; name: string }>;
+        error: string | null;
+      };
+    },
+    enabled: isDev,
+    refetchOnWindowFocus: false,
+  });
+  const vectors = vectorsQuery.data?.vectors ?? [];
+  useEffect(() => {
+    if (!isDev) return;
+    if (!vectorId && vectors.length > 0) setVectorId(vectors[0].id);
+  }, [isDev, vectorId, vectors]);
+  const vectorDisabledReason = isDev && !vectorId
+    ? vectorsQuery.isLoading
+      ? "Loading vector stores…"
+      : vectors.length === 0
+        ? `No vector stores available${vectorsQuery.data?.error ? `: ${vectorsQuery.data.error}` : "."}`
+        : "Select a vector store first."
+    : null;
+  const extraProcessBody = isDev && vectorId ? { vector_id: vectorId } : undefined;
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
   const queryClient = useQueryClient();
