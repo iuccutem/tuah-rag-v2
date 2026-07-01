@@ -145,10 +145,12 @@ export function QuestionPasteBox({
       let ok = 0;
       let fail = 0;
       for (const question of insertedQuestions) {
-        const res = await fetch("/api/n8n-process", {
+        const body: Record<string, unknown> = { channel, question, ...(extraProcessBody ?? {}) };
+        if (table) body.table = table;
+        const res = await fetch(processEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(table ? { channel, question, table } : { channel, question }),
+          body: JSON.stringify(body),
         });
         const json = (await res.json()) as { ok: boolean; error?: string };
         if (json.ok) ok++;
