@@ -93,7 +93,7 @@ export const Route = createFileRoute("/_authenticated/")({
       },
     ],
   }),
-  component: DashboardPage,
+  component: () => <DashboardPage mode="prod" />,
 });
 
 type ApiResponse = { data: QARow[]; error: string | null };
