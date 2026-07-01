@@ -1105,11 +1105,61 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
         <div className="flex-1 min-w-0">
           <h1 className="truncate text-[15px] sm:text-[17px] font-medium leading-tight text-foreground">
             RAG Evaluation Builder
+            {isDev ? (
+              <span className="ml-2 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                Dev
+              </span>
+            ) : null}
           </h1>
           <div className="mt-0.5 hidden sm:block text-[12px] text-muted-foreground">
             Last edit was at {lastUpdated}
           </div>
         </div>
+        {/* Environment switch — Production / Development */}
+        <div className="hidden md:flex items-center gap-0 rounded-md border border-[var(--sheets-grid)] bg-background p-0.5">
+          <Link
+            to="/"
+            className="rounded px-2.5 py-1 text-[12px] font-medium text-foreground/70 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
+            activeOptions={{ exact: true }}
+          >
+            Production
+          </Link>
+          <Link
+            to="/dev"
+            className="rounded px-2.5 py-1 text-[12px] font-medium text-foreground/70 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
+          >
+            Development
+          </Link>
+        </div>
+        {isDev ? (
+          <div className="hidden md:flex items-center gap-2">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Vector
+            </span>
+            <Select value={vectorId} onValueChange={setVectorId}>
+              <SelectTrigger className="h-8 w-52 text-[13px]">
+                <SelectValue
+                  placeholder={
+                    vectorsQuery.isLoading ? "Loading…" : "Select vector store"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {vectors.length === 0 ? (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                    {vectorsQuery.data?.error ?? "No vector stores found."}
+                  </div>
+                ) : (
+                  vectors.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
         {/* Desktop: full action row */}
         <div className="hidden sm:flex items-center gap-1">
           <button
