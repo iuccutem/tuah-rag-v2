@@ -281,8 +281,9 @@ export function QuestionPasteBox({
           <div className="flex flex-wrap items-center gap-2">
             <Button
               onClick={() => runAll("web")}
-              disabled={busy || newOnes.length === 0}
+              disabled={busy || newOnes.length === 0 || !!disabledReason}
               className="gap-2"
+              title={disabledReason ?? undefined}
             >
               {busy && activeChannel === "web" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
