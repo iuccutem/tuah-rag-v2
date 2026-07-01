@@ -956,10 +956,16 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
       const results: Array<{ ch: "web" | "telegram_whatsapp"; question: string; ok: boolean; error?: string }> = [];
       for (const ch of channels) {
         for (const question of selectedQuestions) {
-          const res = await fetch("/api/n8n-process", {
+          const body: Record<string, unknown> = {
+            channel: ch,
+            question,
+            table: activeTable,
+            ...(extraProcessBody ?? {}),
+          };
+          const res = await fetch(processEndpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ channel: ch, question, table: activeTable }),
+            body: JSON.stringify(body),
           });
 
           const json = (await res.json()) as { ok: boolean; error?: string };
