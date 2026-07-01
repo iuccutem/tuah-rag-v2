@@ -1660,7 +1660,11 @@ function DashboardPage() {
 
 
       {/* Sheet tabs */}
-      <div className="sticky bottom-0 z-10 flex shrink-0 flex-nowrap items-center gap-1 overflow-x-auto hide-scrollbar border-t border-[var(--sheets-grid)] bg-card px-2 py-1">
+      <div
+        ref={tabsScrollRef}
+        style={{ WebkitOverflowScrolling: "touch" }}
+        className="sticky bottom-0 z-10 flex shrink-0 flex-nowrap items-center gap-1 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-proximity border-t border-[var(--sheets-grid)] bg-card px-2 py-1"
+      >
 
         {tables.length === 0 ? (
           <div className="flex h-7 items-center px-3 text-[12px] text-muted-foreground">
@@ -1672,10 +1676,14 @@ function DashboardPage() {
             return (
               <div
                 key={t}
+                ref={(el) => {
+                  if (el) tabRefs.current.set(t, el);
+                  else tabRefs.current.delete(t);
+                }}
                 className={
                   active
-                    ? "flex h-7 shrink-0 items-center rounded-t-md border-t-2 border-primary bg-card pl-3 pr-1 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]"
-                    : "flex h-7 shrink-0 items-center rounded-t-md border-t-2 border-transparent pl-3 pr-1 text-[13px] font-medium text-muted-foreground hover:bg-muted"
+                    ? "flex h-7 shrink-0 snap-start items-center rounded-t-md border-t-2 border-primary bg-card pl-3 pr-1 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]"
+                    : "flex h-7 shrink-0 snap-start items-center rounded-t-md border-t-2 border-transparent pl-3 pr-1 text-[13px] font-medium text-muted-foreground hover:bg-muted"
                 }
               >
                 <button
