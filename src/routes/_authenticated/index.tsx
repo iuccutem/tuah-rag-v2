@@ -1544,6 +1544,10 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
               <QuestionPasteBox
                 existingQuestions={existingQuestions}
                 table={activeTable}
+                processEndpoint={processEndpoint}
+                extraProcessBody={extraProcessBody}
+                disabledReason={vectorDisabledReason}
+
 
                 onComplete={async () => {
                   setInsertOpen(false);
