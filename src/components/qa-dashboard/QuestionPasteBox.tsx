@@ -222,6 +222,14 @@ export function QuestionPasteBox({
           </div>
         ) : (
         <>
+        {disabledReason ? (
+          <div className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-yellow-900 dark:text-yellow-200">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />
+              <span>{disabledReason}</span>
+            </div>
+          </div>
+        ) : null}
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
