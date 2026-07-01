@@ -67,6 +67,10 @@ export function QuestionPasteBox({
   const [activeChannel, setActiveChannel] = useState<"web" | null>(null);
 
   const runAll = async (channel: "web") => {
+    if (disabledReason) {
+      toast.error(disabledReason);
+      return;
+    }
     if (questions.length === 0) {
       toast.error("Paste at least one question.");
       return;
