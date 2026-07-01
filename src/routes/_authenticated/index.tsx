@@ -142,6 +142,25 @@ function DashboardPage() {
     }
   }, [tables, activeTable]);
 
+  // Refs for the bottom sheet-tab strip so we can auto-scroll to the newest
+  // or currently active tab (important on mobile / iPad where tabs overflow).
+  const tabsScrollRef = useRef<HTMLDivElement | null>(null);
+  const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // When a new sheet is added, scroll the strip to the end.
+  useEffect(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    el.scrollTo({ left: el.scrollWidth, behavior: "smooth" });
+  }, [tables.length]);
+
+  // When the active tab changes, bring it into view.
+  useEffect(() => {
+    if (!activeTable) return;
+    const el = tabRefs.current.get(activeTable);
+    el?.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
+  }, [activeTable]);
+
   const { data, isLoading, isFetching, refetch, dataUpdatedAt, error } =
     useQuery({
       queryKey: ["qa-rows", activeTable],
