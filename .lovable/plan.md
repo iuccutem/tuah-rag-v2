@@ -1,18 +1,27 @@
-## Plan
+# Scrollable bottom sheet-tab bar
 
-1. **Replace the fragile XLSX read path**
-   - Keep the current CSV handling.
-   - For `.xlsx` / `.xls`, stop relying only on `wb.worksheets[0]`, because this file is crashing inside ExcelJS with missing `sheets` metadata.
-   - Add a safer workbook-loader helper that can recover when ExcelJS returns incomplete workbook metadata.
+## Goal
+The bottom row of faculty/sheet tabs currently hides its scrollbar (`hide-scrollbar`) and never scrolls itself when a new tab is added or when the user switches to a tab that's off-screen. On mobile/iPad the extra tabs are effectively unreachable.
 
-2. **Add a compatibility fallback for problematic Excel files**
-   - If `workbook.xlsx.load()` throws errors like `reading 'sheets'` or `evaluating 'e4.sheets'`, retry with a browser-safe parser fallback.
-   - Extract the first worksheet rows into the same `string[][]` shape the UI already expects, so the existing mapping/preview/import logic remains unchanged.
+## Changes (all in `src/routes/_authenticated/index.tsx`, sheet-tabs block around lines 1643–1722)
 
-3. **Improve the user-facing import error**
-   - If the file truly has no readable worksheet, show a clear message such as: `No readable worksheet found. Please save the file again as .xlsx or .csv and retry.`
-   - Avoid showing raw technical errors like `undefined is not an object`.
+1. **Make the strip visibly scrollable**
+   - Keep `overflow-x-auto` but remove `hide-scrollbar` so a thin native horizontal scrollbar shows when tabs overflow.
+   - Add `scroll-smooth` and `snap-x snap-proximity` so scrolling to a tab feels natural; add `snap-start` to each tab item.
+   - Add touch affordance: `style={{ WebkitOverflowScrolling: "touch" }}` and `overscroll-x-contain`.
+   - Keep the "＋ Add sheet" button and the "Synced …" status inside the strip, but wrap the status in a `shrink-0` element so it doesn't collapse the tabs.
 
-4. **Verify with the current import flow**
-   - Confirm the dialog proceeds from upload to the column-mapping preview instead of stopping at the toast.
-   - Confirm Question, Expected Answer, and URL mapping still work after the parser change.
+2. **Auto-scroll to the latest / active tab**
+   - Add a `tabsScrollRef` on the strip container and a `tabRefs = useRef<Map<string, HTMLDivElement>>(new Map())` for each tab.
+   - `useEffect` on `[tables.length]`: scroll the strip to its right end (`el.scrollLeft = el.scrollWidth`) — this handles new sheets being appended.
+   - `useEffect` on `[activeTable]`: call `tabRefs.current.get(activeTable)?.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" })` so switching tabs (including via the mobile "Switch sheet" menu) brings the tab into view.
+   - After a successful create/rename, we already call `tablesQuery.refetch()` and then `setActiveTable(...)`; the two effects above cover both cases without extra code at call sites.
+
+3. **Non-goals / preserved behavior**
+   - No changes to tab creation, rename, delete, or table content rendering.
+   - No visual redesign — same colors, sizing, dark-mode tokens, dropdown menu.
+
+## Technical notes
+- `hide-scrollbar` is defined in `src/styles.css`; we simply stop applying it on this element (leave the utility for other places).
+- `scrollIntoView({ inline: "nearest" })` only scrolls the nearest scrollable ancestor, so it won't move the page vertically.
+- The effects are cheap (run only when `tables.length` or `activeTable` changes) and safe under SSR because they're inside `useEffect`.
