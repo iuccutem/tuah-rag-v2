@@ -926,6 +926,10 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
 
 
   const runChannel = async (channel: "web" | "telegram_whatsapp" | "both") => {
+    if (vectorDisabledReason) {
+      toast.error(vectorDisabledReason);
+      return;
+    }
     setRunningChannel(channel);
     const channels: Array<"web" | "telegram_whatsapp"> =
       channel === "both" ? ["web", "telegram_whatsapp"] : [channel];
