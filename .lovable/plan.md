@@ -1,27 +1,48 @@
-# Scrollable bottom sheet-tab bar
-
 ## Goal
-The bottom row of faculty/sheet tabs currently hides its scrollbar (`hide-scrollbar`) and never scrolls itself when a new tab is added or when the user switches to a tab that's off-screen. On mobile/iPad the extra tabs are effectively unreachable.
 
-## Changes (all in `src/routes/_authenticated/index.tsx`, sheet-tabs block around lines 1643–1722)
+Add a new **Development** workspace that mirrors the existing dashboard (tabs, table, paste-questions, imports, export) but is bound to a user-selected **vector store**. Every question the agent processes from that page is sent to the dev webhook with the chosen `vector_id` included.
 
-1. **Make the strip visibly scrollable**
-   - Keep `overflow-x-auto` but remove `hide-scrollbar` so a thin native horizontal scrollbar shows when tabs overflow.
-   - Add `scroll-smooth` and `snap-x snap-proximity` so scrolling to a tab feels natural; add `snap-start` to each tab item.
-   - Add touch affordance: `style={{ WebkitOverflowScrolling: "touch" }}` and `overscroll-x-contain`.
-   - Keep the "＋ Add sheet" button and the "Synced …" status inside the strip, but wrap the status in a `shrink-0` element so it doesn't collapse the tabs.
+## Scope
 
-2. **Auto-scroll to the latest / active tab**
-   - Add a `tabsScrollRef` on the strip container and a `tabRefs = useRef<Map<string, HTMLDivElement>>(new Map())` for each tab.
-   - `useEffect` on `[tables.length]`: scroll the strip to its right end (`el.scrollLeft = el.scrollWidth`) — this handles new sheets being appended.
-   - `useEffect` on `[activeTable]`: call `tabRefs.current.get(activeTable)?.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" })` so switching tabs (including via the mobile "Switch sheet" menu) brings the tab into view.
-   - After a successful create/rename, we already call `tablesQuery.refetch()` and then `setActiveTable(...)`; the two effects above cover both cases without extra code at call sites.
+### 1. Vector store fetch proxy
+- New server route `src/routes/api/n8n-vector-list.ts` (GET) that Basic-auth-proxies `https://tuah.utem.edu.my/agent/webhook/config/vector/list`.
+- Returns `{ vectors: Array<{ id: string; name: string }>, error }`. Since the exact upstream shape is unknown, normalize defensively (support arrays of strings, `{id,name}`, `{vector_id,label}`, or nested `data/results`) — same pattern as `n8n-tables.ts`.
 
-3. **Non-goals / preserved behavior**
-   - No changes to tab creation, rename, delete, or table content rendering.
-   - No visual redesign — same colors, sizing, dark-mode tokens, dropdown menu.
+### 2. Dev processing proxy
+- New server route `src/routes/api/n8n-dev-process.ts` (POST) that forwards `{ question, table, vector_id }` to `https://tuah.utem.edu.my/agent/webhook/ad7bc9b8-0b89-4e4a-bdb5-89b83ecddc59` with Basic auth.
+- Same envelope contract as `n8n-process.ts` (`{ ok, data, error }`).
+
+### 3. New authenticated route
+- File: `src/routes/_authenticated/dev.tsx` → URL `/dev`.
+- Renders the same dashboard UI as `/`, but with:
+  - A **Vector store** dropdown in the header (loaded from `/api/n8n-vector-list`, persisted per user in `localStorage`).
+  - When no vector is selected, the "Run Text Chat" button in the paste-questions flow is disabled with a hint.
+  - Question processing calls `/api/n8n-dev-process` (with `vector_id`) instead of `/api/n8n-process`.
+  - Sheet/tab CRUD (`Add`, `Rename`, `Delete`, `Switch`) reuses the existing `/api/n8n-create-table`, `n8n-rename-table`, `n8n-delete-table` webhooks — no changes needed.
+  - Same table listing (`/api/n8n-tables`) and row loading (`/api/n8n-qa`) — dev shares the qatest-* tables so structure stays identical.
+
+### 4. Shared dashboard refactor (small)
+- Extract the current `DashboardPage` body in `src/routes/_authenticated/index.tsx` into a reusable `<QADashboard mode="prod" | "dev" />` component (kept in the same folder or `src/components/qa-dashboard/QADashboard.tsx`).
+- Add two internal knobs:
+  - `processEndpoint: "/api/n8n-process" | "/api/n8n-dev-process"`.
+  - `extraProcessBody?: { vector_id?: string }` — merged into every process request.
+- Pass these into `QuestionPasteBox` via new optional props (`processEndpoint`, `extraBody`). Prod page passes nothing (backwards compatible).
+
+### 5. Navigation
+- Add a top-nav segmented control ("Production" / "Development") in the dashboard header. On mobile it lives inside the existing "More" overflow menu.
+- Uses `<Link to="/">` and `<Link to="/dev">` with `activeProps` for the active style.
+
+### 6. Vector store selector UX
+- Dropdown shows the human name; the id is stored in state.
+- If the list is empty or the webhook errors, show a red hint under the dropdown and disable question processing.
+- Selection persists in `localStorage` (`rag-dev-vector-id`) so refreshes keep the choice.
+
+## Out of scope
+- No schema/database changes.
+- No changes to export JSON, Excel import, row flags, or auth flow.
+- No changes to production processing behavior.
 
 ## Technical notes
-- `hide-scrollbar` is defined in `src/styles.css`; we simply stop applying it on this element (leave the utility for other places).
-- `scrollIntoView({ inline: "nearest" })` only scrolls the nearest scrollable ancestor, so it won't move the page vertically.
-- The effects are cheap (run only when `tables.length` or `activeTable` changes) and safe under SSR because they're inside `useEffect`.
+- New proxy routes follow the exact shape of `n8n-tables.ts` / `n8n-process.ts` (Basic auth via `N8N_WEBHOOK_USER` / `N8N_WEBHOOK_PASSWORD`, `Response.json` with `{ ok, error }`).
+- The vector list webhook's response shape isn't documented, so the proxy will log the first response server-side and normalize common shapes. If the real shape differs, only the normalizer needs a one-line tweak.
+- `QuestionPasteBox` currently posts to `/api/n8n-run` (insert) and `/api/n8n-process` (agent run). Only the second call gets the endpoint + `vector_id` override; inserts are unchanged.

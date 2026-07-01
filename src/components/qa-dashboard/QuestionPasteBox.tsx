@@ -18,10 +18,19 @@ export function QuestionPasteBox({
   onComplete,
   existingQuestions = [],
   table,
+  processEndpoint = "/api/n8n-process",
+  extraProcessBody,
+  disabledReason,
 }: {
   onComplete?: () => void;
   existingQuestions?: string[];
   table?: string;
+  /** Override the agent-processing endpoint (e.g. dev pipeline). */
+  processEndpoint?: string;
+  /** Extra fields merged into the process request body (e.g. { vector_id }). */
+  extraProcessBody?: Record<string, unknown>;
+  /** When set, the Run button is disabled and this message is shown. */
+  disabledReason?: string | null;
   /** @deprecated kept for compatibility */
   onDeleteDuplicates?: (questions: string[]) => Promise<void> | void;
 }) {
@@ -58,6 +67,10 @@ export function QuestionPasteBox({
   const [activeChannel, setActiveChannel] = useState<"web" | null>(null);
 
   const runAll = async (channel: "web") => {
+    if (disabledReason) {
+      toast.error(disabledReason);
+      return;
+    }
     if (questions.length === 0) {
       toast.error("Paste at least one question.");
       return;
@@ -132,10 +145,12 @@ export function QuestionPasteBox({
       let ok = 0;
       let fail = 0;
       for (const question of insertedQuestions) {
-        const res = await fetch("/api/n8n-process", {
+        const body: Record<string, unknown> = { channel, question, ...(extraProcessBody ?? {}) };
+        if (table) body.table = table;
+        const res = await fetch(processEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(table ? { channel, question, table } : { channel, question }),
+          body: JSON.stringify(body),
         });
         const json = (await res.json()) as { ok: boolean; error?: string };
         if (json.ok) ok++;
@@ -207,6 +222,14 @@ export function QuestionPasteBox({
           </div>
         ) : (
         <>
+        {disabledReason ? (
+          <div className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-yellow-900 dark:text-yellow-200">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />
+              <span>{disabledReason}</span>
+            </div>
+          </div>
+        ) : null}
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -266,8 +289,9 @@ export function QuestionPasteBox({
           <div className="flex flex-wrap items-center gap-2">
             <Button
               onClick={() => runAll("web")}
-              disabled={busy || newOnes.length === 0}
+              disabled={busy || newOnes.length === 0 || !!disabledReason}
               className="gap-2"
+              title={disabledReason ?? undefined}
             >
               {busy && activeChannel === "web" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

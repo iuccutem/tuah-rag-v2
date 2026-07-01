@@ -40,11 +40,18 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ExcelJS from "exceljs";
 import { toast } from "sonner";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { registerUser } from "@/lib/admin-users.functions";
 import { useTheme } from "@/hooks/use-theme";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 
 
@@ -86,7 +93,7 @@ export const Route = createFileRoute("/_authenticated/")({
       },
     ],
   }),
-  component: DashboardPage,
+  component: () => <DashboardPage mode="prod" />,
 });
 
 type ApiResponse = { data: QARow[]; error: string | null };
@@ -119,7 +126,46 @@ function formatTableLabel(raw: string): string {
   return stripped.charAt(0).toUpperCase() + stripped.slice(1);
 }
 
-function DashboardPage() {
+export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {}) {
+  const isDev = mode === "dev";
+  const processEndpoint = isDev ? "/api/n8n-dev-process" : "/api/n8n-process";
+  const VECTOR_STORAGE_KEY = "rag-dev-vector-id";
+  const [vectorId, setVectorId] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(VECTOR_STORAGE_KEY) ?? "";
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (vectorId) localStorage.setItem(VECTOR_STORAGE_KEY, vectorId);
+  }, [vectorId]);
+  const vectorsQuery = useQuery({
+    queryKey: ["vector-list"],
+    queryFn: async () => {
+      const res = await fetch(`/api/n8n-vector-list?ts=${Date.now()}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+      return (await res.json()) as {
+        vectors: Array<{ id: string; name: string }>;
+        error: string | null;
+      };
+    },
+    enabled: isDev,
+    refetchOnWindowFocus: false,
+  });
+  const vectors = vectorsQuery.data?.vectors ?? [];
+  useEffect(() => {
+    if (!isDev) return;
+    if (!vectorId && vectors.length > 0) setVectorId(vectors[0].id);
+  }, [isDev, vectorId, vectors]);
+  const vectorDisabledReason = isDev && !vectorId
+    ? vectorsQuery.isLoading
+      ? "Loading vector stores…"
+      : vectors.length === 0
+        ? `No vector stores available${vectorsQuery.data?.error ? `: ${vectorsQuery.data.error}` : "."}`
+        : "Select a vector store first."
+    : null;
+  const extraProcessBody = isDev && vectorId ? { vector_id: vectorId } : undefined;
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
   const queryClient = useQueryClient();
@@ -880,6 +926,10 @@ function DashboardPage() {
 
 
   const runChannel = async (channel: "web" | "telegram_whatsapp" | "both") => {
+    if (vectorDisabledReason) {
+      toast.error(vectorDisabledReason);
+      return;
+    }
     setRunningChannel(channel);
     const channels: Array<"web" | "telegram_whatsapp"> =
       channel === "both" ? ["web", "telegram_whatsapp"] : [channel];
@@ -910,10 +960,16 @@ function DashboardPage() {
       const results: Array<{ ch: "web" | "telegram_whatsapp"; question: string; ok: boolean; error?: string }> = [];
       for (const ch of channels) {
         for (const question of selectedQuestions) {
-          const res = await fetch("/api/n8n-process", {
+          const body: Record<string, unknown> = {
+            channel: ch,
+            question,
+            table: activeTable,
+            ...(extraProcessBody ?? {}),
+          };
+          const res = await fetch(processEndpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ channel: ch, question, table: activeTable }),
+            body: JSON.stringify(body),
           });
 
           const json = (await res.json()) as { ok: boolean; error?: string };
@@ -1049,11 +1105,61 @@ function DashboardPage() {
         <div className="flex-1 min-w-0">
           <h1 className="truncate text-[15px] sm:text-[17px] font-medium leading-tight text-foreground">
             RAG Evaluation Builder
+            {isDev ? (
+              <span className="ml-2 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                Dev
+              </span>
+            ) : null}
           </h1>
           <div className="mt-0.5 hidden sm:block text-[12px] text-muted-foreground">
             Last edit was at {lastUpdated}
           </div>
         </div>
+        {/* Environment switch — Production / Development */}
+        <div className="hidden md:flex items-center gap-0 rounded-md border border-[var(--sheets-grid)] bg-background p-0.5">
+          <Link
+            to="/"
+            className="rounded px-2.5 py-1 text-[12px] font-medium text-foreground/70 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
+            activeOptions={{ exact: true }}
+          >
+            Production
+          </Link>
+          <Link
+            to="/dev"
+            className="rounded px-2.5 py-1 text-[12px] font-medium text-foreground/70 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
+          >
+            Development
+          </Link>
+        </div>
+        {isDev ? (
+          <div className="hidden md:flex items-center gap-2">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Vector
+            </span>
+            <Select value={vectorId} onValueChange={setVectorId}>
+              <SelectTrigger className="h-8 w-52 text-[13px]">
+                <SelectValue
+                  placeholder={
+                    vectorsQuery.isLoading ? "Loading…" : "Select vector store"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {vectors.length === 0 ? (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                    {vectorsQuery.data?.error ?? "No vector stores found."}
+                  </div>
+                ) : (
+                  vectors.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
         {/* Desktop: full action row */}
         <div className="hidden sm:flex items-center gap-1">
           <button
@@ -1129,7 +1235,20 @@ function DashboardPage() {
                 <MoreVertical className="h-5 w-5" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link to="/">
+                  <SheetIcon className="mr-2 h-4 w-4" />
+                  Production {mode === "prod" ? "✓" : ""}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/dev">
+                  <Layers className="mr-2 h-4 w-4" />
+                  Development {mode === "dev" ? "✓" : ""}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={toggleTheme}>
                 {theme === "dark" ? (
                   <Sun className="mr-2 h-4 w-4" />
@@ -1180,6 +1299,36 @@ function DashboardPage() {
       </div>
 
 
+
+      {isDev ? (
+        <div className="md:hidden shrink-0 flex items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Vector
+          </span>
+          <Select value={vectorId} onValueChange={setVectorId}>
+            <SelectTrigger className="h-8 flex-1 text-[13px]">
+              <SelectValue
+                placeholder={
+                  vectorsQuery.isLoading ? "Loading…" : "Select vector store"
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {vectors.length === 0 ? (
+                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                  {vectorsQuery.data?.error ?? "No vector stores found."}
+                </div>
+              ) : (
+                vectors.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.name}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
 
       {/* Mobile toolbar */}
       <div className="flex md:hidden shrink-0 flex-col gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
@@ -1488,6 +1637,10 @@ function DashboardPage() {
               <QuestionPasteBox
                 existingQuestions={existingQuestions}
                 table={activeTable}
+                processEndpoint={processEndpoint}
+                extraProcessBody={extraProcessBody}
+                disabledReason={vectorDisabledReason}
+
 
                 onComplete={async () => {
                   setInsertOpen(false);
