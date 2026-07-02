@@ -1,48 +1,68 @@
-## Goal
 
-Add a new **Development** workspace that mirrors the existing dashboard (tabs, table, paste-questions, imports, export) but is bound to a user-selected **vector store**. Every question the agent processes from that page is sent to the dev webhook with the chosen `vector_id` included.
+# Redesign: Production & Development Dashboards
 
-## Scope
+Goal: cleaner, calmer, easier-to-scan layout for both pages. Zero functional changes — every existing action, dialog, webhook, and shortcut keeps working. Dev stays visually isolated from Prod so users always know which environment they're in.
 
-### 1. Vector store fetch proxy
-- New server route `src/routes/api/n8n-vector-list.ts` (GET) that Basic-auth-proxies `https://tuah.utem.edu.my/agent/webhook/config/vector/list`.
-- Returns `{ vectors: Array<{ id: string; name: string }>, error }`. Since the exact upstream shape is unknown, normalize defensively (support arrays of strings, `{id,name}`, `{vector_id,label}`, or nested `data/results`) — same pattern as `n8n-tables.ts`.
+## New page shell (shared)
 
-### 2. Dev processing proxy
-- New server route `src/routes/api/n8n-dev-process.ts` (POST) that forwards `{ question, table, vector_id }` to `https://tuah.utem.edu.my/agent/webhook/ad7bc9b8-0b89-4e4a-bdb5-89b83ecddc59` with Basic auth.
-- Same envelope contract as `n8n-process.ts` (`{ ok, data, error }`).
+Replace the current single-tall-header layout with a 3-zone shell:
 
-### 3. New authenticated route
-- File: `src/routes/_authenticated/dev.tsx` → URL `/dev`.
-- Renders the same dashboard UI as `/`, but with:
-  - A **Vector store** dropdown in the header (loaded from `/api/n8n-vector-list`, persisted per user in `localStorage`).
-  - When no vector is selected, the "Run Text Chat" button in the paste-questions flow is disabled with a hint.
-  - Question processing calls `/api/n8n-dev-process` (with `vector_id`) instead of `/api/n8n-process`.
-  - Sheet/tab CRUD (`Add`, `Rename`, `Delete`, `Switch`) reuses the existing `/api/n8n-create-table`, `n8n-rename-table`, `n8n-delete-table` webhooks — no changes needed.
-  - Same table listing (`/api/n8n-tables`) and row loading (`/api/n8n-qa`) — dev shares the qatest-* tables so structure stays identical.
+```text
++-----------------------------------------------------------+
+|  AppBar (56px)                                            |
+|   [Logo] [Env switch: Prod | Dev]     [Theme] [User menu] |
++-----------------------------------------------------------+
+|  Workspace bar (48px)                                     |
+|   Sheet: [Faculty ▾]  ·  N rows  ·  Last edit 2m ago      |
+|                          [Search] [Filter] [Run] [Export] |
++-----------------------------------------------------------+
+|  Content                                                  |
+|   QATable (unchanged component, more breathing room)      |
++-----------------------------------------------------------+
+|  Sheet tab strip (bottom, unchanged behavior)             |
+|   [Faculty A] [Faculty B] [+ Add sheet]                   |
++-----------------------------------------------------------+
+```
 
-### 4. Shared dashboard refactor (small)
-- Extract the current `DashboardPage` body in `src/routes/_authenticated/index.tsx` into a reusable `<QADashboard mode="prod" | "dev" />` component (kept in the same folder or `src/components/qa-dashboard/QADashboard.tsx`).
-- Add two internal knobs:
-  - `processEndpoint: "/api/n8n-process" | "/api/n8n-dev-process"`.
-  - `extraProcessBody?: { vector_id?: string }` — merged into every process request.
-- Pass these into `QuestionPasteBox` via new optional props (`processEndpoint`, `extraBody`). Prod page passes nothing (backwards compatible).
+Why this helps:
+- Global controls (env, theme, account) separate from data controls (sheet, run, export). Today they're mixed in one crowded row.
+- Sheet context (name, row count, last edit) becomes the visual anchor of the workspace bar, so users always know what they're editing.
+- Action buttons collapse into a single "Actions" dropdown on <lg screens, keeping mobile identical in capability but calm in appearance.
 
-### 5. Navigation
-- Add a top-nav segmented control ("Production" / "Development") in the dashboard header. On mobile it lives inside the existing "More" overflow menu.
-- Uses `<Link to="/">` and `<Link to="/dev">` with `activeProps` for the active style.
+## Production page specifics
 
-### 6. Vector store selector UX
-- Dropdown shows the human name; the id is stored in state.
-- If the list is empty or the webhook errors, show a red hint under the dropdown and disable question processing.
-- Selection persists in `localStorage` (`rag-dev-vector-id`) so refreshes keep the choice.
+- AppBar shows a subtle "Production" pill in muted foreground.
+- Workspace bar primary actions: Run Questions, Import Excel, Export JSON. Secondary (Rename sheet, Delete sheet, Highlight, Flag, Clear formats) move into an overflow "More" menu with section headers (Sheet / Cells / Data).
+- The "Add sheet" affordance stays as the trailing `+` in the bottom tab strip AND appears in the sheet dropdown for discoverability.
+- Selected-cell status line (currently just above the table) becomes a slim footer strip under the table so it doesn't compete with the toolbar.
 
-## Out of scope
-- No schema/database changes.
-- No changes to export JSON, Excel import, row flags, or auth flow.
-- No changes to production processing behavior.
+## Development page specifics (visually isolated)
+
+Same shell, but with clear environment cues so users never confuse it with Prod:
+
+- AppBar background tinted with a dev accent (amber/warning token, low opacity) and a solid "Development" pill.
+- A persistent left-edge 3px accent stripe down the whole page.
+- Workspace bar gains a dedicated Vector Store selector as the first control, styled as a prominent chip (`Vector: <name> ▾`). When empty, chip renders as a warning state ("Select a vector store") and Run is disabled with a tooltip — same disabledReason logic as today.
+- Export JSON, Import Excel, and destructive sheet actions are still available (same sheets as Prod per your choice) but visually de-emphasized (ghost buttons) so Run + Vector remain the focal point.
+- Page title in the AppBar reads "RAG Development Workspace"; Prod reads "RAG Evaluation Builder".
+
+## Mobile / iPad
+
+- AppBar collapses env switch + theme + user into a single leading menu; env pill stays visible.
+- Workspace bar becomes two rows on <md: row 1 = sheet chip + row count, row 2 = horizontally scrollable action chips (Run, Export, Import, More).
+- Bottom sheet-tab strip keeps current auto-scroll behavior.
+- Follows the responsive-layout rules: `grid-cols-[minmax(0,1fr)_auto]`, `min-w-0`, `shrink-0`, `truncate` on the sheet name.
 
 ## Technical notes
-- New proxy routes follow the exact shape of `n8n-tables.ts` / `n8n-process.ts` (Basic auth via `N8N_WEBHOOK_USER` / `N8N_WEBHOOK_PASSWORD`, `Response.json` with `{ ok, error }`).
-- The vector list webhook's response shape isn't documented, so the proxy will log the first response server-side and normalize common shapes. If the real shape differs, only the normalizer needs a one-line tweak.
-- `QuestionPasteBox` currently posts to `/api/n8n-run` (insert) and `/api/n8n-process` (agent run). Only the second call gets the endpoint + `vector_id` override; inserts are unchanged.
+
+- No changes to `QATable`, `QuestionPasteBox`, `ExcelImportBox`, dialogs, or any `/api/n8n-*` route. Only `src/routes/_authenticated/index.tsx` is restructured; `dev.tsx` continues to render `<DashboardPage mode="dev" />`.
+- Extract three small presentational components inside the same file to keep the diff readable: `AppBar`, `WorkspaceBar`, `SheetTabStrip`. All state (queries, mutations, selection, formats, dialogs) stays in `DashboardPage` and is passed down as props — no new state, no new effects.
+- Add two design tokens in `src/styles.css` under `@theme inline`: `--color-env-dev` (amber-tinted) and `--color-env-prod` (muted foreground) so the env cues are theme-aware in light and dark mode.
+- Preserve all existing hotkeys, auto-scroll to active tab, cell-highlight utility, and the runtime `mode` prop contract.
+- Runtime hydration error visible in the preview is unrelated (root-match invariant during dev HMR); the redesign edits will trigger a fresh module graph and it should clear. If it persists after the redesign, I'll address it separately.
+
+## Out of scope
+
+- No changes to webhooks, export format, AI prompts, or auth.
+- No new features, no removed features.
+- No renaming of columns or tabs.
