@@ -1096,135 +1096,97 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
   };
 
   return (
-    <div className="flex h-screen min-h-screen flex-col bg-[var(--sheets-toolbar-bg)] text-foreground">
-      {/* Top bar — file name + account actions */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--sheets-grid)] bg-card px-3 pt-2 pb-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
-          <SheetIcon className="h-5 w-5 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="truncate text-[15px] sm:text-[17px] font-medium leading-tight text-foreground">
-            RAG Evaluation Builder
-            {isDev ? (
-              <span className="ml-2 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
-                Dev
-              </span>
-            ) : null}
+    <div
+      className={
+        "flex h-screen min-h-screen flex-col bg-background text-foreground " +
+        (isDev ? "border-l-[3px] border-l-amber-500/70" : "")
+      }
+    >
+      {/* ============================== AppBar ============================== */}
+      <header
+        className={
+          "flex shrink-0 items-center gap-2 border-b border-border px-3 h-12 " +
+          (isDev ? "bg-amber-500/[0.06]" : "bg-card")
+        }
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+            <SheetIcon className="h-4 w-4 text-primary" />
+          </div>
+          <h1 className="truncate text-[14px] font-semibold leading-tight">
+            {isDev ? "RAG Development Workspace" : "RAG Evaluation Builder"}
           </h1>
-          <div className="mt-0.5 hidden sm:block text-[12px] text-muted-foreground">
-            Last edit was at {lastUpdated}
-          </div>
+          <span
+            className={
+              "ml-1 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide " +
+              (isDev
+                ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                : "bg-primary/10 text-primary")
+            }
+          >
+            {isDev ? "Development" : "Production"}
+          </span>
         </div>
-        {/* Environment switch — Production / Development */}
-        <div className="hidden md:flex items-center gap-0 rounded-md border border-[var(--sheets-grid)] bg-background p-0.5">
-          <Link
-            to="/"
-            className="rounded px-2.5 py-1 text-[12px] font-medium text-foreground/70 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
-            activeOptions={{ exact: true }}
-          >
-            Production
-          </Link>
-          <Link
-            to="/dev"
-            className="rounded px-2.5 py-1 text-[12px] font-medium text-foreground/70 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
-          >
-            Development
-          </Link>
-        </div>
-        {isDev ? (
-          <div className="hidden md:flex items-center gap-2">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Vector
-            </span>
-            <Select value={vectorId} onValueChange={setVectorId}>
-              <SelectTrigger className="h-8 w-52 text-[13px]">
-                <SelectValue
-                  placeholder={
-                    vectorsQuery.isLoading ? "Loading…" : "Select vector store"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {vectors.length === 0 ? (
-                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                    {vectorsQuery.data?.error ?? "No vector stores found."}
-                  </div>
-                ) : (
-                  vectors.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.name}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : null}
-        {/* Desktop: full action row */}
-        <div className="hidden sm:flex items-center gap-1">
-          <button
-            type="button"
-            onClick={exportXlsx}
-            disabled={exporting || exportingJson}
-            title="Export visible rows to Excel (.xlsx) with highlights and error marks preserved"
-            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted disabled:opacity-50"
-          >
-            {exporting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            <span className="hidden sm:inline">{exporting ? "Exporting…" : "Export"}</span>
-          </button>
-          <button
-            type="button"
-            onClick={exportJson}
-            disabled={exporting || exportingJson}
-            title="Export currently visible rows as a JSON file"
-            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted disabled:opacity-50"
-          >
-            {exportingJson ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            <span className="hidden sm:inline">{exportingJson ? "Exporting…" : "Export JSON"}</span>
-          </button>
 
-          <button
-            type="button"
-            onClick={() => setRegisterOpen(true)}
-            title="Register a new user"
-            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted"
-          >
-            <UserPlus className="h-4 w-4" />
-            <span className="hidden sm:inline">Register</span>
-          </button>
-          <div className="mx-1 h-5 w-px bg-[var(--sheets-grid)]" />
+        {/* Right cluster — desktop */}
+        <div className="ml-auto hidden md:flex items-center gap-1">
+          <div className="flex items-center rounded-md border border-border bg-background p-0.5">
+            <Link
+              to="/"
+              activeOptions={{ exact: true }}
+              className="rounded px-2 py-1 text-[12px] font-medium text-foreground/70 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
+            >
+              Production
+            </Link>
+            <Link
+              to="/dev"
+              className="rounded px-2 py-1 text-[12px] font-medium text-foreground/70 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
+            >
+              Development
+            </Link>
+          </div>
+          <div className="mx-1 h-5 w-px bg-border" />
           <button
             type="button"
             onClick={toggleTheme}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={theme === "dark" ? "Light mode" : "Dark mode"}
+            aria-label={theme === "dark" ? "Light mode" : "Dark mode"}
             className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
-          <button
-            type="button"
-            onClick={async () => {
-              await supabase.auth.signOut();
-              navigate({ to: "/auth" });
-            }}
-            title="Sign out"
-            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/80 hover:bg-muted"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Sign out</span>
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex h-8 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-foreground/80 hover:bg-muted"
+              >
+                <UserPlus className="h-4 w-4" />
+                <span>Account</span>
+                <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setRegisterOpen(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Register user
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate({ to: "/auth" });
+                }}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        {/* Mobile: overflow menu */}
-        <div className="sm:hidden">
+
+        {/* Right cluster — mobile */}
+        <div className="ml-auto md:hidden">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -1257,28 +1219,6 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
                 )}
                 {theme === "dark" ? "Light mode" : "Dark mode"}
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={exportXlsx} disabled={exporting || exportingJson}>
-                {exporting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
-                )}
-                {exporting ? "Exporting…" : "Export Excel"}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={exportJson} disabled={exporting || exportingJson}>
-                {exportingJson ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
-                )}
-                {exportingJson ? "Exporting…" : "Export JSON"}
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={() => setExcelImportOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Excel
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setRegisterOpen(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Register user
@@ -1296,201 +1236,42 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      </header>
 
-
-
-      {isDev ? (
-        <div className="md:hidden shrink-0 flex items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Vector
-          </span>
-          <Select value={vectorId} onValueChange={setVectorId}>
-            <SelectTrigger className="h-8 flex-1 text-[13px]">
-              <SelectValue
-                placeholder={
-                  vectorsQuery.isLoading ? "Loading…" : "Select vector store"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {vectors.length === 0 ? (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  {vectorsQuery.data?.error ?? "No vector stores found."}
-                </div>
-              ) : (
-                vectors.map((v) => (
-                  <SelectItem key={v.id} value={v.id}>
-                    {v.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-      ) : null}
-
-      {/* Mobile toolbar */}
-      <div className="flex md:hidden shrink-0 flex-col gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={refreshing || isFetching}
-            title="Refresh data"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/80 hover:bg-muted disabled:opacity-50"
-          >
-            <RefreshCw className={refreshing || isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setInsertOpen(true)}
-            title="Insert questions"
-            className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-2.5 text-[13px] font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
-          >
-            <ListPlus className="h-4 w-4" />
-            Insert
-          </button>
-
-          <button
-            type="button"
-            onClick={deleteSelectedRows}
-            disabled={selectedRowIds.size === 0}
-            title={selectedRowIds.size === 0 ? "Select rows to delete" : `Delete ${selectedRowIds.size}`}
-            className="flex h-8 items-center gap-1 rounded-md px-2 text-[13px] font-medium text-foreground/90 hover:bg-muted disabled:opacity-50"
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-            {selectedRowIds.size > 0 ? (
-              <span className="rounded-full bg-destructive/15 px-1.5 text-[10px] font-semibold text-destructive tabular-nums">
-                {selectedRowIds.size}
-              </span>
-            ) : null}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setExcelImportOpen(true)}
-            disabled={!activeTable}
-            title="Import Excel/CSV"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/80 hover:bg-muted disabled:opacity-50"
-          >
-            <FileSpreadsheet className="h-4 w-4 text-primary" />
-          </button>
-
-          {selectedRowIds.size > 0 ? (
-            <button
-              type="button"
-              onClick={() => setPendingChannel("web")}
-              disabled={runningChannel !== null}
-              title={`Run Text Chat (${selectedRowIds.size} selected)`}
-              className="flex h-8 items-center gap-1 rounded-md px-2 text-[13px] font-medium text-foreground/90 hover:bg-muted disabled:opacity-50"
-            >
-              {runningChannel === "web" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <MessageSquare className="h-4 w-4 text-primary" />
-              )}
-              <span className="rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary tabular-nums">
-                {selectedRowIds.size}
-              </span>
-            </button>
-          ) : null}
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                title="Filters"
-                className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                {(searchQuery || dateFrom || dateTo) && (
-                  <span className="absolute mt-4 ml-4 h-1.5 w-1.5 rounded-full bg-primary" />
-                )}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="start" sideOffset={6} className="z-[100] w-[min(92vw,300px)] space-y-2 p-3">
-              <div className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--sheets-grid)] bg-background px-2 focus-within:ring-1 focus-within:ring-primary">
-                <Search className="h-3.5 w-3.5 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search questions…"
-                  className="h-7 flex-1 min-w-0 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">From</label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="h-10 min-h-[40px] w-full rounded-md border border-[var(--sheets-grid)] bg-background px-2 text-[13px] text-foreground focus:outline-none"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">To</label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="h-10 min-h-[40px] w-full rounded-md border border-[var(--sheets-grid)] bg-background px-2 text-[13px] text-foreground focus:outline-none"
-                />
-              </div>
-              {(searchQuery || dateFrom || dateTo) && (
-                <button
-                  type="button"
-                  onClick={() => { setSearchQuery(""); setDateFrom(""); setDateTo(""); }}
-                  className="w-full rounded-md px-2 py-1.5 text-[12px] font-medium text-muted-foreground hover:bg-muted"
-                >
-                  Clear filters
-                </button>
-              )}
-            </PopoverContent>
-          </Popover>
-
+      {/* ============================ WorkspaceBar ============================ */}
+      <div
+        className={
+          "shrink-0 border-b border-border " +
+          (isDev ? "bg-amber-500/[0.04]" : "bg-card")
+        }
+      >
+        <div className="flex flex-wrap items-center gap-2 px-3 py-2">
+          {/* Sheet context chip */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                title="More actions"
-                className="ml-auto flex h-8 w-8 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
+                title={activeTable || "Select a sheet"}
+                className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-border bg-background px-2.5 text-[13px] font-medium hover:bg-muted"
               >
-                <MoreVertical className="h-4 w-4" />
+                <SheetIcon className="h-4 w-4 shrink-0 text-primary" />
+                <span className="truncate max-w-[9rem] sm:max-w-[14rem]">
+                  {activeTable ? formatTableLabel(activeTable) : "No sheet"}
+                </span>
+                <span className="hidden sm:inline shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                  · {filteredRows.length}/{rows.length}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 max-h-[70vh] overflow-y-auto">
-              <DropdownMenuItem onClick={() => applyFormat({ highlight: true })}>
-                <Highlighter className="mr-2 h-4 w-4 text-yellow-500" />
-                Highlight cell
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => applyFormat({ error: true })}>
-                <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
-                Mark error
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => applyFormat(null)}>
-                <Eraser className="mr-2 h-4 w-4" />
-                Clear formatting
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
+            <DropdownMenuContent align="start" className="w-64 max-h-[70vh] overflow-y-auto">
               <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Sheets
               </div>
-              <DropdownMenuItem onClick={() => setNewSheetOpen(true)}>
-                <Plus className="mr-2 h-4 w-4 text-primary" />
-                New sheet…
-              </DropdownMenuItem>
-              {tables.length > 0 && <DropdownMenuSeparator />}
               {tables.map((t) => {
                 const active = t === activeTable;
                 return (
-                  <div
-                    key={t}
-                    className="flex items-center gap-1 px-1 py-0.5"
-                  >
+                  <div key={t} className="flex items-center gap-1 px-1 py-0.5">
                     <button
                       type="button"
                       onClick={() => {
@@ -1502,8 +1283,8 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
                       }}
                       className={
                         active
-                          ? "flex flex-1 items-center gap-2 truncate rounded px-2 py-1.5 text-[13px] font-medium text-foreground bg-muted"
-                          : "flex flex-1 items-center gap-2 truncate rounded px-2 py-1.5 text-[13px] text-foreground/90 hover:bg-muted"
+                          ? "flex flex-1 items-center gap-2 truncate rounded px-2 py-1.5 text-[13px] font-medium bg-muted"
+                          : "flex flex-1 items-center gap-2 truncate rounded px-2 py-1.5 text-[13px] hover:bg-muted"
                       }
                       title={t}
                     >
@@ -1536,222 +1317,389 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
                   </div>
                 );
               })}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setNewSheetOpen(true)}>
+                <Plus className="mr-2 h-4 w-4 text-primary" />
+                New sheet…
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-      </div>
 
-
-
-      {/* Desktop Toolbar */}
-      <div className="hidden md:flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-2">
-        {/* Group: data view */}
-        <ToolbarGroup>
-          <ToolbarButton
-            onClick={handleRefresh}
-            disabled={refreshing || isFetching}
-            title="Refresh data"
-          >
-            <RefreshCw
+          {/* Dev-only vector chip */}
+          {isDev ? (
+            <div
               className={
-                refreshing || isFetching
-                  ? "h-4 w-4 animate-spin"
-                  : "h-4 w-4"
+                "flex h-9 min-w-0 items-center gap-1.5 rounded-md border px-2 text-[13px] " +
+                (vectorId
+                  ? "border-amber-500/40 bg-amber-500/10"
+                  : "border-destructive/40 bg-destructive/5")
               }
-            />
-          </ToolbarButton>
+              title={vectorDisabledReason ?? "Selected vector store"}
+            >
+              <Layers className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Vector
+              </span>
+              <Select value={vectorId} onValueChange={setVectorId}>
+                <SelectTrigger className="h-7 min-w-[8rem] border-0 bg-transparent px-1 text-[13px] shadow-none focus:ring-0">
+                  <SelectValue
+                    placeholder={vectorsQuery.isLoading ? "Loading…" : "Select store"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {vectors.length === 0 ? (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                      {vectorsQuery.data?.error ?? "No vector stores found."}
+                    </div>
+                  ) : (
+                    vectors.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
 
-          <div className="flex h-8 items-center gap-1.5 rounded-md border border-[var(--sheets-grid)] bg-background px-2 focus-within:ring-1 focus-within:ring-primary">
-            <Search className="h-3.5 w-3.5 text-muted-foreground" />
+          {/* Search */}
+          <div className="flex h-9 min-w-0 items-center gap-1.5 rounded-md border border-border bg-background px-2 focus-within:ring-1 focus-within:ring-primary">
+            <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search questions…"
-              className="h-6 w-44 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+              placeholder="Search…"
+              className="h-7 w-28 min-w-0 bg-transparent text-[13px] focus:outline-none sm:w-44"
             />
             {searchQuery ? (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-[11px] text-muted-foreground hover:text-foreground"
                 title="Clear search"
               >
-                <span className="text-[11px]">✕</span>
+                ✕
               </button>
             ) : null}
           </div>
 
-          <div className="flex h-8 items-center gap-1.5 rounded-md border border-[var(--sheets-grid)] bg-background px-2">
-            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="h-6 w-[120px] bg-transparent text-[12px] text-foreground focus:outline-none"
-              title="From date"
-            />
-            <span className="text-[11px] text-muted-foreground">–</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="h-6 w-[120px] bg-transparent text-[12px] text-foreground focus:outline-none"
-              title="To date"
-            />
-            {(dateFrom || dateTo) && (
+          {/* Date filter */}
+          <Popover>
+            <PopoverTrigger asChild>
               <button
                 type="button"
-                onClick={() => { setDateFrom(""); setDateTo(""); }}
-                className="text-muted-foreground hover:text-foreground"
-                title="Clear date filter"
+                title="Date filter"
+                className="flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-[13px] hover:bg-muted"
               >
-                <span className="text-[11px]">✕</span>
+                <Calendar className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">
+                  {dateFrom || dateTo ? "Filtered" : "Dates"}
+                </span>
+                {(dateFrom || dateTo) && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                )}
               </button>
-            )}
-          </div>
-        </ToolbarGroup>
+            </PopoverTrigger>
+            <PopoverContent
+              align="start"
+              sideOffset={6}
+              className="z-[100] w-64 space-y-2 p-3"
+            >
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">
+                  From
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="h-9 w-full rounded-md border border-border bg-background px-2 text-[13px] focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">
+                  To
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="h-9 w-full rounded-md border border-border bg-background px-2 text-[13px] focus:outline-none"
+                />
+              </div>
+              {(dateFrom || dateTo) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDateFrom("");
+                    setDateTo("");
+                  }}
+                  className="w-full rounded-md px-2 py-1.5 text-[12px] font-medium text-muted-foreground hover:bg-muted"
+                >
+                  Clear dates
+                </button>
+              )}
+            </PopoverContent>
+          </Popover>
 
-        <Divider />
-
-        {/* Group: data actions */}
-        <ToolbarGroup>
-          <Dialog open={insertOpen} onOpenChange={setInsertOpen}>
-            <DialogTrigger asChild>
-              <button
-                type="button"
-                className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-2.5 text-[13px] font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
-              >
-                <ListPlus className="h-4 w-4" />
-                Insert
-              </button>
-            </DialogTrigger>
-            <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Insert questions</DialogTitle>
-                <DialogDescription>
-                  Paste one question per line. Each row is added to the sheet,
-                  then the agent fills in the empty answers.
-                </DialogDescription>
-              </DialogHeader>
-              <QuestionPasteBox
-                existingQuestions={existingQuestions}
-                table={activeTable}
-                processEndpoint={processEndpoint}
-                extraProcessBody={extraProcessBody}
-                disabledReason={vectorDisabledReason}
-
-
-                onComplete={async () => {
-                  setInsertOpen(false);
-                  setInserting(true);
-                  try {
-                    const result = await refetch();
-                    if (result.error) throw result.error;
-                  } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Failed to refresh table.");
-                  } finally {
-                    setInserting(false);
-                  }
-                }}
-              />
-            </DialogContent>
-          </Dialog>
-
-          <ToolbarAction
-            onClick={deleteSelectedRows}
-            disabled={selectedRowIds.size === 0}
-            title={
-              selectedRowIds.size === 0
-                ? "Select rows to delete"
-                : `Delete ${selectedRowIds.size} selected row${selectedRowIds.size === 1 ? "" : "s"}`
-            }
-            icon={<Trash2 className="h-4 w-4 text-destructive" />}
-            label="Delete"
-            badge={selectedRowIds.size > 0 ? selectedRowIds.size : undefined}
-            badgeTone="danger"
-          />
-
-          {/* Import questions from Excel/CSV */}
           <button
             type="button"
-            onClick={() => setExcelImportOpen(true)}
-            disabled={!activeTable}
-            className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-foreground/90 hover:bg-muted disabled:opacity-50"
-            title="Upload an Excel/CSV file and insert its questions into the active sheet"
+            onClick={handleRefresh}
+            disabled={refreshing || isFetching}
+            title="Refresh"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 hover:bg-muted disabled:opacity-50"
           >
-            <FileSpreadsheet className="h-4 w-4 text-primary" />
-            <span>Import Excel</span>
+            <RefreshCw
+              className={refreshing || isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"}
+            />
           </button>
-        </ToolbarGroup>
 
-        <Divider />
+          {/* Primary actions */}
+          <div className="ml-auto flex items-center gap-1.5">
+            <Dialog open={insertOpen} onOpenChange={setInsertOpen}>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+                >
+                  <ListPlus className="h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    {isDev ? "Test Questions" : "Run Questions"}
+                  </span>
+                  <span className="sm:hidden">Run</span>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    {isDev ? "Test questions (Development)" : "Insert questions"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Paste one question per line. Each row is added to the sheet,
+                    then the agent fills in the empty answers.
+                  </DialogDescription>
+                </DialogHeader>
+                <QuestionPasteBox
+                  existingQuestions={existingQuestions}
+                  table={activeTable}
+                  processEndpoint={processEndpoint}
+                  extraProcessBody={extraProcessBody}
+                  disabledReason={vectorDisabledReason}
+                  onComplete={async () => {
+                    setInsertOpen(false);
+                    setInserting(true);
+                    try {
+                      const result = await refetch();
+                      if (result.error) throw result.error;
+                    } catch (e) {
+                      toast.error(
+                        e instanceof Error ? e.message : "Failed to refresh table.",
+                      );
+                    } finally {
+                      setInserting(false);
+                    }
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
 
-        {/* Group: run processing — when rows are selected, allow re-running any channel */}
-        {selectedRowIds.size > 0 ? (
-          <>
-            <ToolbarGroup>
-              <ToolbarAction
-                onClick={() => setPendingChannel("web")}
-                disabled={runningChannel !== null}
-                title={`Run Text Chat agent (${selectedRowIds.size} selected)`}
-                icon={
-                  runningChannel === "web" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+            {!isDev && (
+              <button
+                type="button"
+                onClick={() => setExcelImportOpen(true)}
+                disabled={!activeTable}
+                title="Import questions from Excel/CSV"
+                className="hidden sm:flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[13px] font-medium hover:bg-muted disabled:opacity-50"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-primary" />
+                <span className="hidden lg:inline">Import</span>
+              </button>
+            )}
+            {!isDev && (
+              <button
+                type="button"
+                onClick={exportJson}
+                disabled={exporting || exportingJson}
+                title="Export selected rows as JSON"
+                className="hidden sm:flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[13px] font-medium hover:bg-muted disabled:opacity-50"
+              >
+                {exportingJson ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                <span className="hidden lg:inline">
+                  {exportingJson ? "Exporting…" : "Export JSON"}
+                </span>
+              </button>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  title="More actions"
+                  className="flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 max-h-[70vh] overflow-y-auto">
+                <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Cell
+                </div>
+                <DropdownMenuItem onClick={() => applyFormat({ highlight: true })}>
+                  <Highlighter className="mr-2 h-4 w-4 text-yellow-500" />
+                  Highlight cell
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => applyFormat({ error: true })}>
+                  <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
+                  Mark error
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => applyFormat(null)}>
+                  <Eraser className="mr-2 h-4 w-4" />
+                  Clear formatting
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Data
+                </div>
+                <DropdownMenuItem
+                  onClick={exportXlsx}
+                  disabled={exporting || exportingJson}
+                >
+                  {exporting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <MessageSquare className="h-4 w-4 text-primary" />
-                  )
-                }
-                label="Run Text Chat"
-                badge={selectedRowIds.size}
-              />
-
-
-
-            </ToolbarGroup>
-
-            <Divider />
-          </>
-        ) : null}
-
-
-
-
-        {/* Group: formatting */}
-        <ToolbarGroup>
-          <ToolbarAction
-            onClick={() => applyFormat({ highlight: true })}
-            title="Highlight cell yellow"
-            icon={<Highlighter className="h-4 w-4 text-yellow-500" />}
-            label="Highlight"
-          />
-          <ToolbarAction
-            onClick={() => applyFormat({ error: true })}
-            title="Mark cell text red"
-            icon={<AlertTriangle className="h-4 w-4 text-red-500" />}
-            label="Mark error"
-          />
-          <ToolbarAction
-            onClick={() => applyFormat(null)}
-            title="Clear formatting"
-            icon={<Eraser className="h-4 w-4 text-muted-foreground" />}
-            label="Clear"
-          />
-        </ToolbarGroup>
-
-        {/* Right side — sheet status */}
-        <div className="ml-auto flex items-center gap-2 text-[11px] text-muted-foreground tabular-nums">
-          {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  {exporting ? "Exporting…" : "Export Excel"}
+                </DropdownMenuItem>
+                {!isDev && (
+                  <>
+                    <DropdownMenuItem
+                      className="sm:hidden"
+                      onClick={exportJson}
+                      disabled={exporting || exportingJson}
+                    >
+                      {exportingJson ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="mr-2 h-4 w-4" />
+                      )}
+                      {exportingJson ? "Exporting…" : "Export JSON"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="sm:hidden"
+                      onClick={() => setExcelImportOpen(true)}
+                      disabled={!activeTable}
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Import Excel
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Sheet
+                </div>
+                <DropdownMenuItem onClick={() => setNewSheetOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New sheet…
+                </DropdownMenuItem>
+                {activeTable ? (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setRenameValue(activeTable.replace(/^qatest-/, ""));
+                        setRenameOpen({ open: true, from: activeTable });
+                      }}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Rename current sheet
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() =>
+                        setDeleteSheetConfirm({ open: true, name: activeTable })
+                      }
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete current sheet
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
+
+        {/* Selection strip */}
+        {selectedRowIds.size > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 border-t border-border/70 bg-muted/40 px-3 py-1.5">
+            <span className="text-[12px] font-medium">
+              {selectedRowIds.size} selected
+            </span>
+            <div className="mx-1 h-4 w-px bg-border" />
+            <button
+              type="button"
+              onClick={() => setPendingChannel("web")}
+              disabled={runningChannel !== null || !!vectorDisabledReason}
+              title={vectorDisabledReason ?? "Run Text Chat agent"}
+              className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-2.5 text-[12px] font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {runningChannel === "web" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <MessageSquare className="h-3.5 w-3.5" />
+              )}
+              Run Text Chat
+            </button>
+            <button
+              type="button"
+              onClick={deleteSelectedRows}
+              className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[12px] font-medium text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </button>
+            <div className="mx-1 h-4 w-px bg-border" />
+            <button
+              type="button"
+              onClick={() => applyFormat({ highlight: true })}
+              title="Highlight cell"
+              className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
+            >
+              <Highlighter className="h-3.5 w-3.5 text-yellow-500" />
+            </button>
+            <button
+              type="button"
+              onClick={() => applyFormat({ error: true })}
+              title="Mark error"
+              className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
+            >
+              <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+            </button>
+            <button
+              type="button"
+              onClick={() => applyFormat(null)}
+              title="Clear formatting"
+              className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
+            >
+              <Eraser className="h-3.5 w-3.5" />
+            </button>
+            <div className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+              {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
+            </div>
+          </div>
+        )}
       </div>
 
-
-
-
-
-      {/* Formula bar */}
-      <div className="hidden md:flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-2 py-1">
-        <div className="flex h-7 w-24 items-center justify-between rounded-sm border border-[var(--sheets-grid)] bg-card px-2 text-[12px] text-foreground">
+      {/* ============================ Formula bar ============================ */}
+      <div className="hidden md:flex shrink-0 items-center gap-2 border-b border-border bg-card px-2 py-1">
+        <div className="flex h-7 w-24 items-center justify-between rounded-sm border border-border bg-card px-2 text-[12px] text-foreground">
           {selection?.mode === "cell"
             ? cellRef(selection.col, selection.row)
             : selection?.mode === "col"
@@ -1761,9 +1709,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
                 : "A1"}
           <span className="text-[10px]">▾</span>
         </div>
-        <span className="font-serif text-[14px] italic text-muted-foreground">
-          fx
-        </span>
+        <span className="font-serif text-[14px] italic text-muted-foreground">fx</span>
         <div className="flex-1 truncate text-[13px] text-foreground">
           {selection?.mode === "cell" && filteredRows[selection.row]
             ? QA_COLUMNS[selection.col]?.raw(filteredRows[selection.row]) || (
@@ -1775,6 +1721,9 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
                 ? `${rows.length} row${rows.length === 1 ? "" : "s"} loaded`
                 : "—"}
         </div>
+        <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+          {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
+        </span>
       </div>
 
       {/* Error banner */}
@@ -1785,15 +1734,6 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
         </div>
       ) : null}
 
-      {/* Row count strip */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--sheets-grid)] bg-card px-3 py-1.5">
-        <span className="text-[11px] text-muted-foreground tabular-nums">
-          {activeTable ? `Sheet: ${formatTableLabel(activeTable)}` : "No sheet selected"}
-        </span>
-        <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
-          {filteredRows.length}/{rows.length} row{rows.length === 1 ? "" : "s"}
-        </span>
-      </div>
 
       {/* Grid */}
       <div className="flex-1 min-w-0 w-full overflow-x-auto overflow-y-auto">
