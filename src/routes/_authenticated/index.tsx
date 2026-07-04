@@ -1224,12 +1224,7 @@ export function DashboardPage() {
   };
 
   return (
-    <div
-      className={
-        "flex h-screen min-h-screen flex-col bg-background text-foreground " +
-        (isDev ? "dev-mode border-l-[3px] border-l-amber-500/70" : "")
-      }
-    >
+    <div className="dev-mode flex h-screen min-h-screen flex-col bg-background text-foreground">
       {/* ============================== AppBar ============================== */}
       <header
         className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 h-12"
@@ -1239,19 +1234,10 @@ export function DashboardPage() {
             <SheetIcon className="h-4 w-4 text-primary" />
           </div>
           <h1 className="truncate text-[14px] font-semibold leading-tight">
-            {isDev ? "RAG Development Workspace" : "RAG Evaluation Builder"}
+            RAG Evaluation Workspace
           </h1>
-          <span
-            className={
-              "ml-1 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide " +
-              (isDev
-                ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
-                : "bg-primary/10 text-primary")
-            }
-          >
-            {isDev ? "Development" : "Production"}
-          </span>
         </div>
+
 
         {/* Right cluster — desktop */}
         <div className="ml-auto hidden md:flex items-center gap-1">
