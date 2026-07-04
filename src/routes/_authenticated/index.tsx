@@ -120,8 +120,19 @@ async function fetchTables(): Promise<TablesResponse> {
   return (await res.json()) as TablesResponse;
 }
 
+const TABLE_PREFIX = "qatest-";
+const DEV_PREFIX = "qatest-dev-";
+function isDevTable(name: string): boolean {
+  return name.toLowerCase().startsWith(DEV_PREFIX);
+}
+function belongsTo(name: string, dev: boolean): boolean {
+  if (!name.toLowerCase().startsWith(TABLE_PREFIX)) return false;
+  return isDevTable(name) === dev;
+}
 function formatTableLabel(raw: string): string {
-  const stripped = raw.replace(/^qatest-/i, "");
+  const stripped = raw
+    .replace(/^qatest-/i, "")
+    .replace(/^dev-/i, "");
   if (!stripped) return raw;
   return stripped.charAt(0).toUpperCase() + stripped.slice(1);
 }
