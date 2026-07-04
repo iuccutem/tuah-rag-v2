@@ -120,8 +120,19 @@ async function fetchTables(): Promise<TablesResponse> {
   return (await res.json()) as TablesResponse;
 }
 
+const TABLE_PREFIX = "qatest-";
+const DEV_PREFIX = "qatest-dev-";
+function isDevTable(name: string): boolean {
+  return name.toLowerCase().startsWith(DEV_PREFIX);
+}
+function belongsTo(name: string, dev: boolean): boolean {
+  if (!name.toLowerCase().startsWith(TABLE_PREFIX)) return false;
+  return isDevTable(name) === dev;
+}
 function formatTableLabel(raw: string): string {
-  const stripped = raw.replace(/^qatest-/i, "");
+  const stripped = raw
+    .replace(/^qatest-/i, "")
+    .replace(/^dev-/i, "");
   if (!stripped) return raw;
   return stripped.charAt(0).toUpperCase() + stripped.slice(1);
 }
@@ -177,16 +188,54 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
     queryFn: fetchTables,
     refetchOnWindowFocus: false,
   });
-  const tables = (tablesQuery.data?.tables ?? []).filter((t) =>
-    t.startsWith("qatest-"),
+  const allTables = (tablesQuery.data?.tables ?? []).filter((t) =>
+    t.startsWith(TABLE_PREFIX),
   );
+  const tables = allTables.filter((t) => belongsTo(t, isDev));
+  const oppositeTables = allTables.filter((t) => belongsTo(t, !isDev));
 
-  // Set the first table as the active one on initial load.
+  // Set the first table as the active one on initial load / after env switch.
   useEffect(() => {
     if (!activeTable && tables.length > 0) {
       setActiveTable(tables[0]);
+    } else if (activeTable && !tables.includes(activeTable)) {
+      // Env changed underneath us — pick a valid table for this env.
+      setActiveTable(tables[0] ?? "");
+      setSelection(null);
+      setSelectedRowIds(new Set());
     }
   }, [tables, activeTable]);
+
+  // Auto-seed the `test` starter table on first Dev load.
+  const seedRanRef = useRef(false);
+  useEffect(() => {
+    if (!isDev) return;
+    if (seedRanRef.current) return;
+    if (tablesQuery.isLoading) return;
+    if (tables.length > 0) return;
+    if (typeof window !== "undefined") {
+      if (sessionStorage.getItem("rag-dev-test-seeded") === "1") return;
+      sessionStorage.setItem("rag-dev-test-seeded", "1");
+    }
+    seedRanRef.current = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/n8n-create-table", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "qatest-dev-test" }),
+        });
+        const json = (await res.json()) as { ok: boolean; error?: string };
+        if (json.ok) {
+          toast.success('Created starter table "test".');
+          await tablesQuery.refetch();
+          setActiveTable("qatest-dev-test");
+        }
+      } catch {
+        /* silent — user can create manually */
+      }
+    })();
+  }, [isDev, tablesQuery.isLoading, tables.length]);
 
   // Refs for the bottom sheet-tab strip so we can auto-scroll to the newest
   // or currently active tab (important on mobile / iPad where tabs overflow).
@@ -262,6 +311,10 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
   const [syncing, setSyncing] = useState(false);
   const [syncPhase, setSyncPhase] = useState<"waiting" | "refreshing">("waiting");
   const [inserting, setInserting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importTarget, setImportTarget] = useState<string>("");
+  const [importQueue, setImportQueue] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
   const [formats, setFormats] = useState<FormatsMap>(() => {
     if (typeof window === "undefined") return {};
     try {
@@ -388,7 +441,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
       const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
-      const rawTable = (activeTable || "all").replace(/^qatest-/, "");
+      const rawTable = (activeTable || "all").replace(/^qatest-(dev-)?/, "");
       const tableTag = rawTable
         .replace(/-/g, "_")
         .replace(/[^a-zA-Z0-9_]/g, "_");
@@ -420,8 +473,14 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
       toast.error("Table name is required.");
       return;
     }
-    const formatted = `qatest-${raw.toLowerCase().replace(/\s+/g, "-")}`;
-    if (!/^qatest-[a-z0-9-]+$/.test(formatted)) {
+    const prefix = isDev ? DEV_PREFIX : TABLE_PREFIX;
+    const slug = raw
+      .toLowerCase()
+      .replace(/^qatest-(dev-)?/, "")
+      .replace(/^dev-/, "")
+      .replace(/\s+/g, "-");
+    const formatted = `${prefix}${slug}`;
+    if (!/^[a-z0-9-]+$/.test(slug) || !slug) {
       toast.error("Use letters, numbers, spaces or dashes only.");
       return;
     }
@@ -459,8 +518,14 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
       toast.error("New name is required.");
       return;
     }
-    const formatted = `qatest-${raw.toLowerCase().replace(/^qatest-/, "").replace(/\s+/g, "-")}`;
-    if (!/^qatest-[a-z0-9-]+$/.test(formatted)) {
+    const prefix = isDev ? DEV_PREFIX : TABLE_PREFIX;
+    const slug = raw
+      .toLowerCase()
+      .replace(/^qatest-(dev-)?/, "")
+      .replace(/^dev-/, "")
+      .replace(/\s+/g, "-");
+    const formatted = `${prefix}${slug}`;
+    if (!/^[a-z0-9-]+$/.test(slug) || !slug) {
       toast.error("Use letters, numbers, spaces or dashes only.");
       return;
     }
@@ -512,7 +577,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
       toast.success(`Deleted sheet "${formatTableLabel(name)}".`);
       setDeleteSheetConfirm({ open: false, name: "" });
       const result = await tablesQuery.refetch();
-      const fresh = (result.data?.tables ?? []).filter((t) => t.startsWith("qatest-"));
+      const fresh = (result.data?.tables ?? []).filter((t) => belongsTo(t, isDev));
       if (activeTable === name) {
         const next = fresh[0] ?? "";
         setActiveTable(next);
@@ -532,7 +597,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
       // Step 1: Re-fetch tables first
       const tableResult = await tablesQuery.refetch();
       const freshTables = (tableResult.data?.tables ?? []).filter((t) =>
-        t.startsWith("qatest-"),
+        belongsTo(t, isDev),
       );
 
       // Step 2: Verify active table; switch if no longer valid
@@ -832,6 +897,70 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
     setDeleteConfirm({ open: true, items });
   };
 
+  const openImportDialog = () => {
+    if (selectedRowIds.size === 0) {
+      toast.error("Select at least one row to import.");
+      return;
+    }
+    const questions: string[] = [];
+    for (const row of filteredRows) {
+      const key = row.id ?? row.question ?? "";
+      if (selectedRowIds.has(key)) {
+        const q = (row.question ?? "").trim();
+        if (q) questions.push(q);
+      }
+    }
+    if (questions.length === 0) {
+      toast.error("Selected rows have no question text.");
+      return;
+    }
+    setImportQueue(questions);
+    setImportTarget(oppositeTables[0] ?? "");
+    setImportOpen(true);
+  };
+
+  const runImport = async () => {
+    if (!importTarget) {
+      toast.error("Pick a target sheet.");
+      return;
+    }
+    if (importQueue.length === 0) {
+      toast.error("No questions to import.");
+      return;
+    }
+    setImporting(true);
+    let ok = 0;
+    let fail = 0;
+    try {
+      for (const question of importQueue) {
+        try {
+          const res = await fetch("/api/n8n-run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question, table: importTarget }),
+          });
+          const json = (await res.json()) as { ok: boolean; error?: string };
+          if (json.ok) ok++;
+          else fail++;
+        } catch {
+          fail++;
+        }
+      }
+      if (ok > 0) {
+        toast.success(
+          `Imported ${ok}/${importQueue.length} question${importQueue.length === 1 ? "" : "s"} to "${formatTableLabel(importTarget)}"${fail > 0 ? ` · ${fail} failed` : ""}.`,
+        );
+      } else {
+        toast.error("No questions imported.");
+      }
+      queryClient.invalidateQueries({ queryKey: ["qa-rows", importTarget], exact: true });
+      setImportOpen(false);
+      setImportQueue([]);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const confirmDelete = async () => {
     const items = deleteConfirm.items;
     // Close the confirm dialog and switch to a full-screen loading overlay.
@@ -1077,7 +1206,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
       const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
-      const rawTable = (activeTable || "all").replace(/^qatest-/, "");
+      const rawTable = (activeTable || "all").replace(/^qatest-(dev-)?/, "");
       const tableTag = rawTable
         .replace(/-/g, "_")
         .replace(/[^a-zA-Z0-9_]/g, "_");
@@ -1295,7 +1424,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setRenameValue(t.replace(/^qatest-/, ""));
+                        setRenameValue(t.replace(/^qatest-(dev-)?/, ""));
                         setRenameOpen({ open: true, from: t });
                       }}
                       title="Rename sheet"
@@ -1613,7 +1742,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
                   <>
                     <DropdownMenuItem
                       onClick={() => {
-                        setRenameValue(activeTable.replace(/^qatest-/, ""));
+                        setRenameValue(activeTable.replace(/^qatest-(dev-)?/, ""));
                         setRenameOpen({ open: true, from: activeTable });
                       }}
                     >
@@ -1638,17 +1767,47 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
 
         {/* Selection strip */}
         {selectedRowIds.size > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 border-t border-border/70 bg-muted/40 px-3 py-1.5">
-            <span className="text-[12px] font-medium">
-              {selectedRowIds.size} selected
-            </span>
-            <div className="mx-1 h-4 w-px bg-border" />
+          <div
+            className={
+              "flex flex-wrap items-center gap-2 border-t px-3 py-2 " +
+              (isDev
+                ? "border-amber-500/25 bg-amber-500/[0.08]"
+                : "border-border/70 bg-primary/[0.06]")
+            }
+          >
+            {/* Count chip */}
+            <div className="flex items-center gap-2">
+              <span
+                className={
+                  "inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-[11px] font-semibold tabular-nums " +
+                  (isDev
+                    ? "bg-amber-500/25 text-amber-800 dark:text-amber-200"
+                    : "bg-primary/15 text-primary")
+                }
+              >
+                {selectedRowIds.size}
+              </span>
+              <span className="text-[12px] font-medium text-foreground">
+                row{selectedRowIds.size === 1 ? "" : "s"} selected
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedRowIds(new Set())}
+                className="text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              >
+                Clear
+              </button>
+            </div>
+
+            <div className="mx-1 h-5 w-px bg-border/60" />
+
+            {/* Primary action: Run */}
             <button
               type="button"
               onClick={() => setPendingChannel("web")}
               disabled={runningChannel !== null || !!vectorDisabledReason}
               title={vectorDisabledReason ?? "Run Text Chat agent"}
-              className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-2.5 text-[12px] font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-50"
             >
               {runningChannel === "web" ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1657,45 +1816,65 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
               )}
               Run Text Chat
             </button>
+
+            {/* Import to opposite environment */}
+            <button
+              type="button"
+              onClick={openImportDialog}
+              title={`Copy selected questions to ${isDev ? "Production" : "Development"}`}
+              className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[12px] font-medium hover:bg-muted"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              <span>Import → {isDev ? "Prod" : "Dev"}</span>
+            </button>
+
+            {/* Format dropdown (collapsed) */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  title="Format cell"
+                  className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[12px] font-medium hover:bg-muted"
+                >
+                  <Highlighter className="h-3.5 w-3.5 text-yellow-500" />
+                  <span className="hidden sm:inline">Format</span>
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-44">
+                <DropdownMenuItem onClick={() => applyFormat({ highlight: true })}>
+                  <Highlighter className="mr-2 h-4 w-4 text-yellow-500" />
+                  Highlight cell
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => applyFormat({ error: true })}>
+                  <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
+                  Mark error
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => applyFormat(null)}>
+                  <Eraser className="mr-2 h-4 w-4" />
+                  Clear formatting
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Destructive */}
             <button
               type="button"
               onClick={deleteSelectedRows}
-              className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[12px] font-medium text-destructive hover:bg-destructive/10"
+              className="flex h-8 items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/5 px-2.5 text-[12px] font-medium text-destructive hover:bg-destructive/10"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Delete
             </button>
-            <div className="mx-1 h-4 w-px bg-border" />
-            <button
-              type="button"
-              onClick={() => applyFormat({ highlight: true })}
-              title="Highlight cell"
-              className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-            >
-              <Highlighter className="h-3.5 w-3.5 text-yellow-500" />
-            </button>
-            <button
-              type="button"
-              onClick={() => applyFormat({ error: true })}
-              title="Mark error"
-              className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-            >
-              <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
-            </button>
-            <button
-              type="button"
-              onClick={() => applyFormat(null)}
-              title="Clear formatting"
-              className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-            >
-              <Eraser className="h-3.5 w-3.5" />
-            </button>
+
             <div className="ml-auto text-[11px] text-muted-foreground tabular-nums">
               {isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
             </div>
           </div>
         )}
       </div>
+
 
       {/* ============================ Formula bar ============================ */}
       <div className="hidden md:flex shrink-0 items-center gap-2 border-b border-border bg-card px-2 py-1">
@@ -1807,7 +1986,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
                   <DropdownMenuContent align="start" className="w-40">
                     <DropdownMenuItem
                       onClick={() => {
-                        setRenameValue(t.replace(/^qatest-/, ""));
+                        setRenameValue(t.replace(/^qatest-(dev-)?/, ""));
                         setRenameOpen({ open: true, from: t });
                       }}
                     >
@@ -1884,7 +2063,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
             <DialogTitle>Rename sheet</DialogTitle>
             <DialogDescription>
               Rename <span className="font-mono">{renameOpen.from}</span>. The{" "}
-              <span className="font-mono">qatest-</span> prefix is added automatically.
+              <span className="font-mono">{isDev ? DEV_PREFIX : TABLE_PREFIX}</span> prefix is added automatically.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
@@ -1904,7 +2083,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
               <div className="text-[12px] text-muted-foreground">
                 Will rename to:{" "}
                 <span className="font-mono text-foreground">
-                  qatest-{renameValue.trim().toLowerCase().replace(/^qatest-/, "").replace(/\s+/g, "-")}
+                  {isDev ? DEV_PREFIX : TABLE_PREFIX}{renameValue.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "-")}
                 </span>
               </div>
             )}
@@ -1982,7 +2161,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
             <DialogTitle>New sheet</DialogTitle>
             <DialogDescription>
               Enter a table name. It will be lowercased, spaces become dashes,
-              and a <span className="font-mono">qatest-</span> prefix is added.
+              and a <span className="font-mono">{isDev ? DEV_PREFIX : TABLE_PREFIX}</span> prefix is added.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
@@ -2001,7 +2180,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
             />
             {newSheetName.trim() && (
               <div className="text-[12px] text-muted-foreground">
-                Will create: <span className="font-mono text-foreground">qatest-{newSheetName.trim().toLowerCase().replace(/\s+/g, "-")}</span>
+                Will create: <span className="font-mono text-foreground">{isDev ? DEV_PREFIX : TABLE_PREFIX}{newSheetName.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "-")}</span>
               </div>
             )}
           </div>
@@ -2120,6 +2299,121 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
         </DialogContent>
       </Dialog>
 
+
+      {/* Import → opposite environment dialog */}
+      <Dialog
+        open={importOpen}
+        onOpenChange={(o) => {
+          if (!importing) setImportOpen(o);
+        }}
+      >
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" />
+              Import {importQueue.length} question{importQueue.length === 1 ? "" : "s"} to{" "}
+              {isDev ? "Production" : "Development"}
+            </DialogTitle>
+            <DialogDescription>
+              Only the question text is copied. Answers, URLs and channels stay
+              empty in the destination sheet and can be re-run there.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-1">
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-medium text-muted-foreground">
+                Target sheet ({isDev ? "Production" : "Development"})
+              </label>
+              {oppositeTables.length === 0 ? (
+                <div className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-[12px] text-yellow-900 dark:text-yellow-200">
+                  No sheets exist in {isDev ? "Production" : "Development"} yet.
+                  Create one there first, then try again.
+                </div>
+              ) : (
+                <Select value={importTarget} onValueChange={setImportTarget}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select sheet…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {oppositeTables.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {formatTableLabel(t)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-auto rounded-md border border-[var(--sheets-grid)] bg-muted/30 p-2">
+            {importQueue.length === 0 ? (
+              <p className="p-2 text-[12px] text-muted-foreground">
+                No questions in the queue.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border/60">
+                {importQueue.map((q, i) => (
+                  <li
+                    key={`${i}-${q}`}
+                    className="flex items-start gap-2 px-2 py-2 text-[13px]"
+                  >
+                    <span className="mt-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-background px-1.5 text-[10px] font-semibold text-muted-foreground tabular-nums">
+                      {i + 1}
+                    </span>
+                    <span className="flex-1 line-clamp-2 break-words text-foreground">
+                      {q}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImportQueue((prev) =>
+                          prev.filter((_, idx) => idx !== i),
+                        )
+                      }
+                      disabled={importing}
+                      title="Remove from import"
+                      className="shrink-0 rounded p-1 text-muted-foreground hover:bg-background hover:text-destructive disabled:opacity-50"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setImportOpen(false)}
+              disabled={importing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={runImport}
+              disabled={
+                importing ||
+                importQueue.length === 0 ||
+                !importTarget ||
+                oppositeTables.length === 0
+              }
+              className="gap-2"
+            >
+              {importing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              {importing
+                ? "Importing…"
+                : `Import ${importQueue.length} question${importQueue.length === 1 ? "" : "s"}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Register user dialog */}
       <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
