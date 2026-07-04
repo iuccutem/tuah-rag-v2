@@ -311,6 +311,10 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
   const [syncing, setSyncing] = useState(false);
   const [syncPhase, setSyncPhase] = useState<"waiting" | "refreshing">("waiting");
   const [inserting, setInserting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importTarget, setImportTarget] = useState<string>("");
+  const [importQueue, setImportQueue] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
   const [formats, setFormats] = useState<FormatsMap>(() => {
     if (typeof window === "undefined") return {};
     try {
