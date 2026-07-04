@@ -436,8 +436,6 @@ function EditableCell({
     onBlur: () => void commit(),
     onKeyDown: onKey,
     onClick: (e: React.MouseEvent) => e.stopPropagation(),
-    onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      e.currentTarget.select(),
   };
 
   return (
