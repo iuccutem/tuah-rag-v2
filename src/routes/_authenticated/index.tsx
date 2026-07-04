@@ -573,7 +573,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
       toast.success(`Deleted sheet "${formatTableLabel(name)}".`);
       setDeleteSheetConfirm({ open: false, name: "" });
       const result = await tablesQuery.refetch();
-      const fresh = (result.data?.tables ?? []).filter((t) => t.startsWith("qatest-"));
+      const fresh = (result.data?.tables ?? []).filter((t) => belongsTo(t, isDev));
       if (activeTable === name) {
         const next = fresh[0] ?? "";
         setActiveTable(next);
