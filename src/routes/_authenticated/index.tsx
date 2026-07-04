@@ -188,16 +188,54 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
     queryFn: fetchTables,
     refetchOnWindowFocus: false,
   });
-  const tables = (tablesQuery.data?.tables ?? []).filter((t) =>
-    t.startsWith("qatest-"),
+  const allTables = (tablesQuery.data?.tables ?? []).filter((t) =>
+    t.startsWith(TABLE_PREFIX),
   );
+  const tables = allTables.filter((t) => belongsTo(t, isDev));
+  const oppositeTables = allTables.filter((t) => belongsTo(t, !isDev));
 
-  // Set the first table as the active one on initial load.
+  // Set the first table as the active one on initial load / after env switch.
   useEffect(() => {
     if (!activeTable && tables.length > 0) {
       setActiveTable(tables[0]);
+    } else if (activeTable && !tables.includes(activeTable)) {
+      // Env changed underneath us — pick a valid table for this env.
+      setActiveTable(tables[0] ?? "");
+      setSelection(null);
+      setSelectedRowIds(new Set());
     }
   }, [tables, activeTable]);
+
+  // Auto-seed the `test` starter table on first Dev load.
+  const seedRanRef = useRef(false);
+  useEffect(() => {
+    if (!isDev) return;
+    if (seedRanRef.current) return;
+    if (tablesQuery.isLoading) return;
+    if (tables.length > 0) return;
+    if (typeof window !== "undefined") {
+      if (sessionStorage.getItem("rag-dev-test-seeded") === "1") return;
+      sessionStorage.setItem("rag-dev-test-seeded", "1");
+    }
+    seedRanRef.current = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/n8n-create-table", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "qatest-dev-test" }),
+        });
+        const json = (await res.json()) as { ok: boolean; error?: string };
+        if (json.ok) {
+          toast.success('Created starter table "test".');
+          await tablesQuery.refetch();
+          setActiveTable("qatest-dev-test");
+        }
+      } catch {
+        /* silent — user can create manually */
+      }
+    })();
+  }, [isDev, tablesQuery.isLoading, tables.length]);
 
   // Refs for the bottom sheet-tab strip so we can auto-scroll to the newest
   // or currently active tab (important on mobile / iPad where tabs overflow).
