@@ -50,20 +50,19 @@ export const Route = createFileRoute("/api/n8n-vector-list")({
   server: {
     handlers: {
       GET: async () => {
-        const user = process.env.N8N_WEBHOOK_USER;
-        const password = process.env.N8N_WEBHOOK_PASSWORD;
-        if (!user || !password) {
+        if (!process.env.N8N_JWT_SECRET) {
           return Response.json(
-            { vectors: [], error: "Webhook credentials are not configured." },
+            { vectors: [], error: "Webhook JWT secret is not configured." },
             { status: 200, headers: { "Cache-Control": "no-store" } },
           );
         }
-        const auth = Buffer.from(`${user}:${password}`).toString("base64");
         try {
+          const { signN8nJwt } = await import("@/lib/n8n-jwt.server");
+          const token = await signN8nJwt();
           const res = await fetch(WEBHOOK_URL, {
             method: "GET",
             headers: {
-              Authorization: `Basic ${auth}`,
+              Authorization: `Bearer ${token}`,
               Accept: "application/json",
             },
           });
