@@ -437,7 +437,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
       const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
-      const rawTable = (activeTable || "all").replace(/^qatest-/, "");
+      const rawTable = (activeTable || "all").replace(/^qatest-(dev-)?/, "");
       const tableTag = rawTable
         .replace(/-/g, "_")
         .replace(/[^a-zA-Z0-9_]/g, "_");
@@ -472,7 +472,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
     const prefix = isDev ? DEV_PREFIX : TABLE_PREFIX;
     const slug = raw
       .toLowerCase()
-      .replace(/^qatest-/, "")
+      .replace(/^qatest-(dev-)?/, "")
       .replace(/^dev-/, "")
       .replace(/\s+/g, "-");
     const formatted = `${prefix}${slug}`;
@@ -517,7 +517,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
     const prefix = isDev ? DEV_PREFIX : TABLE_PREFIX;
     const slug = raw
       .toLowerCase()
-      .replace(/^qatest-/, "")
+      .replace(/^qatest-(dev-)?/, "")
       .replace(/^dev-/, "")
       .replace(/\s+/g, "-");
     const formatted = `${prefix}${slug}`;
@@ -1138,7 +1138,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
       const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
-      const rawTable = (activeTable || "all").replace(/^qatest-/, "");
+      const rawTable = (activeTable || "all").replace(/^qatest-(dev-)?/, "");
       const tableTag = rawTable
         .replace(/-/g, "_")
         .replace(/[^a-zA-Z0-9_]/g, "_");
@@ -1356,7 +1356,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setRenameValue(t.replace(/^qatest-/, ""));
+                        setRenameValue(t.replace(/^qatest-(dev-)?/, ""));
                         setRenameOpen({ open: true, from: t });
                       }}
                       title="Rename sheet"
@@ -1674,7 +1674,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
                   <>
                     <DropdownMenuItem
                       onClick={() => {
-                        setRenameValue(activeTable.replace(/^qatest-/, ""));
+                        setRenameValue(activeTable.replace(/^qatest-(dev-)?/, ""));
                         setRenameOpen({ open: true, from: activeTable });
                       }}
                     >
@@ -1868,7 +1868,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
                   <DropdownMenuContent align="start" className="w-40">
                     <DropdownMenuItem
                       onClick={() => {
-                        setRenameValue(t.replace(/^qatest-/, ""));
+                        setRenameValue(t.replace(/^qatest-(dev-)?/, ""));
                         setRenameOpen({ open: true, from: t });
                       }}
                     >
@@ -1965,7 +1965,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
               <div className="text-[12px] text-muted-foreground">
                 Will rename to:{" "}
                 <span className="font-mono text-foreground">
-                  qatest-{renameValue.trim().toLowerCase().replace(/^qatest-/, "").replace(/\s+/g, "-")}
+                  qatest-{renameValue.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "-")}
                 </span>
               </div>
             )}
