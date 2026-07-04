@@ -897,6 +897,70 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
     setDeleteConfirm({ open: true, items });
   };
 
+  const openImportDialog = () => {
+    if (selectedRowIds.size === 0) {
+      toast.error("Select at least one row to import.");
+      return;
+    }
+    const questions: string[] = [];
+    for (const row of filteredRows) {
+      const key = row.id ?? row.question ?? "";
+      if (selectedRowIds.has(key)) {
+        const q = (row.question ?? "").trim();
+        if (q) questions.push(q);
+      }
+    }
+    if (questions.length === 0) {
+      toast.error("Selected rows have no question text.");
+      return;
+    }
+    setImportQueue(questions);
+    setImportTarget(oppositeTables[0] ?? "");
+    setImportOpen(true);
+  };
+
+  const runImport = async () => {
+    if (!importTarget) {
+      toast.error("Pick a target sheet.");
+      return;
+    }
+    if (importQueue.length === 0) {
+      toast.error("No questions to import.");
+      return;
+    }
+    setImporting(true);
+    let ok = 0;
+    let fail = 0;
+    try {
+      for (const question of importQueue) {
+        try {
+          const res = await fetch("/api/n8n-run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question, table: importTarget }),
+          });
+          const json = (await res.json()) as { ok: boolean; error?: string };
+          if (json.ok) ok++;
+          else fail++;
+        } catch {
+          fail++;
+        }
+      }
+      if (ok > 0) {
+        toast.success(
+          `Imported ${ok}/${importQueue.length} question${importQueue.length === 1 ? "" : "s"} to "${formatTableLabel(importTarget)}"${fail > 0 ? ` · ${fail} failed` : ""}.`,
+        );
+      } else {
+        toast.error("No questions imported.");
+      }
+      queryClient.invalidateQueries({ queryKey: ["qa-rows", importTarget], exact: true });
+      setImportOpen(false);
+      setImportQueue([]);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const confirmDelete = async () => {
     const items = deleteConfirm.items;
     // Close the confirm dialog and switch to a full-screen loading overlay.
