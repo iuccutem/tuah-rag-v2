@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 // Trigger the agent to process rows for a given channel.
 const WEBHOOK_URLS = {
-  web: "https://tuah.utem.edu.my/agent/webhook/dfa18ba2-f8f8-4257-a8fd-646b2c002d95",
+  web: "https://tuah.utem.edu.my/agent/webhook/ad7bc9b8-0b89-4e4a-bdb5-89b83ecddc59",
   telegram_whatsapp:
     "https://tuah.utem.edu.my/agent/webhook/ad7bc9b8-0b89-4e4a-bdb5-89b83ecddc59",
 } as const;
@@ -16,11 +16,13 @@ export const Route = createFileRoute("/api/n8n-process")({
         let channel: Channel = "web";
         let question = "";
         let table = "";
+        let vectorId = "";
         try {
           const body = (await request.json()) as {
             channel?: string;
             question?: string;
             table?: string;
+            vector_id?: string;
           };
           if (body.channel === "telegram_whatsapp" || body.channel === "web") {
             channel = body.channel;
@@ -30,6 +32,9 @@ export const Route = createFileRoute("/api/n8n-process")({
           }
           if (typeof body.table === "string") {
             table = body.table.trim();
+          }
+          if (typeof body.vector_id === "string") {
+            vectorId = body.vector_id.trim();
           }
         } catch {
           // default to web, no question
@@ -49,6 +54,7 @@ export const Route = createFileRoute("/api/n8n-process")({
           const upstream: Record<string, unknown> = {};
           if (question) upstream.question = question;
           if (table) upstream.table = table;
+          if (vectorId) upstream.vector_id = vectorId;
           const res = await fetch(WEBHOOK_URL, {
             method: "POST",
             headers: {
