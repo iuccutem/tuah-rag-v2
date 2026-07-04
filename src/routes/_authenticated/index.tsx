@@ -593,7 +593,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
       // Step 1: Re-fetch tables first
       const tableResult = await tablesQuery.refetch();
       const freshTables = (tableResult.data?.tables ?? []).filter((t) =>
-        t.startsWith("qatest-"),
+        belongsTo(t, isDev),
       );
 
       // Step 2: Verify active table; switch if no longer valid
