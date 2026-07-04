@@ -1965,7 +1965,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
               <div className="text-[12px] text-muted-foreground">
                 Will rename to:{" "}
                 <span className="font-mono text-foreground">
-                  qatest-{renameValue.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "-")}
+                  {isDev ? DEV_PREFIX : TABLE_PREFIX}{renameValue.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "-")}
                 </span>
               </div>
             )}
