@@ -25,7 +25,6 @@ import { Route as ApiN8nDevProcessRouteImport } from './routes/api/n8n-dev-proce
 import { Route as ApiN8nDeleteTableRouteImport } from './routes/api/n8n-delete-table'
 import { Route as ApiN8nDeleteRouteImport } from './routes/api/n8n-delete'
 import { Route as ApiN8nCreateTableRouteImport } from './routes/api/n8n-create-table'
-import { Route as AuthenticatedDevRouteImport } from './routes/_authenticated/dev'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -106,16 +105,10 @@ const ApiN8nCreateTableRoute = ApiN8nCreateTableRouteImport.update({
   path: '/api/n8n-create-table',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedDevRoute = AuthenticatedDevRouteImport.update({
-  id: '/dev',
-  path: '/dev',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
-  '/dev': typeof AuthenticatedDevRoute
   '/api/n8n-create-table': typeof ApiN8nCreateTableRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-delete-table': typeof ApiN8nDeleteTableRoute
@@ -132,7 +125,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
-  '/dev': typeof AuthenticatedDevRoute
   '/api/n8n-create-table': typeof ApiN8nCreateTableRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-delete-table': typeof ApiN8nDeleteTableRoute
@@ -152,7 +144,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/dev': typeof AuthenticatedDevRoute
   '/api/n8n-create-table': typeof ApiN8nCreateTableRoute
   '/api/n8n-delete': typeof ApiN8nDeleteRoute
   '/api/n8n-delete-table': typeof ApiN8nDeleteTableRoute
@@ -173,7 +164,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
-    | '/dev'
     | '/api/n8n-create-table'
     | '/api/n8n-delete'
     | '/api/n8n-delete-table'
@@ -190,7 +180,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
-    | '/dev'
     | '/api/n8n-create-table'
     | '/api/n8n-delete'
     | '/api/n8n-delete-table'
@@ -209,7 +198,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/auth'
-    | '/_authenticated/dev'
     | '/api/n8n-create-table'
     | '/api/n8n-delete'
     | '/api/n8n-delete-table'
@@ -358,23 +346,14 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiN8nCreateTableRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/dev': {
-      id: '/_authenticated/dev'
-      path: '/dev'
-      fullPath: '/dev'
-      preLoaderRoute: typeof AuthenticatedDevRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedDevRoute: typeof AuthenticatedDevRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedDevRoute: AuthenticatedDevRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 
@@ -401,13 +380,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

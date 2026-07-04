@@ -85,15 +85,15 @@ import { ExcelImportBox } from "@/components/qa-dashboard/ExcelImportBox";
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "RAG Evaluation Builder" },
+      { title: "RAG Evaluation Workspace" },
       {
         name: "description",
         content:
-          "RAG Evaluation Builder — spreadsheet-style workspace to curate Q&A across faculties and messaging channels.",
+          "RAG Evaluation Workspace — spreadsheet-style workspace to curate Q&A and test against selectable vector stores.",
       },
     ],
   }),
-  component: () => <DashboardPage mode="prod" />,
+  component: () => <DashboardPage />,
 });
 
 type ApiResponse = { data: QARow[]; error: string | null };
@@ -137,10 +137,11 @@ function formatTableLabel(raw: string): string {
   return stripped.charAt(0).toUpperCase() + stripped.slice(1);
 }
 
-export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {}) {
-  const isDev = mode === "dev";
-  const processEndpoint = isDev ? "/api/n8n-dev-process" : "/api/n8n-process";
-  const VECTOR_STORAGE_KEY = "rag-dev-vector-id";
+export function DashboardPage() {
+  // Dev/prod merged: single workspace with always-available vector store picker.
+  const isDev = false;
+  const processEndpoint = "/api/n8n-process";
+  const VECTOR_STORAGE_KEY = "rag-vector-id";
   const [vectorId, setVectorId] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem(VECTOR_STORAGE_KEY) ?? "";
@@ -161,22 +162,20 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
         error: string | null;
       };
     },
-    enabled: isDev,
     refetchOnWindowFocus: false,
   });
   const vectors = vectorsQuery.data?.vectors ?? [];
   useEffect(() => {
-    if (!isDev) return;
     if (!vectorId && vectors.length > 0) setVectorId(vectors[0].id);
-  }, [isDev, vectorId, vectors]);
-  const vectorDisabledReason = isDev && !vectorId
+  }, [vectorId, vectors]);
+  const vectorDisabledReason = !vectorId
     ? vectorsQuery.isLoading
       ? "Loading vector stores…"
       : vectors.length === 0
         ? `No vector stores available${vectorsQuery.data?.error ? `: ${vectorsQuery.data.error}` : "."}`
         : "Select a vector store first."
     : null;
-  const extraProcessBody = isDev && vectorId ? { vector_id: vectorId } : undefined;
+  const extraProcessBody = vectorId ? { vector_id: vectorId } : undefined;
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
   const queryClient = useQueryClient();
@@ -1225,12 +1224,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
   };
 
   return (
-    <div
-      className={
-        "flex h-screen min-h-screen flex-col bg-background text-foreground " +
-        (isDev ? "dev-mode border-l-[3px] border-l-amber-500/70" : "")
-      }
-    >
+    <div className="dev-mode flex h-screen min-h-screen flex-col bg-background text-foreground">
       {/* ============================== AppBar ============================== */}
       <header
         className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 h-12"
@@ -1240,38 +1234,14 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
             <SheetIcon className="h-4 w-4 text-primary" />
           </div>
           <h1 className="truncate text-[14px] font-semibold leading-tight">
-            {isDev ? "RAG Development Workspace" : "RAG Evaluation Builder"}
+            RAG Evaluation Workspace
           </h1>
-          <span
-            className={
-              "ml-1 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide " +
-              (isDev
-                ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
-                : "bg-primary/10 text-primary")
-            }
-          >
-            {isDev ? "Development" : "Production"}
-          </span>
         </div>
+
 
         {/* Right cluster — desktop */}
         <div className="ml-auto hidden md:flex items-center gap-1">
-          <div className="flex items-center rounded-md border border-border bg-background p-0.5">
-            <Link
-              to="/"
-              activeOptions={{ exact: true }}
-              className="rounded px-2 py-1 text-[12px] font-medium text-foreground/70 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
-            >
-              Production
-            </Link>
-            <Link
-              to="/dev"
-              className="rounded px-2 py-1 text-[12px] font-medium text-foreground/70 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
-            >
-              Development
-            </Link>
-          </div>
-          <div className="mx-1 h-5 w-px bg-border" />
+
           <button
             type="button"
             onClick={toggleTheme}
@@ -1324,19 +1294,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem asChild>
-                <Link to="/">
-                  <SheetIcon className="mr-2 h-4 w-4" />
-                  Production {mode === "prod" ? "✓" : ""}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/dev">
-                  <Layers className="mr-2 h-4 w-4" />
-                  Development {mode === "dev" ? "✓" : ""}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+
               <DropdownMenuItem onClick={toggleTheme}>
                 {theme === "dark" ? (
                   <Sun className="mr-2 h-4 w-4" />
@@ -1448,43 +1406,42 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Dev-only vector chip */}
-          {isDev ? (
-            <div
-              className={
-                "flex h-9 min-w-0 items-center gap-1.5 rounded-md border px-2 text-[13px] " +
-                (vectorId
-                  ? "border-amber-500/40 bg-amber-500/10"
-                  : "border-destructive/40 bg-destructive/5")
-              }
-              title={vectorDisabledReason ?? "Selected vector store"}
-            >
-              <Layers className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Vector
-              </span>
-              <Select value={vectorId} onValueChange={setVectorId}>
-                <SelectTrigger className="h-7 min-w-[8rem] border-0 bg-transparent px-1 text-[13px] shadow-none focus:ring-0">
-                  <SelectValue
-                    placeholder={vectorsQuery.isLoading ? "Loading…" : "Select store"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {vectors.length === 0 ? (
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                      {vectorsQuery.data?.error ?? "No vector stores found."}
-                    </div>
-                  ) : (
-                    vectors.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>
-                        {v.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
+          {/* Vector store chip */}
+          <div
+            className={
+              "flex h-9 min-w-0 items-center gap-1.5 rounded-md border px-2 text-[13px] " +
+              (vectorId
+                ? "border-amber-500/40 bg-amber-500/10"
+                : "border-destructive/40 bg-destructive/5")
+            }
+            title={vectorDisabledReason ?? "Selected vector store"}
+          >
+            <Layers className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Vector
+            </span>
+            <Select value={vectorId} onValueChange={setVectorId}>
+              <SelectTrigger className="h-7 min-w-[8rem] border-0 bg-transparent px-1 text-[13px] shadow-none focus:ring-0">
+                <SelectValue
+                  placeholder={vectorsQuery.isLoading ? "Loading…" : "Select store"}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {vectors.length === 0 ? (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                    {vectorsQuery.data?.error ?? "No vector stores found."}
+                  </div>
+                ) : (
+                  vectors.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
 
           {/* Search */}
           <div className="flex h-9 min-w-0 items-center gap-1.5 rounded-md border border-border bg-background px-2 focus-within:ring-1 focus-within:ring-primary">
@@ -1811,16 +1768,8 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
               Run Text Chat
             </button>
 
-            {/* Import to opposite environment */}
-            <button
-              type="button"
-              onClick={openImportDialog}
-              title={`Copy selected questions to ${isDev ? "Production" : "Development"}`}
-              className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[12px] font-medium hover:bg-muted"
-            >
-              <Upload className="h-3.5 w-3.5" />
-              <span>Import → {isDev ? "Prod" : "Dev"}</span>
-            </button>
+
+
 
             {/* Format dropdown (collapsed) */}
             <DropdownMenu>
