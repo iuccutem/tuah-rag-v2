@@ -236,24 +236,6 @@ export function DashboardPage() {
     })();
   }, [isDev, tablesQuery.isLoading, tables.length]);
 
-  // Refs for the bottom sheet-tab strip so we can auto-scroll to the newest
-  // or currently active tab (important on mobile / iPad where tabs overflow).
-  const tabsScrollRef = useRef<HTMLDivElement | null>(null);
-  const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-
-  // When a new sheet is added, scroll the strip to the end.
-  useEffect(() => {
-    const el = tabsScrollRef.current;
-    if (!el) return;
-    el.scrollTo({ left: el.scrollWidth, behavior: "smooth" });
-  }, [tables.length]);
-
-  // When the active tab changes, bring it into view.
-  useEffect(() => {
-    if (!activeTable) return;
-    const el = tabRefs.current.get(activeTable);
-    el?.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
-  }, [activeTable]);
 
   const { data, isLoading, isFetching, refetch, dataUpdatedAt, error } =
     useQuery({
@@ -1873,95 +1855,6 @@ export function DashboardPage() {
 
       </div>
 
-
-      {/* Sheet tabs */}
-      <div
-        ref={tabsScrollRef}
-        style={{ WebkitOverflowScrolling: "touch" }}
-        className="sticky bottom-0 z-10 flex shrink-0 flex-nowrap items-center gap-1 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-proximity border-t border-[var(--sheets-grid)] bg-card px-2 py-1"
-      >
-
-        {tables.length === 0 ? (
-          <div className="flex h-7 items-center px-3 text-[12px] text-muted-foreground">
-            {tablesQuery.isLoading ? "Loading sheets…" : "No sheets yet"}
-          </div>
-        ) : (
-          tables.map((t) => {
-            const active = t === activeTable;
-            return (
-              <div
-                key={t}
-                ref={(el) => {
-                  if (el) tabRefs.current.set(t, el);
-                  else tabRefs.current.delete(t);
-                }}
-                className={
-                  active
-                    ? "flex h-7 shrink-0 snap-start items-center rounded-t-md border-t-2 border-primary bg-card pl-3 pr-1 text-[13px] font-medium shadow-[0_-1px_0_var(--sheets-grid)_inset]"
-                    : "flex h-7 shrink-0 snap-start items-center rounded-t-md border-t-2 border-transparent pl-3 pr-1 text-[13px] font-medium text-muted-foreground hover:bg-muted"
-                }
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (t === activeTable) return;
-                    queryClient.removeQueries({ queryKey: ["qa-rows", t], exact: true });
-                    setActiveTable(t);
-                    setSelection(null);
-                    setSelectedRowIds(new Set());
-                  }}
-                  title={t}
-                  className="mr-1"
-                >
-                  {formatTableLabel(t)}
-                </button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      title="Sheet actions"
-                      className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted-foreground/10 hover:text-foreground"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-40">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setRenameValue(t.replace(/^qatest-(dev-)?/, ""));
-                        setRenameOpen({ open: true, from: t });
-                      }}
-                    >
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Rename
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => setDeleteSheetConfirm({ open: true, name: t })}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            );
-          })
-        )}
-        <button
-          type="button"
-          onClick={() => setNewSheetOpen(true)}
-          title="Add a new sheet"
-          className="ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-        <div className="ml-auto hidden shrink-0 text-[11px] text-muted-foreground tabular-nums sm:block">
-          {refreshing ? "Refreshing…" : isFetching ? "Syncing…" : `Synced ${lastUpdated}`}
-        </div>
-      </div>
 
       {/* Excel import dialog */}
       <Dialog open={excelImportOpen} onOpenChange={setExcelImportOpen}>
