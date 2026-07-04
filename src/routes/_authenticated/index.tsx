@@ -2300,6 +2300,121 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
       </Dialog>
 
 
+      {/* Import → opposite environment dialog */}
+      <Dialog
+        open={importOpen}
+        onOpenChange={(o) => {
+          if (!importing) setImportOpen(o);
+        }}
+      >
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" />
+              Import {importQueue.length} question{importQueue.length === 1 ? "" : "s"} to{" "}
+              {isDev ? "Production" : "Development"}
+            </DialogTitle>
+            <DialogDescription>
+              Only the question text is copied. Answers, URLs and channels stay
+              empty in the destination sheet and can be re-run there.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-1">
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-medium text-muted-foreground">
+                Target sheet ({isDev ? "Production" : "Development"})
+              </label>
+              {oppositeTables.length === 0 ? (
+                <div className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-[12px] text-yellow-900 dark:text-yellow-200">
+                  No sheets exist in {isDev ? "Production" : "Development"} yet.
+                  Create one there first, then try again.
+                </div>
+              ) : (
+                <Select value={importTarget} onValueChange={setImportTarget}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select sheet…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {oppositeTables.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {formatTableLabel(t)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-auto rounded-md border border-[var(--sheets-grid)] bg-muted/30 p-2">
+            {importQueue.length === 0 ? (
+              <p className="p-2 text-[12px] text-muted-foreground">
+                No questions in the queue.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border/60">
+                {importQueue.map((q, i) => (
+                  <li
+                    key={`${i}-${q}`}
+                    className="flex items-start gap-2 px-2 py-2 text-[13px]"
+                  >
+                    <span className="mt-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-background px-1.5 text-[10px] font-semibold text-muted-foreground tabular-nums">
+                      {i + 1}
+                    </span>
+                    <span className="flex-1 line-clamp-2 break-words text-foreground">
+                      {q}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImportQueue((prev) =>
+                          prev.filter((_, idx) => idx !== i),
+                        )
+                      }
+                      disabled={importing}
+                      title="Remove from import"
+                      className="shrink-0 rounded p-1 text-muted-foreground hover:bg-background hover:text-destructive disabled:opacity-50"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setImportOpen(false)}
+              disabled={importing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={runImport}
+              disabled={
+                importing ||
+                importQueue.length === 0 ||
+                !importTarget ||
+                oppositeTables.length === 0
+              }
+              className="gap-2"
+            >
+              {importing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              {importing
+                ? "Importing…"
+                : `Import ${importQueue.length} question${importQueue.length === 1 ? "" : "s"}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Register user dialog */}
       <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
         <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
