@@ -1294,19 +1294,7 @@ export function DashboardPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem asChild>
-                <Link to="/">
-                  <SheetIcon className="mr-2 h-4 w-4" />
-                  Production {mode === "prod" ? "✓" : ""}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/dev">
-                  <Layers className="mr-2 h-4 w-4" />
-                  Development {mode === "dev" ? "✓" : ""}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+
               <DropdownMenuItem onClick={toggleTheme}>
                 {theme === "dark" ? (
                   <Sun className="mr-2 h-4 w-4" />
