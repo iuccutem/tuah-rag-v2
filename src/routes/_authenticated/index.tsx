@@ -1228,15 +1228,12 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
     <div
       className={
         "flex h-screen min-h-screen flex-col bg-background text-foreground " +
-        (isDev ? "border-l-[3px] border-l-amber-500/70" : "")
+        (isDev ? "dev-mode border-l-[3px] border-l-amber-500/70" : "")
       }
     >
       {/* ============================== AppBar ============================== */}
       <header
-        className={
-          "flex shrink-0 items-center gap-2 border-b border-border px-3 h-12 " +
-          (isDev ? "bg-amber-500/[0.06]" : "bg-card")
-        }
+        className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 h-12"
       >
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
@@ -1369,10 +1366,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
 
       {/* ============================ WorkspaceBar ============================ */}
       <div
-        className={
-          "shrink-0 border-b border-border " +
-          (isDev ? "bg-amber-500/[0.04]" : "bg-card")
-        }
+        className="shrink-0 border-b border-border bg-card"
       >
         <div className="flex flex-wrap items-center gap-2 px-3 py-2">
           {/* Sheet context chip */}
