@@ -469,8 +469,14 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
       toast.error("Table name is required.");
       return;
     }
-    const formatted = `qatest-${raw.toLowerCase().replace(/\s+/g, "-")}`;
-    if (!/^qatest-[a-z0-9-]+$/.test(formatted)) {
+    const prefix = isDev ? DEV_PREFIX : TABLE_PREFIX;
+    const slug = raw
+      .toLowerCase()
+      .replace(/^qatest-/, "")
+      .replace(/^dev-/, "")
+      .replace(/\s+/g, "-");
+    const formatted = `${prefix}${slug}`;
+    if (!/^[a-z0-9-]+$/.test(slug) || !slug) {
       toast.error("Use letters, numbers, spaces or dashes only.");
       return;
     }
