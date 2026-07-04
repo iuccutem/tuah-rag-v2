@@ -1945,7 +1945,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
             <DialogTitle>Rename sheet</DialogTitle>
             <DialogDescription>
               Rename <span className="font-mono">{renameOpen.from}</span>. The{" "}
-              <span className="font-mono">qatest-</span> prefix is added automatically.
+              <span className="font-mono">{isDev ? DEV_PREFIX : TABLE_PREFIX}</span> prefix is added automatically.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
