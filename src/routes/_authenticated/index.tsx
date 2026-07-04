@@ -2043,7 +2043,7 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
             <DialogTitle>New sheet</DialogTitle>
             <DialogDescription>
               Enter a table name. It will be lowercased, spaces become dashes,
-              and a <span className="font-mono">qatest-</span> prefix is added.
+              and a <span className="font-mono">{isDev ? DEV_PREFIX : TABLE_PREFIX}</span> prefix is added.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
