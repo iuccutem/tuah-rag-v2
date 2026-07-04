@@ -85,15 +85,15 @@ import { ExcelImportBox } from "@/components/qa-dashboard/ExcelImportBox";
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "RAG Evaluation Builder" },
+      { title: "RAG Evaluation Workspace" },
       {
         name: "description",
         content:
-          "RAG Evaluation Builder — spreadsheet-style workspace to curate Q&A across faculties and messaging channels.",
+          "RAG Evaluation Workspace — spreadsheet-style workspace to curate Q&A and test against selectable vector stores.",
       },
     ],
   }),
-  component: () => <DashboardPage mode="prod" />,
+  component: () => <DashboardPage />,
 });
 
 type ApiResponse = { data: QARow[]; error: string | null };
