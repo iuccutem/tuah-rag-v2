@@ -137,10 +137,11 @@ function formatTableLabel(raw: string): string {
   return stripped.charAt(0).toUpperCase() + stripped.slice(1);
 }
 
-export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {}) {
-  const isDev = mode === "dev";
-  const processEndpoint = isDev ? "/api/n8n-dev-process" : "/api/n8n-process";
-  const VECTOR_STORAGE_KEY = "rag-dev-vector-id";
+export function DashboardPage() {
+  // Dev/prod merged: single workspace with always-available vector store picker.
+  const isDev = false;
+  const processEndpoint = "/api/n8n-process";
+  const VECTOR_STORAGE_KEY = "rag-vector-id";
   const [vectorId, setVectorId] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem(VECTOR_STORAGE_KEY) ?? "";
@@ -161,22 +162,20 @@ export function DashboardPage({ mode = "prod" }: { mode?: "prod" | "dev" } = {})
         error: string | null;
       };
     },
-    enabled: isDev,
     refetchOnWindowFocus: false,
   });
   const vectors = vectorsQuery.data?.vectors ?? [];
   useEffect(() => {
-    if (!isDev) return;
     if (!vectorId && vectors.length > 0) setVectorId(vectors[0].id);
-  }, [isDev, vectorId, vectors]);
-  const vectorDisabledReason = isDev && !vectorId
+  }, [vectorId, vectors]);
+  const vectorDisabledReason = !vectorId
     ? vectorsQuery.isLoading
       ? "Loading vector stores…"
       : vectors.length === 0
         ? `No vector stores available${vectorsQuery.data?.error ? `: ${vectorsQuery.data.error}` : "."}`
         : "Select a vector store first."
     : null;
-  const extraProcessBody = isDev && vectorId ? { vector_id: vectorId } : undefined;
+  const extraProcessBody = vectorId ? { vector_id: vectorId } : undefined;
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
   const queryClient = useQueryClient();
