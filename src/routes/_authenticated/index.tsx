@@ -1241,22 +1241,7 @@ export function DashboardPage() {
 
         {/* Right cluster — desktop */}
         <div className="ml-auto hidden md:flex items-center gap-1">
-          <div className="flex items-center rounded-md border border-border bg-background p-0.5">
-            <Link
-              to="/"
-              activeOptions={{ exact: true }}
-              className="rounded px-2 py-1 text-[12px] font-medium text-foreground/70 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
-            >
-              Production
-            </Link>
-            <Link
-              to="/dev"
-              className="rounded px-2 py-1 text-[12px] font-medium text-foreground/70 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
-            >
-              Development
-            </Link>
-          </div>
-          <div className="mx-1 h-5 w-px bg-border" />
+
           <button
             type="button"
             onClick={toggleTheme}
