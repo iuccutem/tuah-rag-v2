@@ -1768,16 +1768,8 @@ export function DashboardPage() {
               Run Text Chat
             </button>
 
-            {/* Import to opposite environment */}
-            <button
-              type="button"
-              onClick={openImportDialog}
-              title={`Copy selected questions to ${isDev ? "Production" : "Development"}`}
-              className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[12px] font-medium hover:bg-muted"
-            >
-              <Upload className="h-3.5 w-3.5" />
-              <span>Import → {isDev ? "Prod" : "Dev"}</span>
-            </button>
+
+
 
             {/* Format dropdown (collapsed) */}
             <DropdownMenu>
