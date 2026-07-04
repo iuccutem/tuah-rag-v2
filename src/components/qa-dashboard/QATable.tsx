@@ -447,7 +447,13 @@ function EditableCell({
           {...common}
           rows={4}
           className="w-full resize-y rounded-sm border border-primary bg-background px-2 py-1 text-[13px] leading-snug outline-none focus:ring-2 focus:ring-primary/30"
-          placeholder="Enter question…"
+          placeholder={
+            column.key === "telegram_whatsapp"
+              ? "Enter expected answer…"
+              : column.key === "question"
+                ? "Enter question…"
+                : "Enter value…"
+          }
         />
       ) : (
         <input
