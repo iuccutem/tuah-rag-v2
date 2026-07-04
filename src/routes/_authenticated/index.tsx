@@ -190,7 +190,9 @@ export function DashboardPage() {
   const allTables = (tablesQuery.data?.tables ?? []).filter((t) =>
     t.startsWith(TABLE_PREFIX),
   );
-  const tables = allTables.filter((t) => belongsTo(t, isDev));
+  const tables = allTables
+    .filter((t) => belongsTo(t, isDev))
+    .sort((a, b) => a.localeCompare(b));
   const oppositeTables = allTables.filter((t) => belongsTo(t, !isDev));
 
   // Set the first table as the active one on initial load / after env switch.
