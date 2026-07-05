@@ -1633,6 +1633,52 @@ export function DashboardPage() {
               </button>
             )}
 
+            {selection?.mode === "cell" && (
+              <TooltipProvider delayDuration={100}>
+                <div className="flex items-center gap-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => applyFormat({ highlight: true })}
+                        className="flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
+                        aria-label="Highlight cell"
+                      >
+                        <Highlighter className="h-4 w-4 text-yellow-500" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Highlight cell</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => applyFormat({ error: true })}
+                        className="flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
+                        aria-label="Mark error"
+                      >
+                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Mark error</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => applyFormat(null)}
+                        className="flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 hover:bg-muted"
+                        aria-label="Clear formatting"
+                      >
+                        <Eraser className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Clear formatting</TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipProvider>
+            )}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -1644,22 +1690,6 @@ export function DashboardPage() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 max-h-[70vh] overflow-y-auto">
-                <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Cell
-                </div>
-                <DropdownMenuItem onClick={() => applyFormat({ highlight: true })}>
-                  <Highlighter className="mr-2 h-4 w-4 text-yellow-500" />
-                  Highlight cell
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => applyFormat({ error: true })}>
-                  <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
-                  Mark error
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => applyFormat(null)}>
-                  <Eraser className="mr-2 h-4 w-4" />
-                  Clear formatting
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Data
                 </div>
