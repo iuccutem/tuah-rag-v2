@@ -1523,18 +1523,45 @@ export function DashboardPage() {
           {/* Primary actions */}
           <div className="ml-auto flex items-center gap-1.5">
             <Dialog open={insertOpen} onOpenChange={setInsertOpen}>
-              <DialogTrigger asChild>
-                <button
-                  type="button"
-                  className="flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
-                >
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedRowIds.size > 0) {
+                    if (runningChannel !== null || vectorDisabledReason) return;
+                    setPendingChannel("web");
+                  } else {
+                    setInsertOpen(true);
+                  }
+                }}
+                disabled={
+                  selectedRowIds.size > 0 &&
+                  (runningChannel !== null || !!vectorDisabledReason)
+                }
+                title={
+                  selectedRowIds.size > 0
+                    ? (vectorDisabledReason ?? "Run Text Chat agent on selected rows")
+                    : "Paste new questions"
+                }
+                className="flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-50"
+              >
+                {selectedRowIds.size > 0 && runningChannel === "web" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : selectedRowIds.size > 0 ? (
+                  <MessageSquare className="h-4 w-4" />
+                ) : (
                   <ListPlus className="h-4 w-4" />
-                  <span className="hidden sm:inline">
-                    {isDev ? "Test Questions" : "Run Questions"}
-                  </span>
-                  <span className="sm:hidden">Run</span>
-                </button>
-              </DialogTrigger>
+                )}
+                <span className="hidden sm:inline">
+                  {selectedRowIds.size > 0
+                    ? runningChannel === "web"
+                      ? "Running…"
+                      : `Run Questions (${selectedRowIds.size})`
+                    : isDev
+                      ? "Test Questions"
+                      : "Run Questions"}
+                </span>
+                <span className="sm:hidden">Run</span>
+              </button>
               <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
