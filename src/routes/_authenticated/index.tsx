@@ -1523,18 +1523,45 @@ export function DashboardPage() {
           {/* Primary actions */}
           <div className="ml-auto flex items-center gap-1.5">
             <Dialog open={insertOpen} onOpenChange={setInsertOpen}>
-              <DialogTrigger asChild>
-                <button
-                  type="button"
-                  className="flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
-                >
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedRowIds.size > 0) {
+                    if (runningChannel !== null || vectorDisabledReason) return;
+                    setPendingChannel("web");
+                  } else {
+                    setInsertOpen(true);
+                  }
+                }}
+                disabled={
+                  selectedRowIds.size > 0 &&
+                  (runningChannel !== null || !!vectorDisabledReason)
+                }
+                title={
+                  selectedRowIds.size > 0
+                    ? (vectorDisabledReason ?? "Run Text Chat agent on selected rows")
+                    : "Paste new questions"
+                }
+                className="flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-50"
+              >
+                {selectedRowIds.size > 0 && runningChannel === "web" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : selectedRowIds.size > 0 ? (
+                  <MessageSquare className="h-4 w-4" />
+                ) : (
                   <ListPlus className="h-4 w-4" />
-                  <span className="hidden sm:inline">
-                    {isDev ? "Test Questions" : "Run Questions"}
-                  </span>
-                  <span className="sm:hidden">Run</span>
-                </button>
-              </DialogTrigger>
+                )}
+                <span className="hidden sm:inline">
+                  {selectedRowIds.size > 0
+                    ? runningChannel === "web"
+                      ? "Running…"
+                      : `Run Questions (${selectedRowIds.size})`
+                    : isDev
+                      ? "Test Questions"
+                      : "Run Questions"}
+                </span>
+                <span className="sm:hidden">Run</span>
+              </button>
               <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
@@ -1735,55 +1762,6 @@ export function DashboardPage() {
             </div>
 
             <div className="mx-1 h-5 w-px bg-border/60" />
-
-            {/* Primary action: Run */}
-            <button
-              type="button"
-              onClick={() => setPendingChannel("web")}
-              disabled={runningChannel !== null || !!vectorDisabledReason}
-              title={vectorDisabledReason ?? "Run Text Chat agent"}
-              className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-50"
-            >
-              {runningChannel === "web" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <MessageSquare className="h-3.5 w-3.5" />
-              )}
-              Run Text Chat
-            </button>
-
-
-
-
-            {/* Format dropdown (collapsed) */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  title="Format cell"
-                  className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[12px] font-medium hover:bg-muted"
-                >
-                  <Highlighter className="h-3.5 w-3.5 text-yellow-500" />
-                  <span className="hidden sm:inline">Format</span>
-                  <ChevronDown className="h-3 w-3 opacity-60" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-44">
-                <DropdownMenuItem onClick={() => applyFormat({ highlight: true })}>
-                  <Highlighter className="mr-2 h-4 w-4 text-yellow-500" />
-                  Highlight cell
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => applyFormat({ error: true })}>
-                  <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
-                  Mark error
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => applyFormat(null)}>
-                  <Eraser className="mr-2 h-4 w-4" />
-                  Clear formatting
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
 
             {/* Destructive */}
             <button
