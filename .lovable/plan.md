@@ -1,27 +1,16 @@
-## Switch dark theme to Tuah-style pure black
+## Remove amber dev-mode tint from dashboard
 
-The current dark theme uses a bluish navy (`oklch(0.129 0.042 264.695)`). The Tuah dashboard reference is near-pure black with neutral gray surfaces — no blue tint.
+The dashboard root wrapper in `src/routes/_authenticated/index.tsx` (line 1211) applies `className="dev-mode ..."` unconditionally. The `.dev-mode` and `.dark .dev-mode` blocks in `src/styles.css` override background/card/border tokens with amber-tinted values, so the whole authenticated app renders with an amber cast — even in dark mode where the user wants pure near-black.
 
 ### Change
 
-Edit `src/styles.css` `.dark { … }` block only. Light theme, dev-mode overrides, and shadcn `@theme inline` mapping stay unchanged. Replace the bluish tokens with a neutral near-black palette:
+1. `src/routes/_authenticated/index.tsx` line 1211 — drop `dev-mode` from the className, keeping the rest:
+   `<div className="flex h-screen min-h-screen flex-col bg-background text-foreground">`
 
-| Token | Now (bluish) | New (Tuah neutral black) |
-|---|---|---|
-| `--background` | `oklch(0.129 0.042 264.695)` | `oklch(0.06 0 0)` — near pure black |
-| `--card` / `--popover` / `--sidebar` | `oklch(0.208 0.042 265.755)` | `oklch(0.11 0 0)` — slightly lifted panel |
-| `--secondary` / `--muted` / `--accent` / `--sidebar-accent` | `oklch(0.279 0.041 260.031)` | `oklch(0.16 0 0)` — neutral gray fill |
-| `--muted-foreground` | `oklch(0.704 0.04 256.788)` | `oklch(0.68 0 0)` |
-| `--primary-foreground` | `oklch(0.208 0.042 265.755)` | `oklch(0.11 0 0)` |
-| `--border` / `--sidebar-border` | `oklch(1 0 0 / 10%)` | keep (already neutral) |
-| `--input` | `oklch(1 0 0 / 15%)` | keep |
-| `--ring` / `--sidebar-ring` | `oklch(0.551 0.027 264.364)` | `oklch(0.55 0 0)` |
-| Chart / destructive / primary accent | unchanged (used for data + brand highlights) |
+2. `src/styles.css` — remove the now-unused `.dev-mode { … }` and `.dark .dev-mode { … }` blocks (lines 181–214).
 
 ### Not changed
-- Light theme values (`:root`).
-- Dev-mode amber overrides (`.dev-mode`, `.dark .dev-mode`).
-- Component code — tokens are semantic, no hardcoded colors to touch.
-- Theme toggle behavior.
+- `.dark` palette (already the Tuah neutral black from the previous change).
+- Light theme, semantic tokens, component code, `isDev` logic (that flag is separate and stays `false`).
 
-Result: dark mode renders as a clean black canvas with neutral gray cards and borders, matching the Tuah dashboard reference, while primary/destructive brand accents keep their color.
+Result: after login, the dashboard uses the standard dark theme — clean near-black background and neutral gray panels — with no amber tint.
