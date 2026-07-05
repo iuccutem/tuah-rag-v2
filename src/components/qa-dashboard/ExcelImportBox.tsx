@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import ExcelJS from "exceljs";
 import { readSheet } from "read-excel-file/browser";
+import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -119,6 +120,22 @@ async function parseWorkbookWithFallback(file: File): Promise<ParsedWorkbook> {
   );
 }
 
+function parseWorkbookWithSheetJs(buf: ArrayBuffer): ParsedWorkbook {
+  const wb = XLSX.read(buf, { type: "array" });
+  const name = wb.SheetNames[0];
+  if (!name) throw new Error("Workbook has no sheets.");
+  const ws = wb.Sheets[name];
+  const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, {
+    header: 1,
+    defval: "",
+    raw: false,
+    blankrows: false,
+  });
+  return normalizeParsedRows(
+    rows.map((row) => (row ?? []).map((v) => stringifyCellValue(v))),
+  );
+}
+
 async function parseExcelFile(file: File, buf: ArrayBuffer): Promise<ParsedWorkbook> {
   try {
     return await parseWorkbookWithExcelJs(buf);
@@ -126,15 +143,19 @@ async function parseExcelFile(file: File, buf: ArrayBuffer): Promise<ParsedWorkb
     try {
       return await parseWorkbookWithFallback(file);
     } catch {
-      const rawMessage = excelJsError instanceof Error ? excelJsError.message : "";
-      if (/sheets|bookViews|undefined/i.test(rawMessage)) {
+      try {
+        return parseWorkbookWithSheetJs(buf);
+      } catch {
+        const rawMessage = excelJsError instanceof Error ? excelJsError.message : "";
+        if (/sheets|bookViews|undefined/i.test(rawMessage)) {
+          throw new Error(
+            "This workbook format is missing readable sheet metadata. Please open it in Excel or Google Sheets, save it again as .xlsx or .csv, then retry.",
+          );
+        }
         throw new Error(
-          "This workbook format is missing readable sheet metadata. Please open it in Excel or Google Sheets, save it again as .xlsx or .csv, then retry.",
+          "No readable worksheet found. Please save the file again as .xlsx or .csv and retry.",
         );
       }
-      throw new Error(
-        "No readable worksheet found. Please save the file again as .xlsx or .csv and retry.",
-      );
     }
   }
 }
