@@ -1208,7 +1208,7 @@ export function DashboardPage() {
   };
 
   return (
-    <div className="dev-mode flex h-screen min-h-screen flex-col bg-background text-foreground">
+    <div className="flex h-screen min-h-screen flex-col bg-background text-foreground">
       {/* ============================== AppBar ============================== */}
       <header
         className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 h-12"
