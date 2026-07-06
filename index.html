@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="apple-touch-icon" href="favicon.png" />
+    <title>RAG Builder — Q&amp;A Evaluation</title>
+    <meta
+      name="description"
+      content="University Q&amp;A evaluation dashboard for building and testing RAG datasets."
+    />
+    <meta property="og:title" content="RAG Builder — Q&amp;A Evaluation" />
+    <meta
+      property="og:description"
+      content="University Q&amp;A evaluation dashboard for building and testing RAG datasets."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <script>
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "dark") document.documentElement.classList.add("dark");
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
