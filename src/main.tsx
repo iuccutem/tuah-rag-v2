@@ -27,11 +27,12 @@ declare module "@tanstack/react-router" {
   }
 }
 
-// Refresh queries whenever the auth session changes (sign-in / sign-out).
+// Clear cached queries on sign-out. Sign-in navigates to "/" from the auth
+// page, which naturally triggers the loaders — invalidating the router here
+// races with that navigation and can crash <MatchInnerImpl> during commit.
 supabase.auth.onAuthStateChange((event) => {
-  if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
-    queryClient.invalidateQueries();
-    router.invalidate();
+  if (event === "SIGNED_OUT") {
+    queryClient.clear();
   }
 });
 
