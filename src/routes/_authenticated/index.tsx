@@ -1091,7 +1091,7 @@ export function DashboardPage() {
             table: activeTable,
             ...(extraProcessBody ?? {}),
           };
-          const res = await fetch(processEndpoint, {
+          const res = await apiFetch(processEndpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),

@@ -147,7 +147,7 @@ export function QuestionPasteBox({
       for (const question of insertedQuestions) {
         const body: Record<string, unknown> = { channel, question, ...(extraProcessBody ?? {}) };
         if (table) body.table = table;
-        const res = await fetch(processEndpoint, {
+        const res = await apiFetch(processEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
