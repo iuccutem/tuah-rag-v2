@@ -1,33 +1,43 @@
-// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
-// or the app will break with duplicate plugins:
-//   - tanstackStart, viteReact, tailwindcss, tsConfigPaths, nitro (build-only using cloudflare as a default target),
-//     componentTagger (dev-only), VITE_* env injection, @ path alias, React/TanStack dedupe,
-//     error logger plugins, and sandbox detection (port/host/strictPort).
-// You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tsconfigPaths from "vite-tsconfig-paths";
+import tailwindcss from "@tailwindcss/vite";
+import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 
-// When self-hosting (e.g. on tuah.utem.edu.my/rag-builder under Node),
-// set DEPLOY_TARGET=node and BASE_PATH=/rag-builder/ at build time:
-//   DEPLOY_TARGET=node BASE_PATH=/rag-builder/ npm run build
-// Inside Lovable's own build, these vars are unset so the Cloudflare preset
-// is used as usual (Lovable forces the preset internally anyway).
-const isNodeSelfHost = process.env.DEPLOY_TARGET === "node";
-const basePath = process.env.BASE_PATH ?? "/";
+// The app is deployed under a subpath on the university host
+// (tuah.utem.edu.my/rag-builder/). BASE_PATH is baked in at build time.
+// Local dev defaults to "/".
+const basePath = process.env.VITE_BASE_PATH ?? "/";
 
 export default defineConfig({
-  tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
-    server: { entry: "server" },
+  base: basePath,
+  plugins: [
+    TanStackRouterVite({
+      routesDirectory: "src/routes",
+      generatedRouteTree: "src/routeTree.gen.ts",
+      autoCodeSplitting: true,
+    }),
+    react(),
+    tailwindcss(),
+    tsconfigPaths(),
+  ],
+  server: {
+    port: 5173,
+    strictPort: false,
+    proxy: {
+      "/api": {
+        target: process.env.VITE_DEV_API_URL ?? "http://127.0.0.1:6699",
+        changeOrigin: true,
+      },
+    },
   },
-  ...(isNodeSelfHost
-    ? {
-        nitro: {
-          preset: "node-server",
-        },
-      }
-    : {}),
-  vite: {
-    base: basePath,
+  preview: {
+    port: 4173,
+    proxy: {
+      "/api": {
+        target: process.env.VITE_DEV_API_URL ?? "http://127.0.0.1:6699",
+        changeOrigin: true,
+      },
+    },
   },
 });
