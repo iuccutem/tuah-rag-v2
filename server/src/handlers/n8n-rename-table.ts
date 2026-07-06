@@ -1,12 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 const WEBHOOK_URL =
   "https://tuah.utem.edu.my/agent/webhook/24d1ce41-0116-47ef-802f-40a3d7da7cb9";
 
-export const Route = createFileRoute("/api/n8n-rename-table")({
-  server: {
-    handlers: {
-      POST: async ({ request }) => {
+export const method = "POST" as const;
+
+export const handler = async ({ request }: { request: Request }): Promise<Response> => {
         const user = process.env.N8N_WEBHOOK_USER;
         const password = process.env.N8N_WEBHOOK_PASSWORD;
         if (!user || !password) {
@@ -59,7 +56,4 @@ export const Route = createFileRoute("/api/n8n-rename-table")({
             { status: 200 },
           );
         }
-      },
-    },
-  },
-});
+      };

@@ -1,5 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 const WEBHOOK_URL =
   "https://tuah.utem.edu.my/agent/webhook/4340097e-3074-4ab4-b97c-feba47f87a55";
 
@@ -35,10 +33,9 @@ function normalizeTables(input: unknown): string[] {
   return Array.from(new Set(out));
 }
 
-export const Route = createFileRoute("/api/n8n-tables")({
-  server: {
-    handlers: {
-      GET: async () => {
+export const method = "GET" as const;
+
+export const handler = async ({ request }: { request: Request }): Promise<Response> => {
         const user = process.env.N8N_WEBHOOK_USER;
         const password = process.env.N8N_WEBHOOK_PASSWORD;
         if (!user || !password) {
@@ -84,7 +81,4 @@ export const Route = createFileRoute("/api/n8n-tables")({
             { status: 200, headers: { "Cache-Control": "no-store" } },
           );
         }
-      },
-    },
-  },
-});
+      };

@@ -1,12 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 const WEBHOOK_URL =
   "https://tuah.utem.edu.my/agent/webhook/8c131be7-21e7-4049-9dbb-4210b4ba5a79";
 
-export const Route = createFileRoute("/api/n8n-email")({
-  server: {
-    handlers: {
-      POST: async ({ request }) => {
+export const method = "POST" as const;
+
+export const handler = async ({ request }: { request: Request }): Promise<Response> => {
         const body = (await request.json()) as { email?: string };
         const email = body?.email?.trim();
         if (!email) {
@@ -60,7 +57,4 @@ export const Route = createFileRoute("/api/n8n-email")({
             { status: 200 },
           );
         }
-      },
-    },
-  },
-});
+      };

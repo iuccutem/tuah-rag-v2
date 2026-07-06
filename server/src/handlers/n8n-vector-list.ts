@@ -1,5 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 const WEBHOOK_URL =
   "https://tuah.utem.edu.my/agent/webhook/config/vector/list";
 
@@ -46,10 +44,9 @@ function normalizeVectors(input: unknown): Vector[] {
   });
 }
 
-export const Route = createFileRoute("/api/n8n-vector-list")({
-  server: {
-    handlers: {
-      GET: async () => {
+export const method = "GET" as const;
+
+export const handler = async ({ request }: { request: Request }): Promise<Response> => {
         if (!process.env.N8N_JWT_SECRET) {
           return Response.json(
             { vectors: [], error: "Webhook JWT secret is not configured." },
@@ -57,7 +54,7 @@ export const Route = createFileRoute("/api/n8n-vector-list")({
           );
         }
         try {
-          const { signN8nJwt } = await import("@/lib/n8n-jwt.server");
+          const { signN8nJwt } = await import("../lib/n8n-jwt");
           const token = await signN8nJwt();
           const res = await fetch(WEBHOOK_URL, {
             method: "GET",
@@ -94,7 +91,4 @@ export const Route = createFileRoute("/api/n8n-vector-list")({
             { status: 200, headers: { "Cache-Control": "no-store" } },
           );
         }
-      },
-    },
-  },
-});
+      };

@@ -1,12 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 const WEBHOOK_URL =
   "https://tuah.utem.edu.my/agent/webhook/3f944ef2-7d47-42b8-8500-b03ab19a71a6";
 
-export const Route = createFileRoute("/api/n8n-delete-table")({
-  server: {
-    handlers: {
-      POST: async ({ request }) => {
+export const method = "POST" as const;
+
+export const handler = async ({ request }: { request: Request }): Promise<Response> => {
         const user = process.env.N8N_WEBHOOK_USER;
         const password = process.env.N8N_WEBHOOK_PASSWORD;
         if (!user || !password) {
@@ -52,7 +49,4 @@ export const Route = createFileRoute("/api/n8n-delete-table")({
             { status: 200 },
           );
         }
-      },
-    },
-  },
-});
+      };
