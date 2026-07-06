@@ -1,8 +1,13 @@
 # RAG Builder — API Server
 
+> **Optional.** Only needed for the self-hosted university deploy. The
+> Lovable-hosted app (`tuah-rag.lovable.app` / `rag.ainibot.com`) uses Supabase
+> Edge Functions under `supabase/functions/` and does **not** require this
+> service. Keep the two handler sets in sync when adding new routes.
+
 Standalone Node/Express service that hosts every `/api/*` endpoint the SPA needs
 (n8n webhook proxies, admin user creation, RAG export). Runs alongside Nginx on
-the university host and is reverse-proxied under `/rag-builder/api/*`.
+the university host and is reverse-proxied under `/rag-builder/api/`.
 
 ## Setup
 
@@ -26,11 +31,11 @@ node dist/index.js     # or use pm2 / systemd
 |---|---|
 | `PORT` | Listen port (default `6699`). |
 | `SUPABASE_URL` | Supabase project URL. |
-| `SUPABASE_PUBLISHABLE_KEY` | Publishable/anon key (unused for now, reserved for auth-verify middleware). |
+| `SUPABASE_PUBLISHABLE_KEY` | Publishable/anon key (reserved for auth-verify middleware). |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service-role key. Used by `admin-users` to create accounts. |
 | `N8N_WEBHOOK_USER` / `N8N_WEBHOOK_PASSWORD` | Basic-auth credentials for the n8n webhooks. |
 | `N8N_JWT_SECRET` | HS256 secret for signing short-lived JWTs to n8n. |
-| `LOVABLE_API_KEY` | Lovable AI gateway key, if any handler calls the gateway. |
+| `LOVABLE_API_KEY` | Lovable AI Gateway key, used by `n8n-export`. |
 
 ## Nginx (reference)
 
@@ -55,4 +60,5 @@ export const handler = async ({ request }: { request: Request }): Promise<Respon
 
 The Express bootstrap in `src/index.ts` converts each incoming request into a
 Web `Request` object and forwards the returned `Response` back to Express, so
-handlers use the same fetch-style API as the previous TanStack Start routes.
+handlers use the same fetch-style API as the Deno edge functions in
+`supabase/functions/`.

@@ -33,12 +33,17 @@ Buttons exist in both the desktop toolbar and the mobile overflow menu.
 ## Per-row tools
 
 - **Highlight / Flag** — visual markers stored in the cell's formats map.
-- **Email** — sends the row through `/api/n8n-email`.
-- **Delete** — removes the row via `/api/n8n-delete`.
+- **Email** — sends the row via the `n8n-email` edge function.
+- **Delete** — removes the row via the `n8n-delete` edge function.
+
+All `/api/n8n-*` calls in the SPA are routed through `apiFetch` (see
+`src/lib/api.ts`), which forwards them to the corresponding Supabase Edge
+Function with the caller's Supabase JWT attached.
 
 ## RAG JSON export
 
-Click **Export RAG JSON** to send the currently visible rows to the Lovable AI Gateway. Each row becomes:
+Click **Export RAG JSON** to send the currently visible rows through the
+`n8n-export` edge function, which calls the Lovable AI Gateway. Each row becomes:
 
 ```json
 {
@@ -56,4 +61,6 @@ Malay or mixed Malay/English content is translated to natural English; proper no
 ## Auth & user management
 
 - Sign in at `/auth` with an admin-provisioned account.
-- Admins can register new users from the dashboard toolbar (uses an authorized server function — non-admins are rejected server-side).
+- Admins can register new users from the dashboard toolbar. The request hits the
+  `admin-users` edge function, which uses the service-role key server-side —
+  non-admins are rejected before any user is created.
