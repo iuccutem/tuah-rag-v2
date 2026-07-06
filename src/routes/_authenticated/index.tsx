@@ -2347,7 +2347,7 @@ export function DashboardPage() {
                 }
                 setRegistering(true);
                 try {
-                  await registerUserFn({ data: { email, password: registerPassword } });
+                  await registerUserFn({ email, password: registerPassword });
                   toast.success("User registered.");
                   setRegisterEmail("");
                   setRegisterPassword("");
