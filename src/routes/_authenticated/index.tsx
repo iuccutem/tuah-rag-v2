@@ -1152,6 +1152,14 @@ export function DashboardPage() {
       ws.getRow(1).font = { bold: true };
       ws.getRow(1).alignment = { vertical: "middle" };
 
+      // Key rows the same way derivedFormats does: row.id when present,
+      // else the row's index within filteredRows.
+      const filteredIndexById = new Map<string | number, number>();
+      filteredRows.forEach((r, i) => {
+        const key = (r.id ?? r.question ?? i) as string | number;
+        filteredIndexById.set(key, i);
+      });
+
       const rowsToExport =
         selectedRowIds.size > 0
           ? filteredRows.filter((r) =>
@@ -1159,7 +1167,7 @@ export function DashboardPage() {
             )
           : filteredRows;
 
-      rowsToExport.forEach((row, rIdx) => {
+      rowsToExport.forEach((row) => {
         const rowValues: Record<string, unknown> = {};
         QA_COLUMNS.forEach((c) => {
           rowValues[c.key as string] = c.raw(row);
@@ -1167,8 +1175,13 @@ export function DashboardPage() {
         const addedRow = ws.addRow(rowValues);
         addedRow.alignment = { wrapText: true, vertical: "top" };
 
+        const lookupKey =
+          row.id ??
+          filteredIndexById.get((row.question ?? "") as string) ??
+          0;
+
         QA_COLUMNS.forEach((c, cIdx) => {
-          const fmt = derivedFormats[formatKey(row.id ?? rIdx, c.key as string)];
+          const fmt = derivedFormats[formatKey(lookupKey, c.key as string)];
           if (!fmt) return;
           const cell = addedRow.getCell(cIdx + 1);
           if (fmt.highlight) {
@@ -1176,6 +1189,12 @@ export function DashboardPage() {
               type: "pattern",
               pattern: "solid",
               fgColor: { argb: "FFFEF08A" },
+            };
+          } else if (fmt.error) {
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFFECACA" },
             };
           }
           if (fmt.error) {
