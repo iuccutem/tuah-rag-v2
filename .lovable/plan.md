@@ -1,57 +1,49 @@
 
 ## Goal
 
-The Sheets and Vector Store panels are empty because the SPA calls `/api/n8n-*` on the standalone Express server (port 6699), which does not run inside the Lovable-hosted preview. We will mirror those routes as Supabase Edge Functions so the same credentials (`N8N_WEBHOOK_USER`, `N8N_WEBHOOK_PASSWORD`, `N8N_JWT_SECRET`) power the app in both environments. No webhook URLs change.
+The documentation still describes the old TanStack Start / Cloudflare Workers / `.functions.ts` server-function architecture. The app is now a Vite SPA on **@tanstack/react-router** (no Start), with all `/api/n8n-*` and `admin-users` logic ported to **Supabase Edge Functions**, plus an optional standalone Express server (`server/`) kept only for the university host. Rewrite the markdown to match.
 
-## What gets built
+## Files to rewrite
 
-### 1. Edge Functions (one per current handler)
+### `README.md`
+- Replace TanStack Start badge/mention with **@tanstack/react-router** + Vite SPA.
+- Tech Stack table: drop "TanStack Start", "Cloudflare Workers/Nitro"; add **Supabase Edge Functions (Deno)** for the backend row; mark Express server as optional/self-host only.
+- Installation: dev server URL is `http://localhost:8080` (Vite default in this project). Remove Cloudflare build note; add `VITE_BASE_PATH` note and link to `server/README.md` for the self-hosted API.
+- Simplify env example to only what the browser needs (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`); move server/edge secrets to `docs/environment.md`.
+- Project Structure section: replace `src/routes/api/*`, `*.functions.ts`, `client.server.ts` with the current tree — `supabase/functions/<name>/index.ts`, `src/lib/api.ts`, `server/src/handlers/`.
 
-Port every file in `server/src/handlers/` to `supabase/functions/<name>/index.ts` (Deno):
+### `docs/architecture.md`
+- New ASCII diagram: React SPA → `apiFetch` → Supabase Edge Function (Deno) → n8n webhook (JWT/Basic auth). Show optional secondary path: SPA → Nginx → Express `server/` for the university deploy.
+- Components section: describe `src/lib/api.ts` (`apiFetch` helper that resolves `/api/*` to `${VITE_SUPABASE_URL}/functions/v1/*` and attaches the Supabase JWT + apikey).
+- Server-side section: replace TanStack Start server routes / server functions with **Edge Functions** in `supabase/functions/`, using `_shared/cors.ts` and `_shared/n8n-jwt.ts`. Note `admin-users` uses `SUPABASE_SERVICE_ROLE_KEY` for user creation. Auth is verified per-function via `supabase.auth.getClaims`.
+- Keep the n8n endpoint table and AI export pipeline section, but move `rag-export` description to reflect it's now an edge function (`n8n-export`) not a client-side server function.
 
-- `n8n-tables` (GET) — Sheets list
-- `n8n-vector-list` (GET) — Vector Store list
-- `n8n-qa` (GET, query params)
-- `n8n-create-table`, `n8n-delete-table`, `n8n-rename-table` (POST)
-- `n8n-delete`, `n8n-flag`, `n8n-run` (POST)
-- `n8n-process`, `n8n-dev-process` (POST)
-- `n8n-export`, `n8n-email` (POST)
-- `admin-users` (POST, uses service role key)
+### `docs/deployment.md`
+- Drop the Cloudflare Workers / workerd / `nodejs_compat` section entirely.
+- Two deployment targets:
+  1. **Lovable hosting** — Vite static build, edge functions deploy automatically. Publish button flow unchanged.
+  2. **University self-host** — `bun run build:prod` with `VITE_BASE_PATH=/rag-builder/`, Nginx serves `dist/`, Express server runs on `127.0.0.1:6699` under `/rag-builder/api/`.
+- Required secrets section split into "Edge Function secrets (Lovable Cloud)" and "Express server env (self-host)".
 
-Each function:
-- Reads secrets via `Deno.env.get(...)` (already configured: `N8N_WEBHOOK_USER`, `N8N_WEBHOOK_PASSWORD`, `N8N_JWT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`).
-- Replaces Node-only APIs (`Buffer.from(...).toString("base64")` → `btoa(...)`, `jsonwebtoken` → `jose` via `npm:jose`).
-- Uses standard CORS headers and handles `OPTIONS` preflight.
-- Validates the caller's Supabase JWT via `supabase.auth.getClaims(token)` for every function except unauthenticated ones (all n8n routes require auth today; `admin-users` additionally requires admin role, matching current server behavior).
-- Returns the same JSON shape the client already expects, so no UI changes are needed.
+### `docs/environment.md`
+- Three groups: **Browser (build-time)**, **Edge Functions (Lovable Cloud secrets)**, **Standalone Express server (self-host only)**.
+- Add `VITE_BASE_PATH` under browser.
+- Add `N8N_JWT_SECRET`.
+- Remove the "never import `client.server.ts`" and "read `process.env` inside `.handler()`" rules — those were TanStack Start–specific. Replace with: "Edge functions use `Deno.env.get(...)`; never read env at module scope in browser code."
 
-### 2. Client — thin `apiFetch` helper
+### `docs/usage.md`
+- Minor: change the `/api/n8n-*` references to say "routed through `apiFetch` → Supabase Edge Function"; otherwise the user-facing flow is unchanged.
 
-Add `src/lib/api.ts` exporting `apiFetch(path, init?)`:
+### `server/README.md`
+- Add a header banner: "**Optional** — only needed for the self-hosted university deploy. The Lovable-hosted app uses Supabase Edge Functions." Rest of the file stays.
 
-- Strips leading `/api/`, resolves to `${VITE_SUPABASE_URL}/functions/v1/<name>`.
-- Attaches `Authorization: Bearer <session access_token>` and `apikey: <publishable key>`.
-- Returns the raw `Response` so existing call-site code (`res.ok`, `res.json()`, `res.status`) keeps working unchanged.
+### `src/routes/README.md`
+- Rewrite for **@tanstack/react-router** (not Start): file-based routing still applies for pages, but the `src/routes/api/` folder no longer exists — API surface now lives in `supabase/functions/`. Keep the conventions table for pages.
 
-Replace the 16 `fetch("/api/n8n-*")` and `/api/admin-users` calls in:
-
-- `src/routes/_authenticated/index.tsx`
-- `src/components/qa-dashboard/QuestionPasteBox.tsx`
-- `src/components/qa-dashboard/ExcelImportBox.tsx`
-
-with `apiFetch(...)`. Payloads, endpoints, and response handling stay identical.
-
-### 3. Standalone Express server
-
-Left in place for the university deploy but no longer required for the Lovable-hosted app. `apiFetch` targets Supabase Edge Functions in both environments, so a single code path serves both. The `server/` directory can be removed later if you decide you don't need it — not part of this change.
+### `.lovable/plan.md`
+- Leave as-is (historical plan record).
 
 ## Out of scope
 
-- No changes to n8n webhook URLs, credentials, DB schema, RLS, or UI.
-- No changes to Supabase auth, routing, or base-path handling.
-
-## Verification
-
-1. Deploy edge functions.
-2. Load the app in preview, sign in — Sheets list and Vector Store repopulate.
-3. Spot-check: rename a sheet, run a question, export — each round-trips through the corresponding edge function.
+- No code changes. Documentation only.
+- No changes to screenshots, license, or the n8n endpoint IDs table.

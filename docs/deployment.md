@@ -1,6 +1,9 @@
 # Deployment
 
-## Lovable hosting (recommended)
+There are two supported targets: **Lovable hosting** (default) and a
+**self-hosted university deploy** behind Nginx.
+
+## 1. Lovable hosting (recommended)
 
 The app is built and deployed through Lovable:
 
@@ -9,29 +12,74 @@ The app is built and deployed through Lovable:
   - `https://tuah-rag.lovable.app` (Lovable subdomain)
   - `https://rag.ainibot.com` (custom domain)
 
-Under the hood, Nitro produces a Cloudflare Workers bundle.
+Frontend changes require a **Publish → Update** to go live. Edge Function
+changes deploy immediately and automatically — no manual step.
 
-## Runtime notes (Cloudflare Workers + nodejs_compat)
+### Edge Function secrets (Lovable Cloud)
 
-The server-side code runs on **workerd**, not a full Node host. Practical implications:
+Configure these once in Lovable Cloud; they are read by the edge functions via
+`Deno.env.get(...)`:
 
-- ✅ Safe: `fetch`, `crypto`, `Buffer`, `stream`, `url`, `zlib`, most Web APIs.
-- ❌ Unsafe: `child_process`, `sharp`, `puppeteer`, `fs.watch`, native modules, `os.cpus()`.
-- All npm packages must be **fully bundled at build time** — no runtime module resolution exists.
-
-When adding new dependencies, prefer pure-JS or WASM packages that explicitly support edge / Workers runtimes.
-
-## Required secrets at deploy time
-
-Configure these in the hosting environment (Lovable Cloud / Cloudflare):
-
-- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- `LOVABLE_API_KEY`
 - `N8N_WEBHOOK_USER`, `N8N_WEBHOOK_PASSWORD`
+- `N8N_JWT_SECRET`
+- `LOVABLE_API_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` *(auto-provisioned)*
 
-The browser-side `VITE_*` mirrors are baked in at build time.
+Browser build-time values live in `.env`:
 
-## Local production build
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` *(auto-written by the Lovable Cloud connection)*
+- `VITE_BASE_PATH` — leave as `/` for Lovable hosting
+
+## 2. Self-hosted university deploy
+
+Serves the same SPA under `https://<uni-host>/rag-builder/` with a Node/Express
+API on `127.0.0.1:6699` behind Nginx.
+
+### Build
+
+```bash
+bun run build:prod          # sets VITE_BASE_PATH=/rag-builder/
+```
+
+Copy `dist/` to the web root (e.g. `/var/www/rag-builder/`).
+
+### Run the API
+
+```bash
+cd server
+cp .env.example .env        # fill in secrets — see below
+npm install
+npm run build
+node dist/index.js          # or manage with pm2 / systemd
+```
+
+### Express server env (self-host only)
+
+| Variable | Purpose |
+|---|---|
+| `PORT` | Default `6699` |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Auth + admin ops |
+| `N8N_WEBHOOK_USER`, `N8N_WEBHOOK_PASSWORD`, `N8N_JWT_SECRET` | n8n auth |
+| `LOVABLE_API_KEY` | AI Gateway (used by `n8n-export`) |
+
+### Nginx snippet
+
+```nginx
+location /rag-builder/ {
+  alias /var/www/rag-builder/;
+  try_files $uri $uri/ /rag-builder/index.html;
+}
+
+location /rag-builder/api/ {
+  proxy_pass http://127.0.0.1:6699/api/;
+  proxy_set_header Host $host;
+  proxy_set_header Authorization $http_authorization;
+}
+```
+
+See [`server/README.md`](../server/README.md) for the full server setup.
+
+## Local production preview
 
 ```bash
 bun run build
@@ -40,4 +88,5 @@ bun run preview
 
 ## Custom domain
 
-The custom domain `rag.ainibot.com` is wired through the Lovable publish settings. Changing it does not require code edits.
+`rag.ainibot.com` is wired through the Lovable publish settings. Changing it
+does not require code edits.

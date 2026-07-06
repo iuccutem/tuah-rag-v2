@@ -4,12 +4,12 @@
 
 ### A spreadsheet-style workspace for curating Q&A knowledge across faculties and messaging channels — powered by AI.
 
-[![TanStack Start](https://img.shields.io/badge/TanStack_Start-1.x-FF4154?logo=react&logoColor=white)](https://tanstack.com/start)
-[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS v4](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![React 18](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![TanStack Router](https://img.shields.io/badge/TanStack_Router-1.x-FF4154?logo=react&logoColor=white)](https://tanstack.com/router)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v3-38BDF8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![Supabase](https://img.shields.io/badge/Lovable_Cloud-Supabase-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
-[![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
+[![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
 [![License](https://img.shields.io/badge/license-MIT-blue)](#license)
 
 [Live Preview](https://tuah-rag.lovable.app) · [Custom Domain](https://rag.ainibot.com) · [Docs](./docs)
@@ -67,7 +67,7 @@ and metadata for each entry.
 
 ### 🤖 AI answer pipeline
 - One-click **Run Web** / **Run WA-TG** per row or in bulk
-- Pipeline orchestrated through self-hosted **n8n** webhooks (Basic-auth proxied via TanStack server routes)
+- Pipeline orchestrated through self-hosted **n8n** webhooks, proxied by **Supabase Edge Functions** so credentials never reach the browser
 - Per-row email / flag / delete actions
 
 ### 🌐 RAG JSON export with translation
@@ -89,16 +89,16 @@ and metadata for each entry.
 
 | Layer | Technology |
 |---|---|
-| **Framework** | [TanStack Start](https://tanstack.com/start) v1 (SSR + server functions) |
-| **Build tool** | [Vite 7](https://vitejs.dev) |
-| **UI** | [React 19](https://react.dev), [Tailwind CSS v4](https://tailwindcss.com), [shadcn/ui](https://ui.shadcn.com), [Radix UI](https://www.radix-ui.com), [lucide-react](https://lucide.dev) |
-| **Data layer** | [TanStack Query 5](https://tanstack.com/query), [TanStack Router](https://tanstack.com/router) |
-| **Backend** | [Lovable Cloud](https://lovable.dev) (Supabase) — Postgres, Auth, RLS |
+| **Framework** | [React 18](https://react.dev) SPA on [Vite 5](https://vitejs.dev) |
+| **Routing** | [@tanstack/react-router](https://tanstack.com/router) (file-based, no SSR) |
+| **UI** | [Tailwind CSS v3](https://tailwindcss.com), [shadcn/ui](https://ui.shadcn.com), [Radix UI](https://www.radix-ui.com), [lucide-react](https://lucide.dev) |
+| **Data layer** | [TanStack Query 5](https://tanstack.com/query) |
+| **Backend** | [Lovable Cloud](https://lovable.dev) (Supabase) — Postgres, Auth, RLS, **Edge Functions (Deno)** |
 | **AI** | [Lovable AI Gateway](https://lovable.dev) (Gemini 3 Flash) via Vercel [AI SDK](https://sdk.vercel.ai) |
 | **Workflow engine** | [n8n](https://n8n.io) — agent webhooks for Q&A processing |
 | **Spreadsheet I/O** | [exceljs](https://github.com/exceljs/exceljs) |
 | **Forms & validation** | [react-hook-form](https://react-hook-form.com), [zod](https://zod.dev) |
-| **Runtime** | Cloudflare Workers (via Nitro) |
+| **Optional self-host API** | Node/Express in [`server/`](./server) — only for the university deploy |
 
 ---
 
@@ -121,7 +121,7 @@ and metadata for each entry.
 
 - [Bun](https://bun.sh) ≥ 1.0 (or npm/pnpm)
 - A Lovable Cloud project (Supabase URL + publishable key)
-- Access to the n8n agent instance (Basic-auth credentials)
+- Access to the n8n agent instance (Basic-auth credentials + JWT secret) — configured as Edge Function secrets
 
 ### 1. Clone & install
 
@@ -133,26 +133,20 @@ bun install
 
 ### 2. Environment variables
 
-Create a `.env` file at the project root:
+Only browser-visible values live in `.env` at the project root:
 
 ```env
-# Lovable Cloud / Supabase (browser)
+# Lovable Cloud (browser — publishable/anon key is safe to ship)
 VITE_SUPABASE_URL=https://<project>.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=<publishable-anon-key>
 
-# Server runtime mirror
-SUPABASE_URL=https://<project>.supabase.co
-SUPABASE_PUBLISHABLE_KEY=<publishable-anon-key>
-
-# AI Gateway (server-only)
-LOVABLE_API_KEY=<gateway-key>
-
-# n8n agent webhooks (server-only)
-N8N_WEBHOOK_USER=<user>
-N8N_WEBHOOK_PASSWORD=<password>
+# Optional: base path when hosted under a sub-path (e.g. /rag-builder/)
+VITE_BASE_PATH=/
 ```
 
-> See [`docs/environment.md`](./docs/environment.md) for the full variable matrix.
+All server-side secrets (`N8N_WEBHOOK_USER`, `N8N_WEBHOOK_PASSWORD`, `N8N_JWT_SECRET`,
+`SUPABASE_SERVICE_ROLE_KEY`, `LOVABLE_API_KEY`) live as **Edge Function secrets** in
+Lovable Cloud — see [`docs/environment.md`](./docs/environment.md) for the full matrix.
 
 ### 3. Run the dev server
 
@@ -160,15 +154,17 @@ N8N_WEBHOOK_PASSWORD=<password>
 bun run dev
 ```
 
-App is served at **http://localhost:5173**.
+App is served at **http://localhost:8080**.
 
 ### 4. Build for production
 
 ```bash
-bun run build
+bun run build              # standard build (VITE_BASE_PATH=/)
+bun run build:prod         # university self-host build (VITE_BASE_PATH=/rag-builder/)
 ```
 
-Output targets Cloudflare Workers via Nitro. See [`docs/deployment.md`](./docs/deployment.md).
+Output is a static Vite bundle. See [`docs/deployment.md`](./docs/deployment.md) for
+Lovable hosting and the optional self-hosted Express API in [`server/`](./server/README.md).
 
 ---
 
@@ -192,32 +188,33 @@ For deeper workflows, see [`docs/usage.md`](./docs/usage.md).
 
 ```
 src/
+├── main.tsx                        # SPA entry, router + auth wiring
 ├── routes/
 │   ├── __root.tsx                  # App shell
 │   ├── auth.tsx                    # Sign-in
-│   ├── _authenticated/
-│   │   ├── route.tsx               # Auth gate
-│   │   └── index.tsx               # Main dashboard
-│   └── api/                        # Server routes (n8n proxies)
-│       ├── n8n-qa.ts               # List rows
-│       ├── n8n-tables.ts           # List sheets
-│       ├── n8n-create-table.ts
-│       ├── n8n-rename-table.ts
-│       ├── n8n-delete-table.ts
-│       ├── n8n-run.ts              # Insert / run question
-│       ├── n8n-process.ts          # Trigger Web / WA-TG pipeline
-│       ├── n8n-flag.ts
-│       ├── n8n-delete.ts
-│       └── n8n-email.ts
+│   └── _authenticated/
+│       ├── route.tsx               # Auth gate
+│       └── index.tsx               # Main dashboard
 ├── components/
 │   ├── qa-dashboard/               # QATable, columns, paste & import boxes
 │   └── ui/                         # shadcn/ui primitives
 ├── lib/
-│   ├── rag-export.functions.ts     # AI translation + intent/metadata
-│   ├── ai-gateway.server.ts        # Lovable AI Gateway provider
-│   └── admin-users.functions.ts    # Admin-only user registration
+│   └── api.ts                      # apiFetch() → routes /api/* to edge functions
 ├── integrations/supabase/          # Auto-generated client
-└── styles.css                      # Tailwind v4 theme tokens
+└── styles.css                      # Tailwind theme tokens
+
+supabase/functions/                 # Deno edge functions (backend)
+├── _shared/{cors,n8n-jwt}.ts
+├── n8n-tables/                     # List sheets
+├── n8n-vector-list/                # List vector store entries
+├── n8n-qa/                         # List rows
+├── n8n-{create,rename,delete}-table/
+├── n8n-{run,process,dev-process,flag,delete,email,export}/
+└── admin-users/                    # Uses SUPABASE_SERVICE_ROLE_KEY
+
+server/                             # Optional Express API for self-hosted deploy
+└── src/handlers/                   # Mirrors the edge functions above
+
 docs/                               # Long-form documentation
 ```
 
@@ -228,9 +225,10 @@ docs/                               # Long-form documentation
 | Doc | What's inside |
 |---|---|
 | [`docs/architecture.md`](./docs/architecture.md) | System diagram, data flow, n8n agent contract |
-| [`docs/environment.md`](./docs/environment.md) | All env vars (browser vs server) |
+| [`docs/environment.md`](./docs/environment.md) | All env vars (browser vs edge vs self-host) |
 | [`docs/usage.md`](./docs/usage.md) | End-user workflows in depth |
-| [`docs/deployment.md`](./docs/deployment.md) | Publishing, custom domains, Cloudflare runtime notes |
+| [`docs/deployment.md`](./docs/deployment.md) | Lovable publish + university self-host |
+| [`server/README.md`](./server/README.md) | Optional Node/Express API for self-hosting |
 
 ---
 
