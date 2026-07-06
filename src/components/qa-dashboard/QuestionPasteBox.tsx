@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api";
 import { useMemo, useState } from "react";
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, Scissors, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -94,7 +95,7 @@ export function QuestionPasteBox({
       const question = questions[i];
       if (existingSet.has(question.toLowerCase())) continue;
       try {
-        const res = await fetch("/api/n8n-run", {
+        const res = await apiFetch("/n8n-run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(table ? { question, table } : { question }),
@@ -147,7 +148,7 @@ export function QuestionPasteBox({
       for (const question of insertedQuestions) {
         const body: Record<string, unknown> = { channel, question, ...(extraProcessBody ?? {}) };
         if (table) body.table = table;
-        const res = await fetch(processEndpoint, {
+        const res = await apiFetch(processEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),

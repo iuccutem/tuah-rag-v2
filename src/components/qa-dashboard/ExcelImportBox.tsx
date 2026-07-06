@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api";
 import { useMemo, useState } from "react";
 import ExcelJS from "exceljs";
 import { readSheet } from "read-excel-file/browser";
@@ -282,7 +283,7 @@ export function ExcelImportBox({
         const payload: Record<string, unknown> = { question: q, table };
         if (e.telegram_whatsapp) payload.telegram_whatsapp = e.telegram_whatsapp;
         if (e.url) payload.url = e.url;
-        const res = await fetch("/api/n8n-run", {
+        const res = await apiFetch("/n8n-run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
