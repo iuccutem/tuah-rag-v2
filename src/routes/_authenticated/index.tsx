@@ -105,7 +105,7 @@ type ApiResponse = { data: QARow[]; error: string | null };
 async function fetchRows(table: string): Promise<ApiResponse> {
   const params = new URLSearchParams({ ts: String(Date.now()) });
   if (table) params.set("table", table);
-  const res = await fetch(`/api/n8n-qa?${params.toString()}`, {
+  const res = await apiFetch(`/n8n-qa?${params.toString()}`, {
     cache: "no-store",
     headers: { Accept: "application/json" },
   });
@@ -116,7 +116,7 @@ async function fetchRows(table: string): Promise<ApiResponse> {
 type TablesResponse = { tables: string[]; error: string | null };
 
 async function fetchTables(): Promise<TablesResponse> {
-  const res = await fetch(`/api/n8n-tables?ts=${Date.now()}`, {
+  const res = await apiFetch(`/n8n-tables?ts=${Date.now()}`, {
     cache: "no-store",
     headers: { Accept: "application/json" },
   });
@@ -157,7 +157,7 @@ export function DashboardPage() {
   const vectorsQuery = useQuery({
     queryKey: ["vector-list"],
     queryFn: async () => {
-      const res = await fetch(`/api/n8n-vector-list?ts=${Date.now()}`, {
+      const res = await apiFetch(`/n8n-vector-list?ts=${Date.now()}`, {
         cache: "no-store",
       });
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
@@ -225,7 +225,7 @@ export function DashboardPage() {
     seedRanRef.current = true;
     (async () => {
       try {
-        const res = await fetch("/api/n8n-create-table", {
+        const res = await apiFetch("/n8n-create-table", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: "qatest-dev-test" }),
@@ -273,7 +273,7 @@ export function DashboardPage() {
   const [registerPassword, setRegisterPassword] = useState("");
   const [registering, setRegistering] = useState(false);
   const registerUserFn = async (data: { email: string; password: string }) => {
-    const res = await fetch("/api/admin-users", {
+    const res = await apiFetch("/admin-users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -413,7 +413,7 @@ export function DashboardPage() {
         telegram_whatsapp: r.expected_answer,
         url: r.url,
       }));
-      const res = await fetch("/api/n8n-export", {
+      const res = await apiFetch("/n8n-export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -486,7 +486,7 @@ export function DashboardPage() {
     }
     setCreatingSheet(true);
     try {
-      const res = await fetch("/api/n8n-create-table", {
+      const res = await apiFetch("/n8n-create-table", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: formatted }),
@@ -535,7 +535,7 @@ export function DashboardPage() {
     }
     setRenaming(true);
     try {
-      const res = await fetch("/api/n8n-rename-table", {
+      const res = await apiFetch("/n8n-rename-table", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: from, newName: formatted }),
@@ -563,7 +563,7 @@ export function DashboardPage() {
     if (!name) return;
     setDeletingSheet(true);
     try {
-      const res = await fetch("/api/n8n-delete-table", {
+      const res = await apiFetch("/n8n-delete-table", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
@@ -720,7 +720,7 @@ export function DashboardPage() {
         field: null,
         ...buildRowPayload(row, overrides),
       };
-      const res = await fetch("/api/n8n-flag", {
+      const res = await apiFetch("/n8n-flag", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -779,7 +779,7 @@ export function DashboardPage() {
         field,
         ...buildRowPayload(row, {}, { [field]: value }),
       };
-      const res = await fetch("/api/n8n-flag", {
+      const res = await apiFetch("/n8n-flag", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -930,7 +930,7 @@ export function DashboardPage() {
     try {
       for (const question of importQueue) {
         try {
-          const res = await fetch("/api/n8n-run", {
+          const res = await apiFetch("/n8n-run", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ question, table: importTarget }),
@@ -973,7 +973,7 @@ export function DashboardPage() {
   const postDelete = async (
     items: Array<{ id: string | number | null; question: string }>,
   ) => {
-    const res = await fetch("/api/n8n-delete", {
+    const res = await apiFetch("/n8n-delete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

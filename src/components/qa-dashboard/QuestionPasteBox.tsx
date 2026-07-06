@@ -94,7 +94,7 @@ export function QuestionPasteBox({
       const question = questions[i];
       if (existingSet.has(question.toLowerCase())) continue;
       try {
-        const res = await fetch("/api/n8n-run", {
+        const res = await apiFetch("/n8n-run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(table ? { question, table } : { question }),
