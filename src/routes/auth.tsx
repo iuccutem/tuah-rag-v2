@@ -17,10 +17,6 @@ import {
 } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/auth")({
-  ssr: false,
-  head: () => ({
-    meta: [{ title: "Sign in — Q&A Evaluation" }],
-  }),
   component: AuthPage,
 });
 

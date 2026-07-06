@@ -1,13 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 // Development pipeline: forward question + vector_id to the dev agent webhook.
 const WEBHOOK_URL =
   "https://tuah.utem.edu.my/agent/webhook/ad7bc9b8-0b89-4e4a-bdb5-89b83ecddc59";
 
-export const Route = createFileRoute("/api/n8n-dev-process")({
-  server: {
-    handlers: {
-      POST: async ({ request }) => {
+export const method = "POST" as const;
+
+export const handler = async ({ request }: { request: Request }): Promise<Response> => {
         let question = "";
         let table = "";
         let vectorId = "";
@@ -77,7 +74,4 @@ export const Route = createFileRoute("/api/n8n-dev-process")({
             { status: 200 },
           );
         }
-      },
-    },
-  },
-});
+      };

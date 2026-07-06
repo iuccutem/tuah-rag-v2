@@ -42,8 +42,6 @@ import ExcelJS from "exceljs";
 import { toast } from "sonner";
 import { useNavigate, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { useServerFn } from "@tanstack/react-start";
-import { registerUser } from "@/lib/admin-users.functions";
 import { useTheme } from "@/hooks/use-theme";
 import {
   Select,
@@ -274,7 +272,16 @@ export function DashboardPage() {
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registering, setRegistering] = useState(false);
-  const registerUserFn = useServerFn(registerUser);
+  const registerUserFn = async (data: { email: string; password: string }) => {
+    const res = await fetch("/api/admin-users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const payload = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) throw new Error(payload.error || `Registration failed (${res.status})`);
+    return payload;
+  };
   const [insertOpen, setInsertOpen] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -2340,7 +2347,7 @@ export function DashboardPage() {
                 }
                 setRegistering(true);
                 try {
-                  await registerUserFn({ data: { email, password: registerPassword } });
+                  await registerUserFn({ email, password: registerPassword });
                   toast.success("User registered.");
                   setRegisterEmail("");
                   setRegisterPassword("");

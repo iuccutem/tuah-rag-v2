@@ -1,20 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
-
+// Insert a single question into the evaluation table.
 const WEBHOOK_URL =
-  "https://tuah.utem.edu.my/agent/webhook/8c131be7-21e7-4049-9dbb-4210b4ba5a79";
+  "https://tuah.utem.edu.my/agent/webhook/8757e607-cb93-4b34-8289-9114663381bb";
 
-export const Route = createFileRoute("/api/n8n-email")({
-  server: {
-    handlers: {
-      POST: async ({ request }) => {
-        const body = (await request.json()) as { email?: string };
-        const email = body?.email?.trim();
-        if (!email) {
-          return Response.json(
-            { ok: false, error: "Email is required." },
-            { status: 200 },
-          );
-        }
+export const method = "POST" as const;
+
+export const handler = async ({ request }: { request: Request }): Promise<Response> => {
         const user = process.env.N8N_WEBHOOK_USER;
         const password = process.env.N8N_WEBHOOK_PASSWORD;
         if (!user || !password) {
@@ -23,8 +13,38 @@ export const Route = createFileRoute("/api/n8n-email")({
             { status: 200 },
           );
         }
+
+        let body: {
+          question?: string;
+          table?: string;
+          telegram_whatsapp?: string;
+          url?: string;
+        } = {};
+        try {
+          body = await request.json();
+        } catch {
+          return Response.json(
+            { ok: false, error: "Invalid JSON body." },
+            { status: 400 },
+          );
+        }
+        const question = (body.question ?? "").trim();
+        const table = (body.table ?? "").trim();
+        const expected = (body.telegram_whatsapp ?? "").trim();
+        const url = (body.url ?? "").trim();
+        if (!question) {
+          return Response.json(
+            { ok: false, error: "Question is empty." },
+            { status: 200 },
+          );
+        }
+
         const auth = Buffer.from(`${user}:${password}`).toString("base64");
         try {
+          const upstream: Record<string, unknown> = { question };
+          if (table) upstream.table = table;
+          if (expected) upstream.telegram_whatsapp = expected;
+          if (url) upstream.url = url;
           const res = await fetch(WEBHOOK_URL, {
             method: "POST",
             headers: {
@@ -32,8 +52,9 @@ export const Route = createFileRoute("/api/n8n-email")({
               "Content-Type": "application/json",
               Accept: "application/json",
             },
-            body: JSON.stringify({ email }),
+            body: JSON.stringify(upstream),
           });
+
           const text = await res.text();
           let data: unknown = null;
           try {
@@ -60,7 +81,4 @@ export const Route = createFileRoute("/api/n8n-email")({
             { status: 200 },
           );
         }
-      },
-    },
-  },
-});
+      };

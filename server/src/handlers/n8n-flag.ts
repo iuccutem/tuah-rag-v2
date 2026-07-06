@@ -1,14 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 const WEBHOOK_URL =
   "https://tuah.utem.edu.my/agent/webhook/adf82095-c24f-4a8f-9e10-fca39d0452ff";
 
 type Field = "question" | "url" | "web" | "telegram_whatsapp" | null;
 
-export const Route = createFileRoute("/api/n8n-flag")({
-  server: {
-    handlers: {
-      POST: async ({ request }) => {
+export const method = "POST" as const;
+
+export const handler = async ({ request }: { request: Request }): Promise<Response> => {
         const user = process.env.N8N_WEBHOOK_USER;
         const password = process.env.N8N_WEBHOOK_PASSWORD;
         if (!user || !password) {
@@ -103,7 +100,4 @@ export const Route = createFileRoute("/api/n8n-flag")({
             { status: 200 },
           );
         }
-      },
-    },
-  },
-});
+      };

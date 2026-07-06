@@ -1,13 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 const DELETE_WEBHOOK_URL =
   "https://tuah.utem.edu.my/agent/webhook/498f1285-dd47-489f-bf00-17487742d2c6";
 const SUCCESS_MESSAGE = "Delete the auto-test delete workflow successfully.";
 
-export const Route = createFileRoute("/api/n8n-delete")({
-  server: {
-    handlers: {
-      POST: async ({ request }) => {
+export const method = "POST" as const;
+
+export const handler = async ({ request }: { request: Request }): Promise<Response> => {
         const user = process.env.N8N_WEBHOOK_USER;
         const password = process.env.N8N_WEBHOOK_PASSWORD;
         if (!user || !password) {
@@ -120,7 +117,4 @@ export const Route = createFileRoute("/api/n8n-delete")({
           },
           { status: 200 },
         );
-      },
-    },
-  },
-});
+      };

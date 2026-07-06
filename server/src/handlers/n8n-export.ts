@@ -1,12 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 const DEFAULT_WEBHOOK =
   "https://tuah.utem.edu.my/agent/webhook/22f796c0-d27f-4e92-a914-a6dcde8a0c5f";
 
-export const Route = createFileRoute("/api/n8n-export")({
-  server: {
-    handlers: {
-      POST: async ({ request }) => {
+export const method = "POST" as const;
+
+export const handler = async ({ request }: { request: Request }): Promise<Response> => {
         const target = process.env.N8N_EXPORT_WEBHOOK_URL || DEFAULT_WEBHOOK;
         const user = process.env.N8N_WEBHOOK_USER;
         const password = process.env.N8N_WEBHOOK_PASSWORD;
@@ -86,7 +83,4 @@ export const Route = createFileRoute("/api/n8n-export")({
             { status: 502 },
           );
         }
-      },
-    },
-  },
-});
+      };

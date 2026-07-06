@@ -1,5 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 // Trigger the agent to process rows for a given channel.
 const WEBHOOK_URLS = {
   web: "https://tuah.utem.edu.my/agent/webhook/ad7bc9b8-0b89-4e4a-bdb5-89b83ecddc59",
@@ -9,10 +7,9 @@ const WEBHOOK_URLS = {
 
 type Channel = keyof typeof WEBHOOK_URLS;
 
-export const Route = createFileRoute("/api/n8n-process")({
-  server: {
-    handlers: {
-      POST: async ({ request }) => {
+export const method = "POST" as const;
+
+export const handler = async ({ request }: { request: Request }): Promise<Response> => {
         let channel: Channel = "web";
         let question = "";
         let table = "";
@@ -91,7 +88,4 @@ export const Route = createFileRoute("/api/n8n-process")({
             { status: 200 },
           );
         }
-      },
-    },
-  },
-});
+      };

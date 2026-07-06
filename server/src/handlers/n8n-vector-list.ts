@@ -1,15 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 const WEBHOOK_URL =
-  "https://tuah.utem.edu.my/agent/webhook/4340097e-3074-4ab4-b97c-feba47f87a55";
+  "https://tuah.utem.edu.my/agent/webhook/config/vector/list";
 
-function normalizeTables(input: unknown): string[] {
-  const out: string[] = [];
+type Vector = { id: string; name: string };
+
+function normalizeVectors(input: unknown): Vector[] {
+  const out: Vector[] = [];
   const visit = (v: unknown) => {
     if (v == null) return;
     if (typeof v === "string") {
       const s = v.trim();
-      if (s) out.push(s);
+      if (s) out.push({ id: s, name: s });
       return;
     }
     if (Array.isArray(v)) {
@@ -18,41 +18,48 @@ function normalizeTables(input: unknown): string[] {
     }
     if (typeof v === "object") {
       const obj = v as Record<string, unknown>;
-      for (const key of ["name", "table", "table_name", "tablename"]) {
-        if (typeof obj[key] === "string") {
-          const s = (obj[key] as string).trim();
-          if (s) out.push(s);
-          return;
-        }
+      const idKey = ["id", "vector_id", "vectorId", "value", "uuid"].find(
+        (k) => typeof obj[k] === "string" || typeof obj[k] === "number",
+      );
+      const nameKey = ["name", "label", "title", "display_name", "displayName"].find(
+        (k) => typeof obj[k] === "string",
+      );
+      if (idKey) {
+        const id = String(obj[idKey]);
+        const name = nameKey ? String(obj[nameKey]) : id;
+        if (id.trim()) out.push({ id: id.trim(), name: name.trim() || id.trim() });
+        return;
       }
-      for (const key of ["data", "tables", "results", "items", "rows"]) {
+      for (const key of ["data", "vectors", "results", "items", "rows", "list"]) {
         if (key in obj) visit(obj[key]);
       }
     }
   };
   visit(input);
-  // Dedupe, preserve order.
-  return Array.from(new Set(out));
+  const seen = new Set<string>();
+  return out.filter((v) => {
+    if (seen.has(v.id)) return false;
+    seen.add(v.id);
+    return true;
+  });
 }
 
-export const Route = createFileRoute("/api/n8n-tables")({
-  server: {
-    handlers: {
-      GET: async () => {
-        const user = process.env.N8N_WEBHOOK_USER;
-        const password = process.env.N8N_WEBHOOK_PASSWORD;
-        if (!user || !password) {
+export const method = "GET" as const;
+
+export const handler = async ({ request }: { request: Request }): Promise<Response> => {
+        if (!process.env.N8N_JWT_SECRET) {
           return Response.json(
-            { tables: [], error: "Webhook credentials are not configured." },
+            { vectors: [], error: "Webhook JWT secret is not configured." },
             { status: 200, headers: { "Cache-Control": "no-store" } },
           );
         }
-        const auth = Buffer.from(`${user}:${password}`).toString("base64");
         try {
+          const { signN8nJwt } = await import("../lib/n8n-jwt");
+          const token = await signN8nJwt();
           const res = await fetch(WEBHOOK_URL, {
             method: "GET",
             headers: {
-              Authorization: `Basic ${auth}`,
+              Authorization: `Bearer ${token}`,
               Accept: "application/json",
             },
           });
@@ -60,7 +67,7 @@ export const Route = createFileRoute("/api/n8n-tables")({
             const text = await res.text().catch(() => "");
             return Response.json(
               {
-                tables: [],
+                vectors: [],
                 error: `Webhook returned ${res.status} ${res.statusText}${
                   text ? `: ${text.slice(0, 200)}` : ""
                 }`,
@@ -69,22 +76,19 @@ export const Route = createFileRoute("/api/n8n-tables")({
             );
           }
           const json = await res.json().catch(() => null);
-          const tables = normalizeTables(json);
+          const vectors = normalizeVectors(json);
           return Response.json(
-            { tables, error: null },
+            { vectors, error: null },
             { status: 200, headers: { "Cache-Control": "no-store" } },
           );
         } catch (error) {
           return Response.json(
             {
-              tables: [],
+              vectors: [],
               error:
                 error instanceof Error ? error.message : "Failed to reach webhook.",
             },
             { status: 200, headers: { "Cache-Control": "no-store" } },
           );
         }
-      },
-    },
-  },
-});
+      };
