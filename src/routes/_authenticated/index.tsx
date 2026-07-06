@@ -42,8 +42,6 @@ import ExcelJS from "exceljs";
 import { toast } from "sonner";
 import { useNavigate, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { useServerFn } from "@tanstack/react-start";
-import { registerUser } from "@/lib/admin-users.functions";
 import { useTheme } from "@/hooks/use-theme";
 import {
   Select,
