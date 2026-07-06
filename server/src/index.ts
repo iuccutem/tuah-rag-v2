@@ -45,7 +45,7 @@ function toFetchRequest(req: ExRequest): Request {
     if (req.body === undefined || (typeof req.body === "object" && req.body !== null && Object.keys(req.body).length === 0 && !(req.body instanceof Buffer))) {
       // No body
     } else if (Buffer.isBuffer(req.body)) {
-      init.body = req.body;
+      init.body = new Uint8Array(req.body);
     } else if (typeof req.body === "string") {
       init.body = req.body;
     } else {
