@@ -25,7 +25,6 @@ Lovable Cloud dashboard.
 | `N8N_WEBHOOK_USER` | Basic-auth username for the n8n agent |
 | `N8N_WEBHOOK_PASSWORD` | Basic-auth password for the n8n agent |
 | `N8N_JWT_SECRET` | HS256 secret used to sign short-lived JWTs to n8n |
-| `LOVABLE_API_KEY` | Lovable AI Gateway key (used by `n8n-export`) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Admin client (bypasses RLS) — used by `admin-users` |
 | `SUPABASE_URL` | Auto-provided to every edge function |
 
@@ -39,7 +38,6 @@ university deploy — the Lovable-hosted app does not use these.
 | `PORT` | Listen port (default `6699`) |
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Auth + admin operations |
 | `N8N_WEBHOOK_USER`, `N8N_WEBHOOK_PASSWORD`, `N8N_JWT_SECRET` | Mirror the edge-function values |
-| `LOVABLE_API_KEY` | AI Gateway key |
 
 ## Rules
 

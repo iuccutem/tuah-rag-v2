@@ -145,7 +145,7 @@ VITE_BASE_PATH=/
 ```
 
 All server-side secrets (`N8N_WEBHOOK_USER`, `N8N_WEBHOOK_PASSWORD`, `N8N_JWT_SECRET`,
-`SUPABASE_SERVICE_ROLE_KEY`, `LOVABLE_API_KEY`) live as **Edge Function secrets** in
+`SUPABASE_SERVICE_ROLE_KEY`) live as **Edge Function secrets** in
 Lovable Cloud — see [`docs/environment.md`](./docs/environment.md) for the full matrix.
 
 ### 3. Run the dev server
