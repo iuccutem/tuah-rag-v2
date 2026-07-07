@@ -35,7 +35,6 @@ node dist/index.js     # or use pm2 / systemd
 | `SUPABASE_SERVICE_ROLE_KEY` | Service-role key. Used by `admin-users` to create accounts. |
 | `N8N_WEBHOOK_USER` / `N8N_WEBHOOK_PASSWORD` | Basic-auth credentials for the n8n webhooks. |
 | `N8N_JWT_SECRET` | HS256 secret for signing short-lived JWTs to n8n. |
-| `LOVABLE_API_KEY` | Lovable AI Gateway key, used by `n8n-export`. |
 
 ## Nginx (reference)
 

@@ -22,7 +22,6 @@ Configure these once in Lovable Cloud; they are read by the edge functions via
 
 - `N8N_WEBHOOK_USER`, `N8N_WEBHOOK_PASSWORD`
 - `N8N_JWT_SECRET`
-- `LOVABLE_API_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` *(auto-provisioned)*
 
 Browser build-time values live in `.env`:
@@ -60,7 +59,6 @@ node dist/index.js          # or manage with pm2 / systemd
 | `PORT` | Default `6699` |
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Auth + admin ops |
 | `N8N_WEBHOOK_USER`, `N8N_WEBHOOK_PASSWORD`, `N8N_JWT_SECRET` | n8n auth |
-| `LOVABLE_API_KEY` | AI Gateway (used by `n8n-export`) |
 
 ### Nginx snippet
 
