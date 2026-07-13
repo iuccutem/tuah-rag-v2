@@ -376,8 +376,8 @@ export function DashboardPage() {
     return result;
   }, [rows, searchQuery, dateFrom, dateTo]);
 
-  const exportJson = () => {
-    if (exportingJson) return;
+  const openExportDialog = () => {
+    if (exportingJson || exportingRag || exporting) return;
     if (selectedRowIds.size === 0) {
       toast.error("Select rows to export.");
       return;
@@ -398,6 +398,16 @@ export function DashboardPage() {
       return;
     }
     setExportPreview({ open: true, rows: previewRows });
+  };
+
+  const buildTableTag = () => {
+    const rawTable = (activeTable || "all").replace(/^qatest-(dev-)?/, "");
+    return rawTable.replace(/-/g, "_").replace(/[^a-zA-Z0-9_]/g, "_");
+  };
+  const buildStamp = () => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
   };
 
   const confirmExportJson = async () => {
@@ -436,15 +446,8 @@ export function DashboardPage() {
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const now = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
-      const rawTable = (activeTable || "all").replace(/^qatest-(dev-)?/, "");
-      const tableTag = rawTable
-        .replace(/-/g, "_")
-        .replace(/[^a-zA-Z0-9_]/g, "_");
       a.href = url;
-      a.download = `${tableTag}_q&a_${stamp}.json`;
+      a.download = `${buildTableTag()}_q&a_${buildStamp()}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -458,6 +461,60 @@ export function DashboardPage() {
       toast.error(e instanceof Error ? e.message : "Failed to export JSON.");
     } finally {
       setExportingJson(false);
+    }
+  };
+
+  const confirmExportRag = async () => {
+    if (exportingRag) return;
+    const previewRows = exportPreview.rows;
+    if (previewRows.length === 0) return;
+    setExportingRag(true);
+    const tId = toast.loading(
+      `Building production RAG for ${previewRows.length} row${previewRows.length === 1 ? "" : "s"}… this may take a while.`,
+    );
+    try {
+      const inputRows = previewRows.map((r) => ({
+        id: r.id,
+        question: r.question,
+        telegram_whatsapp: r.expected_answer,
+        url: r.url,
+      }));
+      const res = await apiFetch("/n8n-rag-build", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          table: activeTable || "all",
+          rows: inputRows,
+        }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as {
+        rows?: unknown;
+        error?: string;
+      };
+      toast.dismiss(tId);
+      if (!res.ok || !Array.isArray(payload.rows)) {
+        throw new Error(payload.error || `RAG build failed (${res.status})`);
+      }
+      const ragRows = payload.rows;
+      const json = JSON.stringify(ragRows, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${buildTableTag()}_rag_${buildStamp()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(
+        `Production RAG ready (${ragRows.length} record${ragRows.length === 1 ? "" : "s"}).`,
+      );
+      setExportPreview({ open: false, rows: [] });
+    } catch (e) {
+      toast.dismiss(tId);
+      toast.error(e instanceof Error ? e.message : "Failed to build RAG.");
+    } finally {
+      setExportingRag(false);
     }
   };
 
