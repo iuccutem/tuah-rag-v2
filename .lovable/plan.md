@@ -1,30 +1,22 @@
-## Batch the Production RAG export to avoid Cloudflare 524 timeouts
+## Batch the Raw JSON export to avoid timeouts
 
-### Problem
-The single call to `/n8n-rag-build` sends every selected row in one request. For >10 rows the n8n workflow needs more than 120s and Cloudflare returns 524. Output must remain one JSON file.
+Apply the same batching pattern already used in `confirmExportRag` to `confirmExportJson` in `src/routes/_authenticated/index.tsx`.
 
-### Fix (frontend only — `src/routes/_authenticated/index.tsx`, `confirmExportRag`)
+### Changes (frontend only)
 
-Split the selected rows into fixed-size chunks and call the existing `/n8n-rag-build` endpoint once per chunk, sequentially. Concatenate every returned `rows` array into one array and download it as the same `<tab>_rag_<DDMMYY>.json` file. No backend, edge-function, prompt, or webhook change.
-
-**Batch size:** 5 rows per request (safe headroom under the 120s proxy limit; adjustable via a single `RAG_BATCH_SIZE` const at the top of the function). Sheets ≤5 rows behave exactly as today (one request).
-
-**Sequential, not parallel:** avoids hammering the n8n instance and keeps ordering stable so the merged JSON matches the on-screen preview order.
-
-**Progress feedback:** update the existing loading toast after each batch — `Building production RAG… batch X / Y (Z rows done)`. Reuse the same toast id so it stays a single line.
-
-**Per-batch failure handling:**
-- On network error or non-2xx response, retry that batch once after a short delay (2s).
-- If it still fails, abort the whole export, dismiss the loading toast, show an error toast that names the failing batch and how many rows had already completed, and do NOT download a partial file (user asked for a single complete JSON).
-
-**Merging:** collect each response's `rows` into `const merged: unknown[] = []`; push with `merged.push(...payload.rows)`. Serialize once at the end with `JSON.stringify(merged, null, 2)` — identical shape to today's output, just longer.
-
-**Success toast:** unchanged wording, uses `merged.length`.
+- Introduce `const JSON_BATCH_SIZE = 5;` alongside `RAG_BATCH_SIZE` (single knob at top of function).
+- Split `previewRows` into sequential chunks of 5 and call `/n8n-export` once per chunk with the same payload shape (`{ table, rows: chunk }`).
+- Reuse the existing loading toast id; update text after each batch: `Generating batch X / Y (Z rows done)…`. Sheets ≤5 rows behave exactly like today (one request, original toast wording).
+- Per-batch retry: on network error or non-2xx, wait 2s and retry once. If it still fails, abort the whole export, dismiss the toast, show an error toast naming the failing batch and rows already completed, and do NOT download a partial file.
+- Merge results: `const merged: unknown[] = []; merged.push(...payload.rows)` per batch. Serialize once at the end with `JSON.stringify(merged, null, 2)` — identical shape to today's output.
+- Filename unchanged: `${buildTableTag()}_q&a_${buildStamp()}.json`.
+- Success toast unchanged wording, uses `merged.length`.
 
 ### Out of scope
-- No changes to `supabase/functions/n8n-rag-build/index.ts` (still forwards one payload).
-- No changes to the n8n webhook, prompts, filename format, or the Raw JSON / Raw Excel paths.
+
+- No changes to `supabase/functions/n8n-export/index.ts`, the n8n webhook, Raw Excel path, or Production RAG path.
 - No parallelism, no resumable state, no partial downloads.
 
 ### Result
-Exporting 28 rows issues 6 sequential requests of ≤5 rows each, each well under the 120s limit, then downloads a single `<tab>_rag_<DDMMYY>.json` containing all 28 merged records.
+
+Exporting 28 rows via Raw JSON issues 6 sequential requests of ≤5 rows each, each well under the 120s Cloudflare limit, then downloads a single merged `<tab>_q&a_<DDMMYY>.json`.
