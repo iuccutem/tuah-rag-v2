@@ -2,7 +2,7 @@ import { corsHeaders, json } from "../_shared/cors.ts";
 import { basicAuthHeader } from "../_shared/n8n-jwt.ts";
 
 const WEBHOOK_URL =
-  "https://tuah.utem.edu.my/agent/webhook/498f1285-dd47-489f-bf00-17487742d2c6";
+  "https://tuah.utem.edu.my/agent/webhook/3f944ef2-7d47-42b8-8500-b03ab19a71a6";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
