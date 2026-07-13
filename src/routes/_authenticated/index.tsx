@@ -578,10 +578,10 @@ export function DashboardPage() {
       .toLowerCase()
       .replace(/^qatest-(dev-)?/, "")
       .replace(/^dev-/, "")
-      .replace(/\s+/g, "-");
+      .replace(/\s+/g, "_");
     const formatted = `${prefix}${slug}`;
-    if (!/^[a-z0-9-]+$/.test(slug) || !slug) {
-      toast.error("Use letters, numbers, spaces or dashes only.");
+    if (!/^[a-z0-9_-]+$/.test(slug) || !slug) {
+      toast.error("Use letters, numbers, spaces, underscores or dashes only.");
       return;
     }
     if (formatted === from) {
