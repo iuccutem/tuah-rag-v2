@@ -258,6 +258,7 @@ export function DashboardPage() {
 
   const [exporting, setExporting] = useState(false);
   const [exportingJson, setExportingJson] = useState(false);
+  const [exportingRag, setExportingRag] = useState(false);
   const [exportPreview, setExportPreview] = useState<{
     open: boolean;
     rows: Array<{
@@ -375,8 +376,8 @@ export function DashboardPage() {
     return result;
   }, [rows, searchQuery, dateFrom, dateTo]);
 
-  const exportJson = () => {
-    if (exportingJson) return;
+  const openExportDialog = () => {
+    if (exportingJson || exportingRag || exporting) return;
     if (selectedRowIds.size === 0) {
       toast.error("Select rows to export.");
       return;
@@ -397,6 +398,16 @@ export function DashboardPage() {
       return;
     }
     setExportPreview({ open: true, rows: previewRows });
+  };
+
+  const buildTableTag = () => {
+    const rawTable = (activeTable || "all").replace(/^qatest-(dev-)?/, "");
+    return rawTable.replace(/-/g, "_").replace(/[^a-zA-Z0-9_]/g, "_");
+  };
+  const buildStamp = () => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
   };
 
   const confirmExportJson = async () => {
@@ -435,15 +446,8 @@ export function DashboardPage() {
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const now = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
-      const rawTable = (activeTable || "all").replace(/^qatest-(dev-)?/, "");
-      const tableTag = rawTable
-        .replace(/-/g, "_")
-        .replace(/[^a-zA-Z0-9_]/g, "_");
       a.href = url;
-      a.download = `${tableTag}_q&a_${stamp}.json`;
+      a.download = `${buildTableTag()}_q&a_${buildStamp()}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -457,6 +461,60 @@ export function DashboardPage() {
       toast.error(e instanceof Error ? e.message : "Failed to export JSON.");
     } finally {
       setExportingJson(false);
+    }
+  };
+
+  const confirmExportRag = async () => {
+    if (exportingRag) return;
+    const previewRows = exportPreview.rows;
+    if (previewRows.length === 0) return;
+    setExportingRag(true);
+    const tId = toast.loading(
+      `Building production RAG for ${previewRows.length} row${previewRows.length === 1 ? "" : "s"}… this may take a while.`,
+    );
+    try {
+      const inputRows = previewRows.map((r) => ({
+        id: r.id,
+        question: r.question,
+        telegram_whatsapp: r.expected_answer,
+        url: r.url,
+      }));
+      const res = await apiFetch("/n8n-rag-build", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          table: activeTable || "all",
+          rows: inputRows,
+        }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as {
+        rows?: unknown;
+        error?: string;
+      };
+      toast.dismiss(tId);
+      if (!res.ok || !Array.isArray(payload.rows)) {
+        throw new Error(payload.error || `RAG build failed (${res.status})`);
+      }
+      const ragRows = payload.rows;
+      const json = JSON.stringify(ragRows, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${buildTableTag()}_rag_${buildStamp()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(
+        `Production RAG ready (${ragRows.length} record${ragRows.length === 1 ? "" : "s"}).`,
+      );
+      setExportPreview({ open: false, rows: [] });
+    } catch (e) {
+      toast.dismiss(tId);
+      toast.error(e instanceof Error ? e.message : "Failed to build RAG.");
+    } finally {
+      setExportingRag(false);
     }
   };
 
@@ -1644,19 +1702,17 @@ export function DashboardPage() {
             {!isDev && (
               <button
                 type="button"
-                onClick={exportJson}
-                disabled={exporting || exportingJson}
-                title="Export selected rows as JSON"
+                onClick={openExportDialog}
+                disabled={exporting || exportingJson || exportingRag}
+                title="Export selected rows"
                 className="hidden sm:flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[13px] font-medium hover:bg-muted disabled:opacity-50"
               >
-                {exportingJson ? (
+                {exportingJson || exportingRag || exporting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Download className="h-4 w-4" />
                 )}
-                <span className="hidden lg:inline">
-                  {exportingJson ? "Exporting…" : "Export JSON"}
-                </span>
+                <span className="hidden lg:inline">Export</span>
               </button>
             )}
 
@@ -1720,40 +1776,25 @@ export function DashboardPage() {
                 <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Data
                 </div>
-                <DropdownMenuItem
-                  onClick={exportXlsx}
-                  disabled={exporting || exportingJson}
-                >
-                  {exporting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="mr-2 h-4 w-4" />
-                  )}
-                  {exporting ? "Exporting…" : "Export Excel"}
-                </DropdownMenuItem>
                 {!isDev && (
-                  <>
-                    <DropdownMenuItem
-                      className="sm:hidden"
-                      onClick={exportJson}
-                      disabled={exporting || exportingJson}
-                    >
-                      {exportingJson ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Download className="mr-2 h-4 w-4" />
-                      )}
-                      {exportingJson ? "Exporting…" : "Export JSON"}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="sm:hidden"
-                      onClick={() => setExcelImportOpen(true)}
-                      disabled={!activeTable}
-                    >
-                      <Upload className="mr-2 h-4 w-4" />
-                      Import Excel
-                    </DropdownMenuItem>
-                  </>
+                  <DropdownMenuItem
+                    className="sm:hidden"
+                    onClick={openExportDialog}
+                    disabled={exporting || exportingJson || exportingRag}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export…
+                  </DropdownMenuItem>
+                )}
+                {!isDev && (
+                  <DropdownMenuItem
+                    className="sm:hidden"
+                    onClick={() => setExcelImportOpen(true)}
+                    disabled={!activeTable}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import Excel
+                  </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
                 <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -2084,9 +2125,13 @@ export function DashboardPage() {
       >
         <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Confirm export ({exportPreview.rows.length} row{exportPreview.rows.length === 1 ? "" : "s"})</DialogTitle>
+            <DialogTitle>Export ({exportPreview.rows.length} row{exportPreview.rows.length === 1 ? "" : "s"})</DialogTitle>
             <DialogDescription>
-              Review the questions and expected answers below. On confirm, these are sent to the export webhook and the JSON file is downloaded.
+              Review the selected rows below, then pick an export format.
+              <span className="mt-1 block text-[12px] text-muted-foreground">
+                <strong>Raw data</strong> — download the sheet as-is (JSON or Excel) for backup or manual editing.<br />
+                <strong>Production RAG</strong> — send the rows to the RAG builder webhook and download the enriched, retrieval-ready JSON.
+              </span>
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-auto rounded-md border border-[var(--sheets-grid)] bg-muted/30 p-2 space-y-2">
@@ -2113,14 +2158,45 @@ export function DashboardPage() {
               })
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setExportPreview({ open: false, rows: [] })} disabled={exportingJson}>
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+            <Button
+              variant="ghost"
+              onClick={() => setExportPreview({ open: false, rows: [] })}
+              disabled={exportingJson || exportingRag || exporting}
+            >
               Cancel
             </Button>
-            <Button onClick={confirmExportJson} disabled={exportPreview.rows.length === 0 || exportingJson} className="gap-2">
-              {exportingJson ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              {exportingJson ? "Sending…" : "Send & Download JSON"}
-            </Button>
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              <Button
+                variant="outline"
+                onClick={confirmExportJson}
+                disabled={exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting}
+                className="gap-2"
+                title="Download the selected rows as raw JSON (id, question, expected answer, url)."
+              >
+                {exportingJson ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {exportingJson ? "Sending…" : "Raw JSON"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={exportXlsx}
+                disabled={exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting}
+                className="gap-2"
+                title="Download the selected rows as an Excel workbook."
+              >
+                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+                {exporting ? "Exporting…" : "Raw Excel"}
+              </Button>
+              <Button
+                onClick={confirmExportRag}
+                disabled={exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting}
+                className="gap-2"
+                title="Send rows to the RAG builder webhook and download the production RAG JSON."
+              >
+                {exportingRag ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {exportingRag ? "Building…" : "Production RAG"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
