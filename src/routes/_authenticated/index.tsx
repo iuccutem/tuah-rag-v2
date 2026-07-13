@@ -483,7 +483,7 @@ export function DashboardPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${buildTableTag()}_q&a_${buildStamp()}.json`;
+      a.download = `${buildTableTag()}_rag_${buildStamp()}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -1359,7 +1359,7 @@ export function DashboardPage() {
         .replace(/-/g, "_")
         .replace(/[^a-zA-Z0-9_]/g, "_");
       a.href = url;
-      a.download = `${tableTag}_q&a_eval_${stamp}.xlsx`;
+      a.download = `${tableTag}_rag_${stamp}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
