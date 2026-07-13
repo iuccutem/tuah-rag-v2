@@ -258,6 +258,7 @@ export function DashboardPage() {
 
   const [exporting, setExporting] = useState(false);
   const [exportingJson, setExportingJson] = useState(false);
+  const [exportingRag, setExportingRag] = useState(false);
   const [exportPreview, setExportPreview] = useState<{
     open: boolean;
     rows: Array<{
