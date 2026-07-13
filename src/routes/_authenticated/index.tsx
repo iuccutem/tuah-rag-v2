@@ -2003,7 +2003,7 @@ export function DashboardPage() {
               <div className="text-[12px] text-muted-foreground">
                 Will rename to:{" "}
                 <span className="font-mono text-foreground">
-                  {isDev ? DEV_PREFIX : TABLE_PREFIX}{renameValue.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "-")}
+                  {isDev ? DEV_PREFIX : TABLE_PREFIX}{renameValue.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "_")}
                 </span>
               </div>
             )}
