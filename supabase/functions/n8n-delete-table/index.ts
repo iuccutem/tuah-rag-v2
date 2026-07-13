@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   let body: { name?: string } = {};
   try { body = await req.json(); } catch { return json({ ok: false, error: "Invalid JSON body." }, { status: 400 }); }
   const name = (body.name ?? "").trim();
-  if (!name || !/^qatest-[a-z0-9-]+$/.test(name))
+  if (!name || !/^qatest-[a-z0-9_-]+$/.test(name))
     return json({ ok: false, error: "Invalid table name." }, { status: 400 });
 
   try {
