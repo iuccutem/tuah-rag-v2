@@ -533,10 +533,10 @@ export function DashboardPage() {
       .toLowerCase()
       .replace(/^qatest-(dev-)?/, "")
       .replace(/^dev-/, "")
-      .replace(/\s+/g, "-");
+      .replace(/\s+/g, "_");
     const formatted = `${prefix}${slug}`;
-    if (!/^[a-z0-9-]+$/.test(slug) || !slug) {
-      toast.error("Use letters, numbers, spaces or dashes only.");
+    if (!/^[a-z0-9_-]+$/.test(slug) || !slug) {
+      toast.error("Use letters, numbers, spaces, underscores or dashes only.");
       return;
     }
     if (tables.some((t) => t.toLowerCase() === formatted)) {
@@ -578,10 +578,10 @@ export function DashboardPage() {
       .toLowerCase()
       .replace(/^qatest-(dev-)?/, "")
       .replace(/^dev-/, "")
-      .replace(/\s+/g, "-");
+      .replace(/\s+/g, "_");
     const formatted = `${prefix}${slug}`;
-    if (!/^[a-z0-9-]+$/.test(slug) || !slug) {
-      toast.error("Use letters, numbers, spaces or dashes only.");
+    if (!/^[a-z0-9_-]+$/.test(slug) || !slug) {
+      toast.error("Use letters, numbers, spaces, underscores or dashes only.");
       return;
     }
     if (formatted === from) {
@@ -2003,7 +2003,7 @@ export function DashboardPage() {
               <div className="text-[12px] text-muted-foreground">
                 Will rename to:{" "}
                 <span className="font-mono text-foreground">
-                  {isDev ? DEV_PREFIX : TABLE_PREFIX}{renameValue.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "-")}
+                  {isDev ? DEV_PREFIX : TABLE_PREFIX}{renameValue.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "_")}
                 </span>
               </div>
             )}
@@ -2100,7 +2100,7 @@ export function DashboardPage() {
             />
             {newSheetName.trim() && (
               <div className="text-[12px] text-muted-foreground">
-                Will create: <span className="font-mono text-foreground">{isDev ? DEV_PREFIX : TABLE_PREFIX}{newSheetName.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "-")}</span>
+                Will create: <span className="font-mono text-foreground">{isDev ? DEV_PREFIX : TABLE_PREFIX}{newSheetName.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "_")}</span>
               </div>
             )}
           </div>
