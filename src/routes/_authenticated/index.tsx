@@ -409,6 +409,10 @@ export function DashboardPage() {
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
   };
+  const buildExportBase = () => {
+    const tag = buildTableTag();
+    return /_(faq|qna|rag)$/.test(tag) ? tag : `${tag}_faq`;
+  };
 
   const confirmExportJson = async () => {
     if (exportingJson) return;
@@ -483,7 +487,7 @@ export function DashboardPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${buildTableTag()}_rag_${buildStamp()}.json`;
+      a.download = `${buildExportBase()}_${buildStamp()}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -1359,7 +1363,8 @@ export function DashboardPage() {
         .replace(/-/g, "_")
         .replace(/[^a-zA-Z0-9_]/g, "_");
       a.href = url;
-      a.download = `${tableTag}_rag_${stamp}.xlsx`;
+      const baseName = /_(faq|qna|rag)$/.test(tableTag) ? tableTag : `${tableTag}_faq`;
+      a.download = `${baseName}_${stamp}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
