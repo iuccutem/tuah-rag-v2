@@ -1702,19 +1702,17 @@ export function DashboardPage() {
             {!isDev && (
               <button
                 type="button"
-                onClick={exportJson}
-                disabled={exporting || exportingJson}
-                title="Export selected rows as JSON"
+                onClick={openExportDialog}
+                disabled={exporting || exportingJson || exportingRag}
+                title="Export selected rows"
                 className="hidden sm:flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[13px] font-medium hover:bg-muted disabled:opacity-50"
               >
-                {exportingJson ? (
+                {exportingJson || exportingRag || exporting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Download className="h-4 w-4" />
                 )}
-                <span className="hidden lg:inline">
-                  {exportingJson ? "Exporting…" : "Export JSON"}
-                </span>
+                <span className="hidden lg:inline">Export</span>
               </button>
             )}
 
