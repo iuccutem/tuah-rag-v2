@@ -2125,9 +2125,13 @@ export function DashboardPage() {
       >
         <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Confirm export ({exportPreview.rows.length} row{exportPreview.rows.length === 1 ? "" : "s"})</DialogTitle>
+            <DialogTitle>Export ({exportPreview.rows.length} row{exportPreview.rows.length === 1 ? "" : "s"})</DialogTitle>
             <DialogDescription>
-              Review the questions and expected answers below. On confirm, these are sent to the export webhook and the JSON file is downloaded.
+              Review the selected rows below, then pick an export format.
+              <span className="mt-1 block text-[12px] text-muted-foreground">
+                <strong>Raw data</strong> — download the sheet as-is (JSON or Excel) for backup or manual editing.<br />
+                <strong>Production RAG</strong> — send the rows to the RAG builder webhook and download the enriched, retrieval-ready JSON.
+              </span>
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-auto rounded-md border border-[var(--sheets-grid)] bg-muted/30 p-2 space-y-2">
@@ -2154,14 +2158,45 @@ export function DashboardPage() {
               })
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setExportPreview({ open: false, rows: [] })} disabled={exportingJson}>
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+            <Button
+              variant="ghost"
+              onClick={() => setExportPreview({ open: false, rows: [] })}
+              disabled={exportingJson || exportingRag || exporting}
+            >
               Cancel
             </Button>
-            <Button onClick={confirmExportJson} disabled={exportPreview.rows.length === 0 || exportingJson} className="gap-2">
-              {exportingJson ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              {exportingJson ? "Sending…" : "Send & Download JSON"}
-            </Button>
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              <Button
+                variant="outline"
+                onClick={confirmExportJson}
+                disabled={exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting}
+                className="gap-2"
+                title="Download the selected rows as raw JSON (id, question, expected answer, url)."
+              >
+                {exportingJson ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {exportingJson ? "Sending…" : "Raw JSON"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={exportXlsx}
+                disabled={exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting}
+                className="gap-2"
+                title="Download the selected rows as an Excel workbook."
+              >
+                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+                {exporting ? "Exporting…" : "Raw Excel"}
+              </Button>
+              <Button
+                onClick={confirmExportRag}
+                disabled={exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting}
+                className="gap-2"
+                title="Send rows to the RAG builder webhook and download the production RAG JSON."
+              >
+                {exportingRag ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {exportingRag ? "Building…" : "Production RAG"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
