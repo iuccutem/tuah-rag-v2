@@ -1776,40 +1776,25 @@ export function DashboardPage() {
                 <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Data
                 </div>
-                <DropdownMenuItem
-                  onClick={exportXlsx}
-                  disabled={exporting || exportingJson}
-                >
-                  {exporting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="mr-2 h-4 w-4" />
-                  )}
-                  {exporting ? "Exporting…" : "Export Excel"}
-                </DropdownMenuItem>
                 {!isDev && (
-                  <>
-                    <DropdownMenuItem
-                      className="sm:hidden"
-                      onClick={exportJson}
-                      disabled={exporting || exportingJson}
-                    >
-                      {exportingJson ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Download className="mr-2 h-4 w-4" />
-                      )}
-                      {exportingJson ? "Exporting…" : "Export JSON"}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="sm:hidden"
-                      onClick={() => setExcelImportOpen(true)}
-                      disabled={!activeTable}
-                    >
-                      <Upload className="mr-2 h-4 w-4" />
-                      Import Excel
-                    </DropdownMenuItem>
-                  </>
+                  <DropdownMenuItem
+                    className="sm:hidden"
+                    onClick={openExportDialog}
+                    disabled={exporting || exportingJson || exportingRag}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export…
+                  </DropdownMenuItem>
+                )}
+                {!isDev && (
+                  <DropdownMenuItem
+                    className="sm:hidden"
+                    onClick={() => setExcelImportOpen(true)}
+                    disabled={!activeTable}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import Excel
+                  </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
                 <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
