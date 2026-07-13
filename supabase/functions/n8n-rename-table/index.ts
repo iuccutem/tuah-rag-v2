@@ -13,9 +13,9 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json({ ok: false, error: "Invalid JSON body." }, { status: 400 }); }
   const name = (body.name ?? "").trim();
   const newName = (body.newName ?? "").trim();
-  if (!name || !/^qatest-[a-z0-9-]+$/.test(name))
+  if (!name || !/^qatest-[a-z0-9_-]+$/.test(name))
     return json({ ok: false, error: "Invalid current table name." }, { status: 400 });
-  if (!newName || !/^qatest-[a-z0-9-]+$/.test(newName))
+  if (!newName || !/^qatest-[a-z0-9_-]+$/.test(newName))
     return json({ ok: false, error: "Invalid new table name." }, { status: 400 });
   if (name === newName)
     return json({ ok: false, error: "New name is the same as the current name." }, { status: 400 });
