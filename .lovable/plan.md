@@ -1,15 +1,23 @@
-## Allow underscores in table rename/delete edge functions
+## Fix "Delete sheet" using the wrong n8n webhook
 
 ### Problem
-The frontend already accepts `[a-z0-9_-]+` for sheet slugs (create + rename), and `n8n-create-table` accepts `[A-Za-z0-9_-]+`. But `n8n-rename-table` and `n8n-delete-table` validate with `/^qatest-[a-z0-9-]+$/`, which rejects any existing table containing `_` (e.g. `qatest-hep_qna`). Attempting to rename `qatest-hep_qna` triggers `Invalid current table name.`, and renaming to `qatest-pusatislam_qna` would also trip `Invalid new table name.`.
+When deleting a sheet (e.g. `qatest-hep_qna`), the flow fails. The current `n8n-delete-table` edge function posts to webhook `3f944ef2-7d47-42b8-8500-b03ab19a71a6`, which is not the correct n8n trigger for the delete-sheet workflow. The correct trigger is `498f1285-dd47-489f-bf00-17487742d2c6`.
 
-### Fix (edge functions only)
-Add `_` to the character class in both regexes so the pattern matches what the frontend and create endpoint already allow.
+The regex was already fixed to allow underscores in a prior turn, so `qatest-hep_qna` passes validation. The remaining issue is only the webhook URL.
 
-- `supabase/functions/n8n-rename-table/index.ts` — change both regexes from `/^qatest-[a-z0-9-]+$/` to `/^qatest-[a-z0-9_-]+$/` (used for `name` and `newName`).
-- `supabase/functions/n8n-delete-table/index.ts` — change `/^qatest-[a-z0-9-]+$/` to `/^qatest-[a-z0-9_-]+$/`.
+### Fix (URL swap only)
+Update the `WEBHOOK_URL` constant in the delete-sheet code paths to the correct n8n endpoint. No changes to payload shape (`{ name }`), auth, response handling, or validation regex.
 
-No other logic, webhook, or frontend changes. Dev-prefixed tables (`qatest-dev-...`) continue to match since `-` is still allowed.
+- `supabase/functions/n8n-delete-table/index.ts` — change `WEBHOOK_URL` from
+  `https://tuah.utem.edu.my/agent/webhook/3f944ef2-7d47-42b8-8500-b03ab19a71a6`
+  to
+  `https://tuah.utem.edu.my/agent/webhook/498f1285-dd47-489f-bf00-17487742d2c6`.
+- `server/src/handlers/n8n-delete-table.ts` — same URL swap so the university (Bun) deploy matches.
+
+### Notes
+- This is the same URL used by `n8n-delete` (delete question rows). The n8n workflow at that endpoint branches on payload: `{ name }` → delete whole sheet; `{ id, question, table? }` → delete question row. No client-side changes needed.
+- Frontend (`src/routes/_authenticated/index.tsx` `deleteSheet`) already sends the full prefixed name (`qatest-hep_qna`) and shows the error toast from `json.error`; no UI change required.
 
 ### Out of scope
-Frontend validation (already allows `_`), create endpoint (already allows `_`), other n8n endpoints.
+- No changes to `n8n-delete` (question deletion), `n8n-rename-table`, `n8n-create-table`, or any other function.
+- No changes to validation regex, payload, auth, or frontend.
