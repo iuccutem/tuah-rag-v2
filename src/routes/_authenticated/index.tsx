@@ -468,35 +468,72 @@ export function DashboardPage() {
     if (exportingRag) return;
     const previewRows = exportPreview.rows;
     if (previewRows.length === 0) return;
+    const RAG_BATCH_SIZE = 5;
     setExportingRag(true);
+
+    const inputRows = previewRows.map((r) => ({
+      id: r.id,
+      question: r.question,
+      telegram_whatsapp: r.expected_answer,
+      url: r.url,
+    }));
+    const batches: (typeof inputRows)[] = [];
+    for (let i = 0; i < inputRows.length; i += RAG_BATCH_SIZE) {
+      batches.push(inputRows.slice(i, i + RAG_BATCH_SIZE));
+    }
+    const tableName = activeTable || "all";
     const tId = toast.loading(
-      `Building production RAG for ${previewRows.length} row${previewRows.length === 1 ? "" : "s"}… this may take a while.`,
+      batches.length === 1
+        ? `Building production RAG for ${inputRows.length} row${inputRows.length === 1 ? "" : "s"}…`
+        : `Building production RAG… batch 1 / ${batches.length} (0 / ${inputRows.length} rows done)`,
     );
-    try {
-      const inputRows = previewRows.map((r) => ({
-        id: r.id,
-        question: r.question,
-        telegram_whatsapp: r.expected_answer,
-        url: r.url,
-      }));
+
+    const runBatch = async (batch: typeof inputRows) => {
       const res = await apiFetch("/n8n-rag-build", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          table: activeTable || "all",
-          rows: inputRows,
-        }),
+        body: JSON.stringify({ table: tableName, rows: batch }),
       });
       const payload = (await res.json().catch(() => ({}))) as {
         rows?: unknown;
         error?: string;
       };
-      toast.dismiss(tId);
       if (!res.ok || !Array.isArray(payload.rows)) {
         throw new Error(payload.error || `RAG build failed (${res.status})`);
       }
-      const ragRows = payload.rows;
-      const json = JSON.stringify(ragRows, null, 2);
+      return payload.rows as unknown[];
+    };
+
+    try {
+      const merged: unknown[] = [];
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        let rows: unknown[];
+        try {
+          rows = await runBatch(batch);
+        } catch (err) {
+          // Retry once after a short delay.
+          await new Promise((r) => setTimeout(r, 2000));
+          try {
+            rows = await runBatch(batch);
+          } catch (err2) {
+            const msg = err2 instanceof Error ? err2.message : String(err2);
+            throw new Error(
+              `Batch ${i + 1} of ${batches.length} failed after retry (${merged.length} / ${inputRows.length} rows completed): ${msg}`,
+            );
+          }
+        }
+        merged.push(...rows);
+        if (i < batches.length - 1) {
+          toast.loading(
+            `Building production RAG… batch ${i + 2} / ${batches.length} (${merged.length} / ${inputRows.length} rows done)`,
+            { id: tId },
+          );
+        }
+      }
+
+      toast.dismiss(tId);
+      const json = JSON.stringify(merged, null, 2);
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -507,7 +544,7 @@ export function DashboardPage() {
       a.remove();
       URL.revokeObjectURL(url);
       toast.success(
-        `Production RAG ready (${ragRows.length} record${ragRows.length === 1 ? "" : "s"}).`,
+        `Production RAG ready (${merged.length} record${merged.length === 1 ? "" : "s"}).`,
       );
       setExportPreview({ open: false, rows: [] });
     } catch (e) {

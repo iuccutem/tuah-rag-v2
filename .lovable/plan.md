@@ -1,21 +1,30 @@
-## Allow underscores in sheet names
+## Batch the Production RAG export to avoid Cloudflare 524 timeouts
 
-Currently the sheet create/rename flow only accepts `[a-z0-9-]`, so a name like `audit_faq` is rejected with "Use letters, numbers, spaces or dashes only." The download filename builder already preserves underscores, so once sheets can be named with `_` the RAG export will naturally save as `audit_faq_rag_<DDMMYY>.json`.
+### Problem
+The single call to `/n8n-rag-build` sends every selected row in one request. For >10 rows the n8n workflow needs more than 120s and Cloudflare returns 524. Output must remain one JSON file.
 
-### Change (single file: `src/routes/_authenticated/index.tsx`)
+### Fix (frontend only — `src/routes/_authenticated/index.tsx`, `confirmExportRag`)
 
-In both `createSheet` (~line 532) and `renameSheet` (~line 577):
-- Slug pipeline: keep lowercase + strip `qatest-`/`dev-` prefix, but change whitespace collapse to underscore-friendly. Replace runs of whitespace with `_` (instead of `-`) so users typing "audit faq" get `audit_faq`. Existing dashes still allowed.
-- Validation regex: change `/^[a-z0-9-]+$/` → `/^[a-z0-9_-]+$/`.
-- Error toast text: "Use letters, numbers, spaces, underscores or dashes only."
+Split the selected rows into fixed-size chunks and call the existing `/n8n-rag-build` endpoint once per chunk, sequentially. Concatenate every returned `rows` array into one array and download it as the same `<tab>_rag_<DDMMYY>.json` file. No backend, edge-function, prompt, or webhook change.
 
-Update the two live-preview spans (lines 2006 and 2103) to mirror the same whitespace → `_` transform so the "Will create / Will rename to" hint matches what actually gets sent.
+**Batch size:** 5 rows per request (safe headroom under the 120s proxy limit; adjustable via a single `RAG_BATCH_SIZE` const at the top of the function). Sheets ≤5 rows behave exactly as today (one request).
 
-No backend change needed — `n8n-create-table` / `n8n-rename-table` just forward the name string. Postgres table identifiers allow `_`, and the existing `qatest-<slug>` pattern already tolerates it (the code uses quoted identifiers server-side via n8n).
+**Sequential, not parallel:** avoids hammering the n8n instance and keeps ordering stable so the merged JSON matches the on-screen preview order.
+
+**Progress feedback:** update the existing loading toast after each batch — `Building production RAG… batch X / Y (Z rows done)`. Reuse the same toast id so it stays a single line.
+
+**Per-batch failure handling:**
+- On network error or non-2xx response, retry that batch once after a short delay (2s).
+- If it still fails, abort the whole export, dismiss the loading toast, show an error toast that names the failing batch and how many rows had already completed, and do NOT download a partial file (user asked for a single complete JSON).
+
+**Merging:** collect each response's `rows` into `const merged: unknown[] = []`; push with `merged.push(...payload.rows)`. Serialize once at the end with `JSON.stringify(merged, null, 2)` — identical shape to today's output, just longer.
+
+**Success toast:** unchanged wording, uses `merged.length`.
 
 ### Out of scope
-- No change to export filename logic (already supports `_`).
-- No change to edge functions, prompts, or the RAG dialog.
+- No changes to `supabase/functions/n8n-rag-build/index.ts` (still forwards one payload).
+- No changes to the n8n webhook, prompts, filename format, or the Raw JSON / Raw Excel paths.
+- No parallelism, no resumable state, no partial downloads.
 
 ### Result
-User can create/rename a sheet as `audit_faq` (or type "audit faq"), and the Production RAG download will save as `audit_faq_rag_<DDMMYY>.json`.
+Exporting 28 rows issues 6 sequential requests of ≤5 rows each, each well under the 120s limit, then downloads a single `<tab>_rag_<DDMMYY>.json` containing all 28 merged records.
