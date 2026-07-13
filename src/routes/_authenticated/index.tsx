@@ -2100,7 +2100,7 @@ export function DashboardPage() {
             />
             {newSheetName.trim() && (
               <div className="text-[12px] text-muted-foreground">
-                Will create: <span className="font-mono text-foreground">{isDev ? DEV_PREFIX : TABLE_PREFIX}{newSheetName.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "-")}</span>
+                Will create: <span className="font-mono text-foreground">{isDev ? DEV_PREFIX : TABLE_PREFIX}{newSheetName.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "_")}</span>
               </div>
             )}
           </div>
