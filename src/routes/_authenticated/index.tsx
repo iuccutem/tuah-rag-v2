@@ -1947,6 +1947,17 @@ export function DashboardPage() {
 
             <div className="mx-1 h-5 w-px bg-border/60" />
 
+            {/* Unselect all */}
+            <button
+              type="button"
+              onClick={() => setSelectedRowIds(new Set())}
+              className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[12px] font-medium text-foreground hover:bg-muted"
+              title="Unselect all rows"
+            >
+              <X className="h-3.5 w-3.5" />
+              Unselect all
+            </button>
+
             {/* Destructive */}
             <button
               type="button"
