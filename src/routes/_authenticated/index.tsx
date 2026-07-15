@@ -30,6 +30,7 @@ import {
   Check,
   Sun,
   Moon,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
