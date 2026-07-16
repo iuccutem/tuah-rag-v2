@@ -163,6 +163,9 @@ function AuthPage() {
             Sign in
           </Button>
         </form>
+        <p className="mt-5 text-center text-xs text-muted-foreground">
+          Enter your credentials to access your workspace.
+        </p>
       </div>
 
       <Dialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog((d) => ({ ...d, open }))}>
