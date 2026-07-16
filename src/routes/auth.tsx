@@ -112,15 +112,13 @@ function AuthPage() {
       >
         {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
       </Button>
-      <div className="w-full max-w-sm rounded-xl border border-[var(--sheets-grid)] bg-card p-6 shadow-sm">
-        <div className="mb-5 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
-            <SheetIcon className="h-5 w-5 text-primary" />
+      <div className="relative w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-xl shadow-primary/5">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+            <SheetIcon className="h-6 w-6 text-primary" />
           </div>
-          <div>
-            <h1 className="text-[16px] font-semibold leading-tight">Q&amp;A Evaluation</h1>
-            <p className="text-[12px] text-muted-foreground">Sign in to continue</p>
-          </div>
+          <h1 className="text-2xl font-semibold tracking-tight">RAG Builder</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Build and evaluate your RAG knowledge base</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
