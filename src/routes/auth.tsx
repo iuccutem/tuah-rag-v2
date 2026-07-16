@@ -86,8 +86,12 @@ function AuthPage() {
 
   if (checkingAuth) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--sheets-toolbar-bg)] px-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -left-1/4 -top-1/4 h-1/2 w-1/2 rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full bg-accent/20 blur-3xl" />
+        </div>
+        <Loader2 className="relative h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
