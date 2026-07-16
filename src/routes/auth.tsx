@@ -86,33 +86,39 @@ function AuthPage() {
 
   if (checkingAuth) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--sheets-toolbar-bg)] px-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -left-1/4 -top-1/4 h-1/2 w-1/2 rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full bg-accent/20 blur-3xl" />
+        </div>
+        <Loader2 className="relative h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-[var(--sheets-toolbar-bg)] px-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -left-1/4 -top-1/4 h-1/2 w-1/2 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full bg-accent/20 blur-3xl" />
+      </div>
       <Button
         type="button"
         variant="ghost"
         size="icon"
         onClick={toggleTheme}
         aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        className="absolute right-4 top-4 h-9 w-9"
+        className="absolute right-4 top-4 z-10 h-9 w-9"
       >
         {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
       </Button>
-      <div className="w-full max-w-sm rounded-xl border border-[var(--sheets-grid)] bg-card p-6 shadow-sm">
-        <div className="mb-5 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
-            <SheetIcon className="h-5 w-5 text-primary" />
+      <div className="relative w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-xl shadow-primary/5">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+            <SheetIcon className="h-6 w-6 text-primary" />
           </div>
-          <div>
-            <h1 className="text-[16px] font-semibold leading-tight">Q&amp;A Evaluation</h1>
-            <p className="text-[12px] text-muted-foreground">Sign in to continue</p>
-          </div>
+          <h1 className="text-2xl font-semibold tracking-tight">RAG Builder</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Build and evaluate your RAG knowledge base</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -157,6 +163,9 @@ function AuthPage() {
             Sign in
           </Button>
         </form>
+        <p className="mt-5 text-center text-xs text-muted-foreground">
+          Enter your credentials to access your workspace.
+        </p>
       </div>
 
       <Dialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog((d) => ({ ...d, open }))}>
