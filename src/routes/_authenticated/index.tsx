@@ -240,6 +240,12 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
   const queryClient = useQueryClient();
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["vector-list"] });
+    queryClient.invalidateQueries({ queryKey: ["system-prompt-list"] });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [activeTable, setActiveTable] = useState<string>("");
   const [refreshing, setRefreshing] = useState(false);
 
