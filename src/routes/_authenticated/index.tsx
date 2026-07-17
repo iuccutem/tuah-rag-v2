@@ -1668,24 +1668,48 @@ export function DashboardPage() {
                   placeholder={promptsQuery.isLoading ? "Loading…" : "Select prompt"}
                 />
               </SelectTrigger>
-              <SelectContent className="max-w-[22rem]">
+              <SelectContent className="max-w-[24rem]">
                 {prompts.length === 0 ? (
                   <div className="px-2 py-1.5 text-xs text-muted-foreground">
                     {promptsQuery.data?.error ?? "No system prompts found."}
                   </div>
                 ) : (
-                  prompts.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      <div className="flex flex-col">
-                        <span className="truncate">{p.name}</span>
-                        {p.model && (
-                          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                            {p.model}
-                          </span>
-                        )}
+                  <>
+                    <div className="sticky top-0 z-10 border-b bg-popover px-2 py-1.5">
+                      <input
+                        type="text"
+                        value={promptSearch}
+                        onChange={(e) => setPromptSearch(e.target.value)}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        placeholder="Search prompts…"
+                        className="h-7 w-full rounded border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary"
+                      />
+                      <div className="mt-1 text-[10px] text-muted-foreground">
+                        {filteredPrompts.length} of {prompts.length}
                       </div>
-                    </SelectItem>
-                  ))
+                    </div>
+                    <div className="max-h-[22rem] overflow-auto">
+                      {filteredPrompts.length === 0 ? (
+                        <div className="px-2 py-3 text-xs text-muted-foreground">
+                          No matches.
+                        </div>
+                      ) : (
+                        filteredPrompts.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            <div className="flex flex-col">
+                              <span className="truncate">{p.name}</span>
+                              {p.model && (
+                                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                  {p.model}
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
+                    </div>
+                  </>
                 )}
               </SelectContent>
             </Select>
