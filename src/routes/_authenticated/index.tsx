@@ -1759,7 +1759,10 @@ export function DashboardPage() {
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => setPromptPreviewOpen(true)}
+                    onClick={() => {
+                      setPreviewPromptId(systemPromptId || null);
+                      setPromptPreviewOpen(true);
+                    }}
                     disabled={!selectedPrompt}
                     className="ml-0.5 inline-flex h-6 w-6 items-center justify-center rounded hover:bg-muted disabled:opacity-40"
                     aria-label="Preview system prompt"
