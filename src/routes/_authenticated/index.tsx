@@ -220,7 +220,11 @@ export function DashboardPage() {
         error: string | null;
       };
     },
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
+
   const prompts = promptsQuery.data?.prompts ?? [];
   const [promptSearch, setPromptSearch] = useState("");
   useEffect(() => {
