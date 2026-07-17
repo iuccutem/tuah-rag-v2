@@ -182,6 +182,47 @@ export function DashboardPage() {
         : "Select a vector store first."
     : null;
   const extraProcessBody = vectorId ? { vector_id: vectorId } : undefined;
+
+  // System prompt selector
+  const PROMPT_STORAGE_KEY = "rag-system-prompt-id";
+  const [systemPromptId, setSystemPromptId] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(PROMPT_STORAGE_KEY) ?? "";
+  });
+  useEffect(() => {
+    if (systemPromptId) localStorage.setItem(PROMPT_STORAGE_KEY, systemPromptId);
+  }, [systemPromptId]);
+  const [promptPreviewOpen, setPromptPreviewOpen] = useState(false);
+  type SystemPrompt = {
+    id: string;
+    name: string;
+    model: string | null;
+    vector_store_id: string | null;
+    description: string | null;
+    system_prompt: string;
+    is_active: boolean | null;
+    updated_at: string | null;
+  };
+  const promptsQuery = useQuery({
+    queryKey: ["system-prompt-list"],
+    queryFn: async () => {
+      const res = await apiFetch(`/n8n-system-prompt-list?ts=${Date.now()}`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error(`Failed (${res.status})`);
+      return (await res.json()) as {
+        prompts: SystemPrompt[];
+        error: string | null;
+      };
+    },
+  });
+  const prompts = promptsQuery.data?.prompts ?? [];
+  useEffect(() => {
+    if (systemPromptId || prompts.length === 0) return;
+    const active = prompts.find((p) => p.is_active) ?? prompts[0];
+    setSystemPromptId(active.id);
+  }, [systemPromptId, prompts]);
+  const selectedPrompt = prompts.find((p) => p.id === systemPromptId) ?? null;
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
   const queryClient = useQueryClient();
