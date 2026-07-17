@@ -1714,16 +1714,39 @@ export function DashboardPage() {
                         </div>
                       ) : (
                         filteredPrompts.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            <div className="flex flex-col">
-                              <span className="truncate">{p.name}</span>
-                              {p.model && (
-                                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                                  {p.model}
-                                </span>
-                              )}
-                            </div>
-                          </SelectItem>
+                          <div key={p.id} className="flex items-center gap-1 pr-1">
+                            <SelectItem value={p.id} className="flex-1">
+                              <div className="flex flex-col">
+                                <span className="truncate">{p.name}</span>
+                                {p.model && (
+                                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                    {p.model}
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setPreviewPromptId(p.id);
+                                      setPromptPreviewOpen(true);
+                                    }}
+                                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    aria-label="Preview this prompt"
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">Preview this prompt</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                         ))
                       )}
                     </div>
