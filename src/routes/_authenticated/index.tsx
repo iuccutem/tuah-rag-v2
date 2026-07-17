@@ -199,6 +199,7 @@ export function DashboardPage() {
     if (systemPromptId) localStorage.setItem(PROMPT_STORAGE_KEY, systemPromptId);
   }, [systemPromptId]);
   const [promptPreviewOpen, setPromptPreviewOpen] = useState(false);
+  const [previewPromptId, setPreviewPromptId] = useState<string | null>(null);
   type SystemPrompt = {
     id: string;
     name: string;
