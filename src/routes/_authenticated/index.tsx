@@ -1775,8 +1775,6 @@ export function DashboardPage() {
             </TooltipProvider>
           </div>
 
-          <Dialog open={promptPreviewOpen} onOpenChange={setPromptPreviewOpen}>
-            <DialogContent className="max-w-3xl">
           <Dialog
             open={promptPreviewOpen}
             onOpenChange={(open) => {
