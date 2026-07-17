@@ -234,6 +234,9 @@ export function DashboardPage() {
     setSystemPromptId(prompts[0].id);
   }, [systemPromptId, prompts]);
   const selectedPrompt = prompts.find((p) => p.id === systemPromptId) ?? null;
+  const previewPrompt =
+    (previewPromptId ? prompts.find((p) => p.id === previewPromptId) : null) ??
+    selectedPrompt;
   const filteredPrompts = promptSearch.trim()
     ? prompts.filter((p) =>
         p.name.toLowerCase().includes(promptSearch.trim().toLowerCase()),
