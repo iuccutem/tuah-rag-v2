@@ -30,6 +30,8 @@ import {
   Check,
   Sun,
   Moon,
+  Sparkles,
+  Info,
   X,
 } from "lucide-react";
 import {
@@ -1637,6 +1639,97 @@ export function DashboardPage() {
               </SelectContent>
             </Select>
           </div>
+
+          {/* System prompt chip */}
+          <div
+            className={
+              "flex h-9 min-w-0 items-center gap-1.5 rounded-md border px-2 text-[13px] " +
+              (systemPromptId
+                ? "border-primary/40 bg-primary/10"
+                : "border-border bg-muted/30")
+            }
+            title={
+              promptsQuery.data?.error ??
+              (selectedPrompt ? `Prompt: ${selectedPrompt.name}` : "Select a system prompt")
+            }
+          >
+            <Sparkles className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Prompt
+            </span>
+            <Select value={systemPromptId} onValueChange={setSystemPromptId}>
+              <SelectTrigger className="h-7 min-w-[9rem] max-w-[14rem] border-0 bg-transparent px-1 text-[13px] shadow-none focus:ring-0">
+                <SelectValue
+                  placeholder={promptsQuery.isLoading ? "Loading…" : "Select prompt"}
+                />
+              </SelectTrigger>
+              <SelectContent className="max-w-[22rem]">
+                {prompts.length === 0 ? (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                    {promptsQuery.data?.error ?? "No system prompts found."}
+                  </div>
+                ) : (
+                  prompts.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      <div className="flex flex-col">
+                        <span className="truncate">{p.name}</span>
+                        {p.model && (
+                          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            {p.model}
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setPromptPreviewOpen(true)}
+                    disabled={!selectedPrompt}
+                    className="ml-0.5 inline-flex h-6 w-6 items-center justify-center rounded hover:bg-muted disabled:opacity-40"
+                    aria-label="Preview system prompt"
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Preview system prompt</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+
+          <Dialog open={promptPreviewOpen} onOpenChange={setPromptPreviewOpen}>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle className="truncate">
+                  {selectedPrompt?.name ?? "System prompt"}
+                </DialogTitle>
+                <DialogDescription className="space-y-1">
+                  {selectedPrompt?.description && (
+                    <div>{selectedPrompt.description}</div>
+                  )}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    {selectedPrompt?.model && <span>Model: {selectedPrompt.model}</span>}
+                    {selectedPrompt?.vector_store_id && (
+                      <span>Vector: {selectedPrompt.vector_store_id}</span>
+                    )}
+                    {selectedPrompt?.updated_at && (
+                      <span>Updated: {new Date(selectedPrompt.updated_at).toLocaleString()}</span>
+                    )}
+                  </div>
+                </DialogDescription>
+              </DialogHeader>
+              <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-md border bg-muted/30 p-3 font-mono text-xs">
+                {selectedPrompt?.system_prompt ?? ""}
+              </pre>
+            </DialogContent>
+          </Dialog>
+
+
 
 
           {/* Search */}
