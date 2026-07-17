@@ -32,6 +32,7 @@ import {
   Moon,
   Sparkles,
   Info,
+  Eye,
   X,
 } from "lucide-react";
 import {
