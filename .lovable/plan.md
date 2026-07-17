@@ -1,26 +1,28 @@
 ## Goal
-Let users preview any prompt's full content directly from the selector list, not just the one already selected.
+Pass the currently selected system prompt along with each question when triggering the agent, so the n8n webhook uses the prompt the user picked in the toolbar.
 
-## Change
-In `src/routes/_authenticated/index.tsx`, enhance each row inside the Prompt `SelectContent` list with an inline **eye** preview button:
+## Changes
 
-- Wrap each `SelectItem` in a flex row: the item on the left, a small `Eye` icon button on the right.
-- Clicking the eye sets a new `previewPromptId` state and opens the existing prompt preview dialog — without changing the currently selected `systemPromptId`.
-- Use `e.stopPropagation()` + `e.preventDefault()` on the eye button so the Select doesn't treat it as a selection.
-- Tooltip on hover: "Preview this prompt".
+### 1. Frontend — `src/routes/_authenticated/index.tsx`
+- Extend `extraProcessBody` to include the selected prompt fields whenever a prompt is chosen:
+  - `system_prompt_id`: `selectedPrompt.id`
+  - `system_prompt`: `selectedPrompt.system_prompt` (full text)
+  - `system_prompt_name`: `selectedPrompt.name`
+  - `model`: `selectedPrompt.model` (if present)
+- Keep existing `vector_id` behavior. Result: both the "Run selected rows" flow (line ~1290) and the `QuestionPasteBox` "Run Text Chat" flow automatically forward the prompt because both already spread `extraProcessBody`.
 
-Refactor the preview dialog to use a derived `previewPrompt`:
-- `const previewPrompt = prompts.find(p => p.id === previewPromptId) ?? selectedPrompt;`
-- The top-right Info button (already there) keeps working — it previews the currently selected prompt by opening the dialog with `previewPromptId = systemPromptId`.
-- On dialog close, clear `previewPromptId`.
+### 2. Edge function — `supabase/functions/n8n-process/index.ts`
+- Parse and forward the new optional fields to the upstream n8n webhook:
+  - `system_prompt_id`, `system_prompt`, `system_prompt_name`, `model`
+- Only include each field when it's a non-empty string. No change to auth, CORS, or response shape.
 
-Add a small "Use this prompt" button in the dialog footer that calls `setSystemPromptId(previewPrompt.id)` and closes the dialog, so users can preview → confirm → select in one flow.
+### 3. Express handler — `server/src/handlers/n8n-process.ts`
+- Mirror the same additive field passthrough so the self-hosted server behaves identically.
 
-## Why this over hover
-- Hover tooltips truncate/overflow for long multi-KB system prompts and are hard to scroll/copy.
-- Eye-in-list keeps the dropdown open, requires one click, and reuses the existing scrollable/monospace dialog which already handles long prompts, model, vector, and updated-at metadata.
+## Not changed
+- `n8n-run` (question insert) is untouched — the prompt is only relevant for agent processing.
+- No UI changes; the existing prompt selector is the single source of truth.
+- No schema or storage changes.
 
-## Out of scope
-- No backend / webhook changes.
-- No change to prompt sorting, search, or storage of selection.
-- No change to the vector store selector.
+## Open question
+Do you want the full `system_prompt` text sent every call, or just the `system_prompt_id` (so n8n looks it up itself)? Default in this plan: send both, since it's cheap and lets the n8n workflow choose.

@@ -14,25 +14,31 @@ export const handler = async ({ request }: { request: Request }): Promise<Respon
         let question = "";
         let table = "";
         let vectorId = "";
+        let systemPromptId = "";
+        let systemPrompt = "";
+        let systemPromptName = "";
+        let model = "";
         try {
           const body = (await request.json()) as {
             channel?: string;
             question?: string;
             table?: string;
             vector_id?: string;
+            system_prompt_id?: string;
+            system_prompt?: string;
+            system_prompt_name?: string;
+            model?: string;
           };
           if (body.channel === "telegram_whatsapp" || body.channel === "web") {
             channel = body.channel;
           }
-          if (typeof body.question === "string") {
-            question = body.question.trim();
-          }
-          if (typeof body.table === "string") {
-            table = body.table.trim();
-          }
-          if (typeof body.vector_id === "string") {
-            vectorId = body.vector_id.trim();
-          }
+          if (typeof body.question === "string") question = body.question.trim();
+          if (typeof body.table === "string") table = body.table.trim();
+          if (typeof body.vector_id === "string") vectorId = body.vector_id.trim();
+          if (typeof body.system_prompt_id === "string") systemPromptId = body.system_prompt_id.trim();
+          if (typeof body.system_prompt === "string") systemPrompt = body.system_prompt;
+          if (typeof body.system_prompt_name === "string") systemPromptName = body.system_prompt_name.trim();
+          if (typeof body.model === "string") model = body.model.trim();
         } catch {
           // default to web, no question
         }
@@ -52,6 +58,10 @@ export const handler = async ({ request }: { request: Request }): Promise<Respon
           if (question) upstream.question = question;
           if (table) upstream.table = table;
           if (vectorId) upstream.vector_id = vectorId;
+          if (systemPromptId) upstream.system_prompt_id = systemPromptId;
+          if (systemPrompt) upstream.system_prompt = systemPrompt;
+          if (systemPromptName) upstream.system_prompt_name = systemPromptName;
+          if (model) upstream.model = model;
           const res = await fetch(WEBHOOK_URL, {
             method: "POST",
             headers: {

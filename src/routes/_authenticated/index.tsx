@@ -187,7 +187,7 @@ export function DashboardPage() {
         ? `No vector stores available${vectorsQuery.data?.error ? `: ${vectorsQuery.data.error}` : "."}`
         : "Select a vector store first."
     : null;
-  const extraProcessBody = vectorId ? { vector_id: vectorId } : undefined;
+  
 
   // System prompt selector
   const PROMPT_STORAGE_KEY = "rag-system-prompt-id";
@@ -234,6 +234,17 @@ export function DashboardPage() {
     setSystemPromptId(prompts[0].id);
   }, [systemPromptId, prompts]);
   const selectedPrompt = prompts.find((p) => p.id === systemPromptId) ?? null;
+  const extraProcessBody = (() => {
+    const body: Record<string, unknown> = {};
+    if (vectorId) body.vector_id = vectorId;
+    if (selectedPrompt) {
+      body.system_prompt_id = selectedPrompt.id;
+      if (selectedPrompt.system_prompt) body.system_prompt = selectedPrompt.system_prompt;
+      if (selectedPrompt.name) body.system_prompt_name = selectedPrompt.name;
+      if (selectedPrompt.model) body.model = selectedPrompt.model;
+    }
+    return Object.keys(body).length > 0 ? body : undefined;
+  })();
   const previewPrompt =
     (previewPromptId ? prompts.find((p) => p.id === previewPromptId) : null) ??
     selectedPrompt;
