@@ -170,8 +170,11 @@ export function DashboardPage() {
         error: string | null;
       };
     },
-    refetchOnWindowFocus: false,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
+
   const vectors = vectorsQuery.data?.vectors ?? [];
   useEffect(() => {
     if (!vectorId && vectors.length > 0) setVectorId(vectors[0].id);
@@ -217,7 +220,11 @@ export function DashboardPage() {
         error: string | null;
       };
     },
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
+
   const prompts = promptsQuery.data?.prompts ?? [];
   const [promptSearch, setPromptSearch] = useState("");
   useEffect(() => {
@@ -233,6 +240,12 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
   const queryClient = useQueryClient();
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["vector-list"] });
+    queryClient.invalidateQueries({ queryKey: ["system-prompt-list"] });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [activeTable, setActiveTable] = useState<string>("");
   const [refreshing, setRefreshing] = useState(false);
 
