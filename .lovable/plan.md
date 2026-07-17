@@ -1,18 +1,33 @@
-# Handle full prompt list (123 items)
+## Goal
+Ensure vector stores and system prompts are always fetched fresh whenever the dashboard mounts / page is refreshed, so newly created or edited items in n8n appear without manual cache-busting.
 
-The webhook now returns an array. Existing `normalize()` in the edge function already handles arrays, so data will load. Two small UX changes to make picking from 123 items practical.
+## Current behavior
+`src/main.tsx` configures the global TanStack Query client with `staleTime: 30_000` and `refetchOnWindowFocus: false`. As a result, the two relevant queries in `src/routes/_authenticated/index.tsx` inherit that stale window:
 
-## Edge function `supabase/functions/n8n-system-prompt-list/index.ts`
-- After `normalize(j)`, sort by `updated_at` desc (fallback `created_at` desc) so newest prompts appear first.
+- `queryKey: ["vector-list"]` → `/n8n-vector-list`
+- `queryKey: ["system-prompt-list"]` → `/n8n-system-prompt-list`
 
-## Dashboard `src/routes/_authenticated/index.tsx`
-- Keep the existing chip + `<Select>`, but make the dropdown searchable/scrollable for long lists:
-  - Add a sticky text input at the top of `<SelectContent>` that filters by name (case-insensitive substring).
-  - Cap dropdown height (`max-h-[24rem] overflow-auto`) so 123 items scroll instead of overflowing the viewport.
-  - Show a small "N of 123" count line under the search input.
-- Default-select logic: if none stored, pick the first item in the (already newest-first) list. Do not privilege `is_active` since many entries are flagged active.
-- Preview dialog unchanged.
+On a hard browser reload the cache is empty so a fetch happens, but on any in-app remount (route change back to `/`, tab switch, SPA navigation) within 30s the cached lists are reused and updates made in n8n don't show up. There is also no explicit refetch tied to the dashboard mount.
+
+## Changes
+
+1. In `src/routes/_authenticated/index.tsx`, on the two `useQuery` calls add:
+   - `staleTime: 0`
+   - `refetchOnMount: "always"`
+   - `refetchOnWindowFocus: true`
+
+   This forces a fresh network call every time the dashboard mounts or the tab regains focus, for these two lists only (other queries keep the global 30s stale window).
+
+2. Add a small `useEffect` on mount in the dashboard component that calls:
+   ```ts
+   queryClient.invalidateQueries({ queryKey: ["vector-list"] });
+   queryClient.invalidateQueries({ queryKey: ["system-prompt-list"] });
+   ```
+   as a belt-and-braces guarantee that a returning user always sees the latest list, even if React Query decided the data was still fresh.
+
+3. Keep the existing `?ts=${Date.now()}` cache-buster in the fetch URLs (already bypasses any intermediate HTTP cache).
 
 ## Out of scope
-- No change to Run/Export payloads (selection stays local UI state).
-- No changes to the Express mirror handler beyond matching the sort (parity).
+- No backend / edge function changes.
+- No change to how the selected `vectorId` / `systemPromptId` are persisted in `localStorage`; selection is preserved across refresh, only the *list* is refreshed.
+- No change to the global `QueryClient` defaults (other screens keep current caching).
