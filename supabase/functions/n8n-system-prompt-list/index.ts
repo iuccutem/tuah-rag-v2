@@ -93,7 +93,12 @@ Deno.serve(async (req) => {
       });
     }
     const j = await res.json().catch(() => null);
-    return json({ prompts: normalize(j), error: null });
+    const prompts = normalize(j).sort((a, b) => {
+      const av = a.updated_at ?? a.created_at ?? "";
+      const bv = b.updated_at ?? b.created_at ?? "";
+      return bv.localeCompare(av);
+    });
+    return json({ prompts, error: null });
   } catch (e) {
     return json({
       prompts: [],
