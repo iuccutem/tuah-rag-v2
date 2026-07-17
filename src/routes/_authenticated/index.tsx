@@ -32,6 +32,7 @@ import {
   Moon,
   Sparkles,
   Info,
+  Eye,
   X,
 } from "lucide-react";
 import {
@@ -198,6 +199,7 @@ export function DashboardPage() {
     if (systemPromptId) localStorage.setItem(PROMPT_STORAGE_KEY, systemPromptId);
   }, [systemPromptId]);
   const [promptPreviewOpen, setPromptPreviewOpen] = useState(false);
+  const [previewPromptId, setPreviewPromptId] = useState<string | null>(null);
   type SystemPrompt = {
     id: string;
     name: string;
@@ -232,6 +234,9 @@ export function DashboardPage() {
     setSystemPromptId(prompts[0].id);
   }, [systemPromptId, prompts]);
   const selectedPrompt = prompts.find((p) => p.id === systemPromptId) ?? null;
+  const previewPrompt =
+    (previewPromptId ? prompts.find((p) => p.id === previewPromptId) : null) ??
+    selectedPrompt;
   const filteredPrompts = promptSearch.trim()
     ? prompts.filter((p) =>
         p.name.toLowerCase().includes(promptSearch.trim().toLowerCase()),
@@ -1709,16 +1714,39 @@ export function DashboardPage() {
                         </div>
                       ) : (
                         filteredPrompts.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            <div className="flex flex-col">
-                              <span className="truncate">{p.name}</span>
-                              {p.model && (
-                                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                                  {p.model}
-                                </span>
-                              )}
-                            </div>
-                          </SelectItem>
+                          <div key={p.id} className="flex items-center gap-1 pr-1">
+                            <SelectItem value={p.id} className="flex-1">
+                              <div className="flex flex-col">
+                                <span className="truncate">{p.name}</span>
+                                {p.model && (
+                                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                    {p.model}
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setPreviewPromptId(p.id);
+                                      setPromptPreviewOpen(true);
+                                    }}
+                                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    aria-label="Preview this prompt"
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">Preview this prompt</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                         ))
                       )}
                     </div>
@@ -1731,7 +1759,10 @@ export function DashboardPage() {
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => setPromptPreviewOpen(true)}
+                    onClick={() => {
+                      setPreviewPromptId(systemPromptId || null);
+                      setPromptPreviewOpen(true);
+                    }}
                     disabled={!selectedPrompt}
                     className="ml-0.5 inline-flex h-6 w-6 items-center justify-center rounded hover:bg-muted disabled:opacity-40"
                     aria-label="Preview system prompt"
@@ -1744,30 +1775,63 @@ export function DashboardPage() {
             </TooltipProvider>
           </div>
 
-          <Dialog open={promptPreviewOpen} onOpenChange={setPromptPreviewOpen}>
+          <Dialog
+            open={promptPreviewOpen}
+            onOpenChange={(open) => {
+              setPromptPreviewOpen(open);
+              if (!open) setPreviewPromptId(null);
+            }}
+          >
             <DialogContent className="max-w-3xl">
               <DialogHeader>
                 <DialogTitle className="truncate">
-                  {selectedPrompt?.name ?? "System prompt"}
+                  {previewPrompt?.name ?? "System prompt"}
+                  {previewPrompt && selectedPrompt?.id === previewPrompt.id && (
+                    <span className="ml-2 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-normal uppercase tracking-wide text-primary">
+                      Selected
+                    </span>
+                  )}
                 </DialogTitle>
                 <DialogDescription className="space-y-1">
-                  {selectedPrompt?.description && (
-                    <div>{selectedPrompt.description}</div>
+                  {previewPrompt?.description && (
+                    <div>{previewPrompt.description}</div>
                   )}
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    {selectedPrompt?.model && <span>Model: {selectedPrompt.model}</span>}
-                    {selectedPrompt?.vector_store_id && (
-                      <span>Vector: {selectedPrompt.vector_store_id}</span>
+                    {previewPrompt?.model && <span>Model: {previewPrompt.model}</span>}
+                    {previewPrompt?.vector_store_id && (
+                      <span>Vector: {previewPrompt.vector_store_id}</span>
                     )}
-                    {selectedPrompt?.updated_at && (
-                      <span>Updated: {new Date(selectedPrompt.updated_at).toLocaleString()}</span>
+                    {previewPrompt?.updated_at && (
+                      <span>Updated: {new Date(previewPrompt.updated_at).toLocaleString()}</span>
                     )}
                   </div>
                 </DialogDescription>
               </DialogHeader>
               <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-md border bg-muted/30 p-3 font-mono text-xs">
-                {selectedPrompt?.system_prompt ?? ""}
+                {previewPrompt?.system_prompt ?? ""}
               </pre>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPromptPreviewOpen(false);
+                    setPreviewPromptId(null);
+                  }}
+                >
+                  Close
+                </Button>
+                {previewPrompt && previewPrompt.id !== selectedPrompt?.id && (
+                  <Button
+                    onClick={() => {
+                      setSystemPromptId(previewPrompt.id);
+                      setPromptPreviewOpen(false);
+                      setPreviewPromptId(null);
+                    }}
+                  >
+                    Use this prompt
+                  </Button>
+                )}
+              </DialogFooter>
             </DialogContent>
           </Dialog>
 
