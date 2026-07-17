@@ -170,8 +170,11 @@ export function DashboardPage() {
         error: string | null;
       };
     },
-    refetchOnWindowFocus: false,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
+
   const vectors = vectorsQuery.data?.vectors ?? [];
   useEffect(() => {
     if (!vectorId && vectors.length > 0) setVectorId(vectors[0].id);
