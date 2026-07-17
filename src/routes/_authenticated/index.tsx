@@ -1777,28 +1777,63 @@ export function DashboardPage() {
 
           <Dialog open={promptPreviewOpen} onOpenChange={setPromptPreviewOpen}>
             <DialogContent className="max-w-3xl">
+          <Dialog
+            open={promptPreviewOpen}
+            onOpenChange={(open) => {
+              setPromptPreviewOpen(open);
+              if (!open) setPreviewPromptId(null);
+            }}
+          >
+            <DialogContent className="max-w-3xl">
               <DialogHeader>
                 <DialogTitle className="truncate">
-                  {selectedPrompt?.name ?? "System prompt"}
+                  {previewPrompt?.name ?? "System prompt"}
+                  {previewPrompt && selectedPrompt?.id === previewPrompt.id && (
+                    <span className="ml-2 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-normal uppercase tracking-wide text-primary">
+                      Selected
+                    </span>
+                  )}
                 </DialogTitle>
                 <DialogDescription className="space-y-1">
-                  {selectedPrompt?.description && (
-                    <div>{selectedPrompt.description}</div>
+                  {previewPrompt?.description && (
+                    <div>{previewPrompt.description}</div>
                   )}
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    {selectedPrompt?.model && <span>Model: {selectedPrompt.model}</span>}
-                    {selectedPrompt?.vector_store_id && (
-                      <span>Vector: {selectedPrompt.vector_store_id}</span>
+                    {previewPrompt?.model && <span>Model: {previewPrompt.model}</span>}
+                    {previewPrompt?.vector_store_id && (
+                      <span>Vector: {previewPrompt.vector_store_id}</span>
                     )}
-                    {selectedPrompt?.updated_at && (
-                      <span>Updated: {new Date(selectedPrompt.updated_at).toLocaleString()}</span>
+                    {previewPrompt?.updated_at && (
+                      <span>Updated: {new Date(previewPrompt.updated_at).toLocaleString()}</span>
                     )}
                   </div>
                 </DialogDescription>
               </DialogHeader>
               <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-md border bg-muted/30 p-3 font-mono text-xs">
-                {selectedPrompt?.system_prompt ?? ""}
+                {previewPrompt?.system_prompt ?? ""}
               </pre>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPromptPreviewOpen(false);
+                    setPreviewPromptId(null);
+                  }}
+                >
+                  Close
+                </Button>
+                {previewPrompt && previewPrompt.id !== selectedPrompt?.id && (
+                  <Button
+                    onClick={() => {
+                      setSystemPromptId(previewPrompt.id);
+                      setPromptPreviewOpen(false);
+                      setPreviewPromptId(null);
+                    }}
+                  >
+                    Use this prompt
+                  </Button>
+                )}
+              </DialogFooter>
             </DialogContent>
           </Dialog>
 
