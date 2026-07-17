@@ -84,8 +84,11 @@ export const handler = async (): Promise<Response> => {
       );
     }
     const j = await res.json().catch(() => null);
+    const prompts = normalize(j).sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+    );
     return Response.json(
-      { prompts: normalize(j), error: null },
+      { prompts, error: null },
       { status: 200, headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
