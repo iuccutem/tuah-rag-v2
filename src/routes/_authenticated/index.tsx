@@ -219,12 +219,17 @@ export function DashboardPage() {
     },
   });
   const prompts = promptsQuery.data?.prompts ?? [];
+  const [promptSearch, setPromptSearch] = useState("");
   useEffect(() => {
     if (systemPromptId || prompts.length === 0) return;
-    const active = prompts.find((p) => p.is_active) ?? prompts[0];
-    setSystemPromptId(active.id);
+    setSystemPromptId(prompts[0].id);
   }, [systemPromptId, prompts]);
   const selectedPrompt = prompts.find((p) => p.id === systemPromptId) ?? null;
+  const filteredPrompts = promptSearch.trim()
+    ? prompts.filter((p) =>
+        p.name.toLowerCase().includes(promptSearch.trim().toLowerCase()),
+      )
+    : prompts;
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
   const queryClient = useQueryClient();
