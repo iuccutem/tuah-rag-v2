@@ -14,6 +14,7 @@ type Prompt = {
   temperature: number | null;
   max_tokens: number | null;
   is_active: boolean | null;
+  user_id: string | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -39,6 +40,12 @@ function toPrompt(o: Record<string, unknown>): Prompt | null {
       typeof o.max_tokens === "number" ? (o.max_tokens as number) : null,
     is_active:
       typeof o.is_active === "boolean" ? (o.is_active as boolean) : null,
+    user_id:
+      (o.user_id as string) ??
+      (o.created_by as string) ??
+      (o.owner_id as string) ??
+      (o.author_id as string) ??
+      null,
     created_at: (o.created_at as string) ?? null,
     updated_at: (o.updated_at as string) ?? null,
   };
