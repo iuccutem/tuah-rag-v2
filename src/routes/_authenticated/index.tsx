@@ -229,9 +229,22 @@ export function DashboardPage() {
 
   const prompts = promptsQuery.data?.prompts ?? [];
   const [promptSearch, setPromptSearch] = useState("");
+  const PROMPT_SHOW_ALL_KEY = "ragBuilder.promptShowAll";
+  const [promptShowAll, setPromptShowAll] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(PROMPT_SHOW_ALL_KEY) === "1";
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(PROMPT_SHOW_ALL_KEY, promptShowAll ? "1" : "0");
+  }, [promptShowAll]);
+  const PROMPT_FILTER = "prod rag";
   useEffect(() => {
     if (systemPromptId || prompts.length === 0) return;
-    setSystemPromptId(prompts[0].id);
+    const firstProd = prompts.find((p) =>
+      p.name.toLowerCase().includes(PROMPT_FILTER),
+    );
+    setSystemPromptId((firstProd ?? prompts[0]).id);
   }, [systemPromptId, prompts]);
   const selectedPrompt = prompts.find((p) => p.id === systemPromptId) ?? null;
   const extraProcessBody = (() => {
@@ -248,11 +261,22 @@ export function DashboardPage() {
   const previewPrompt =
     (previewPromptId ? prompts.find((p) => p.id === previewPromptId) : null) ??
     selectedPrompt;
-  const filteredPrompts = promptSearch.trim()
-    ? prompts.filter((p) =>
+  const scopedPrompts = promptShowAll
+    ? prompts
+    : prompts.filter((p) => p.name.toLowerCase().includes(PROMPT_FILTER));
+  const searchedPrompts = promptSearch.trim()
+    ? scopedPrompts.filter((p) =>
         p.name.toLowerCase().includes(promptSearch.trim().toLowerCase()),
       )
-    : prompts;
+    : scopedPrompts;
+  // Keep the active selection reachable even when the filter would hide it.
+  const selectionHiddenByFilter =
+    selectedPrompt != null &&
+    !searchedPrompts.some((p) => p.id === selectedPrompt.id);
+  const filteredPrompts = selectionHiddenByFilter
+    ? [selectedPrompt!, ...searchedPrompts]
+    : searchedPrompts;
+
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
   const queryClient = useQueryClient();
@@ -1714,9 +1738,22 @@ export function DashboardPage() {
                         placeholder="Search prompts…"
                         className="h-7 w-full rounded border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary"
                       />
-                      <div className="mt-1 text-[10px] text-muted-foreground">
-                        {filteredPrompts.length} of {prompts.length}
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={promptShowAll}
+                            onChange={(e) => setPromptShowAll(e.target.checked)}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            className="h-3 w-3 accent-primary"
+                          />
+                          Show all
+                        </label>
+                        <div className="text-[10px] text-muted-foreground">
+                          {searchedPrompts.length} of {prompts.length}
+                        </div>
                       </div>
+
                     </div>
                     <div className="max-h-[22rem] overflow-auto">
                       {filteredPrompts.length === 0 ? (
@@ -1728,7 +1765,12 @@ export function DashboardPage() {
                           <div key={p.id} className="flex items-center gap-1 pr-1">
                             <SelectItem value={p.id} className="flex-1">
                               <div className="flex flex-col">
-                                <span className="truncate">{p.name}</span>
+                                <span className="truncate">
+                                  {p.name}
+                                  {selectionHiddenByFilter && p.id === selectedPrompt?.id && (
+                                    <span className="ml-1 text-[10px] text-muted-foreground">(hidden by filter)</span>
+                                  )}
+                                </span>
                                 {p.model && (
                                   <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                                     {p.model}
@@ -1736,6 +1778,7 @@ export function DashboardPage() {
                                 )}
                               </div>
                             </SelectItem>
+
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
