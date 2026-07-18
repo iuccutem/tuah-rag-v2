@@ -388,7 +388,11 @@ export function DashboardPage() {
     return payload;
   };
   const [insertOpen, setInsertOpen] = useState(false);
+  const [copyingRowIds, setCopyingRowIds] = useState<Set<string | number>>(new Set());
+  const [confirmOverwriteRowId, setConfirmOverwriteRowId] = useState<string | number | null>(null);
+  const confirmOverwriteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
