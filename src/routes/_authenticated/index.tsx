@@ -229,9 +229,22 @@ export function DashboardPage() {
 
   const prompts = promptsQuery.data?.prompts ?? [];
   const [promptSearch, setPromptSearch] = useState("");
+  const PROMPT_SHOW_ALL_KEY = "ragBuilder.promptShowAll";
+  const [promptShowAll, setPromptShowAll] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(PROMPT_SHOW_ALL_KEY) === "1";
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(PROMPT_SHOW_ALL_KEY, promptShowAll ? "1" : "0");
+  }, [promptShowAll]);
+  const PROMPT_FILTER = "prod rag";
   useEffect(() => {
     if (systemPromptId || prompts.length === 0) return;
-    setSystemPromptId(prompts[0].id);
+    const firstProd = prompts.find((p) =>
+      p.name.toLowerCase().includes(PROMPT_FILTER),
+    );
+    setSystemPromptId((firstProd ?? prompts[0]).id);
   }, [systemPromptId, prompts]);
   const selectedPrompt = prompts.find((p) => p.id === systemPromptId) ?? null;
   const extraProcessBody = (() => {
@@ -248,11 +261,22 @@ export function DashboardPage() {
   const previewPrompt =
     (previewPromptId ? prompts.find((p) => p.id === previewPromptId) : null) ??
     selectedPrompt;
-  const filteredPrompts = promptSearch.trim()
-    ? prompts.filter((p) =>
+  const scopedPrompts = promptShowAll
+    ? prompts
+    : prompts.filter((p) => p.name.toLowerCase().includes(PROMPT_FILTER));
+  const searchedPrompts = promptSearch.trim()
+    ? scopedPrompts.filter((p) =>
         p.name.toLowerCase().includes(promptSearch.trim().toLowerCase()),
       )
-    : prompts;
+    : scopedPrompts;
+  // Keep the active selection reachable even when the filter would hide it.
+  const selectionHiddenByFilter =
+    selectedPrompt != null &&
+    !searchedPrompts.some((p) => p.id === selectedPrompt.id);
+  const filteredPrompts = selectionHiddenByFilter
+    ? [selectedPrompt!, ...searchedPrompts]
+    : searchedPrompts;
+
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
   const queryClient = useQueryClient();
