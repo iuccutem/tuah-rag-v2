@@ -35,6 +35,9 @@ export function QATable({
   onToggleRow,
   onSelectAll,
   onEditCell,
+  onCopyWebToAnswer,
+  copyingRowIds,
+  confirmOverwriteRowId,
 }: {
   rows: QARow[];
   isLoading: boolean;
@@ -49,6 +52,10 @@ export function QATable({
     col: QAColumn,
     value: string,
   ) => Promise<boolean> | boolean;
+  onCopyWebToAnswer?: (row: QARow) => Promise<void> | void;
+  copyingRowIds?: Set<string | number>;
+  confirmOverwriteRowId?: string | number | null;
+
 }) {
 
   const skeletonRows = Array.from({ length: 8 });
