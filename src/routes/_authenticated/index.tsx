@@ -239,13 +239,20 @@ export function DashboardPage() {
     localStorage.setItem(PROMPT_SHOW_ALL_KEY, promptShowAll ? "1" : "0");
   }, [promptShowAll]);
   const PROMPT_FILTER = "prod rag";
+  const prodPrompts = prompts.filter((p) =>
+    p.name.toLowerCase().includes(PROMPT_FILTER),
+  );
   useEffect(() => {
-    if (systemPromptId || prompts.length === 0) return;
-    const firstProd = prompts.find((p) =>
-      p.name.toLowerCase().includes(PROMPT_FILTER),
-    );
-    setSystemPromptId((firstProd ?? prompts[0]).id);
-  }, [systemPromptId, prompts]);
+    if (prompts.length === 0) return;
+    const current = prompts.find((p) => p.id === systemPromptId);
+    const currentIsProd =
+      current && current.name.toLowerCase().includes(PROMPT_FILTER);
+    if (currentIsProd) return;
+    const firstProd = prodPrompts[0] ?? prompts[0];
+    if (firstProd && firstProd.id !== systemPromptId) {
+      setSystemPromptId(firstProd.id);
+    }
+  }, [systemPromptId, prompts, prodPrompts]);
   const selectedPrompt = prompts.find((p) => p.id === systemPromptId) ?? null;
   const extraProcessBody = (() => {
     const body: Record<string, unknown> = {};
@@ -261,21 +268,15 @@ export function DashboardPage() {
   const previewPrompt =
     (previewPromptId ? prompts.find((p) => p.id === previewPromptId) : null) ??
     selectedPrompt;
-  const scopedPrompts = promptShowAll
-    ? prompts
-    : prompts.filter((p) => p.name.toLowerCase().includes(PROMPT_FILTER));
+  const scopedPrompts = promptShowAll ? prompts : prodPrompts;
   const searchedPrompts = promptSearch.trim()
     ? scopedPrompts.filter((p) =>
         p.name.toLowerCase().includes(promptSearch.trim().toLowerCase()),
       )
     : scopedPrompts;
-  // Keep the active selection reachable even when the filter would hide it.
-  const selectionHiddenByFilter =
-    selectedPrompt != null &&
-    !searchedPrompts.some((p) => p.id === selectedPrompt.id);
-  const filteredPrompts = selectionHiddenByFilter
-    ? [selectedPrompt!, ...searchedPrompts]
-    : searchedPrompts;
+  const selectionHiddenByFilter = false;
+  const filteredPrompts = searchedPrompts;
+
 
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
