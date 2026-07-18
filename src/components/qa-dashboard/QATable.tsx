@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2 } from "lucide-react";
+import { ArrowRight, Check, Loader2 } from "lucide-react";
+
 import { QA_COLUMNS, colLetter, type QAColumn } from "./qa-columns";
 
 export type QARow = {
