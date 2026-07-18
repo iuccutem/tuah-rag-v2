@@ -1943,7 +1943,7 @@ export function DashboardPage() {
           </button>
 
           {/* Primary actions */}
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
             <Dialog open={insertOpen} onOpenChange={setInsertOpen}>
               <button
                 type="button"
