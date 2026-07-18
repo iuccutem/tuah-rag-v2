@@ -333,7 +333,17 @@ export function QATable({
                           ) : (
                             c.render(row, rIdx)
                           )}
+                          {c.key === "web" &&
+                            onCopyWebToAnswer &&
+                            (row.web ?? "").trim().length > 0 && (
+                              <CopyToAnswerButton
+                                busy={!!(rowId && copyingRowIds?.has(rowId))}
+                                armed={confirmOverwriteRowId === rowId}
+                                onClick={() => onCopyWebToAnswer(row)}
+                              />
+                            )}
                         </td>
+
                       );
                     })}
                   </tr>
