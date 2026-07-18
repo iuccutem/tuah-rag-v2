@@ -1,48 +1,34 @@
-# Responsive Toolbar Rearrangement
+# Filter the System Prompt selector
 
-Rework only the layout/visibility of the dashboard toolbar in `src/routes/_authenticated/index.tsx` (WorkspaceBar, ~lines 1558–2163) so it adapts cleanly to phone, tablet, and desktop. No handlers, state, or functionality change — every existing action stays reachable.
+Reduce the messy 123-prompt list to only production RAG prompts, with an escape hatch for debugging. No changes to how prompts are run — the selected prompt is still forwarded to the agent webhook exactly as today.
 
-## Breakpoints
+## Behavior
 
-- Mobile: `<640px` (default)
-- Tablet: `sm` 640–1023px
-- Desktop: `lg` ≥1024px
+- Default view of the Prompt selector shows only prompts whose `name` contains **"PROD RAG"** (case-insensitive).
+- A small **"Show all"** toggle (checkbox/switch) inside the selector dropdown reveals the full list when needed.
+- Toggle state persists in `localStorage` (`ragBuilder.promptShowAll`) so a debugging session survives reloads.
+- Alphabetical sort, search box, result count, and Eye-icon preview stay exactly as today.
+- If the currently selected prompt doesn't match the filter, it stays selected and is shown at the top of the list with a subtle "(hidden by filter)" hint, so the active choice is never silently dropped.
+- Result count updates to reflect the filtered list, e.g. `12 of 123 prompts`.
 
-## Row structure
+## Files
 
-Split the current single wrap-row into two visually grouped rows that collapse on small screens:
+- `src/routes/_authenticated/index.tsx` — only file touched.
+  - Add `promptShowAll` state (persisted to `localStorage`).
+  - Derive `visiblePrompts` from `prompts` using the "PROD RAG" filter unless `promptShowAll` is true.
+  - Add the toggle row at the top of the selector dropdown (next to the search input).
+  - Update the result count label.
+  - Keep the pinned "currently selected" row when it's filtered out.
 
-```text
-Row 1 (context):   [Sheet chip] [Vector chip] [Prompt chip + Eye/Info]
-Row 2 (actions):   [Search] [Dates] [Refresh]   ......   [Cell-format group] [Run] [Import] [Export] [More]
-```
+## Out of scope
 
-On desktop (`lg`) both rows can merge back into a single flex row (as today) via `lg:flex-row lg:flex-wrap`. On tablet/mobile they stack.
-
-## Per-element responsive rules
-
-- **Sheet / Vector / Prompt chips**: keep as-is; tighten `max-w` on mobile (`max-w-[7rem] sm:max-w-[12rem] lg:max-w-[14rem]`) so all three fit one row on tablet.
-- **Search**: full width on mobile (`w-full sm:w-auto`), fixed width on tablet+ (unchanged).
-- **Date filter / Refresh**: icon-only on mobile (hide the "Dates" label already gated by `sm:inline` — keep).
-- **Run Questions (primary)**: always visible; label already collapses to "Run" under `sm`.
-- **Import / Export**: currently `hidden sm:flex` with duplicate entries inside More menu for mobile. Keep that pattern — no change needed, they already adapt.
-- **Cell-format group** (Highlight / Mark error / Clear formatting, only when a cell is selected):
-  - Mobile (`<sm`): render as a compact floating group that wraps to its own line above the primary actions (`w-full order-first sm:order-none sm:w-auto`), so the primary Run button stays reachable.
-  - Tablet (`sm`–`lg`): inline before the More button, icon-only (current behaviour).
-  - Desktop (`lg+`): inline with a subtle divider (`border-l pl-1.5 ml-1`) to visually separate from Run/Import/Export.
-  - Tooltip labels unchanged.
-- **More menu (⋮)**: always visible; already contains mobile duplicates of Import/Export and sheet actions — keep.
-- **Selection strip** (row 2166+): already uses `flex-wrap`; add `justify-between` on `sm+` and stack action buttons full-width on mobile (`w-full sm:w-auto`).
-
-## Technical notes
-
-- All changes are Tailwind class edits inside `src/routes/_authenticated/index.tsx`. No new components, no logic edits, no import changes.
-- Reuse existing tokens (no hardcoded colors).
-- Preserve every `onClick`, `disabled`, `title`, and `aria-label`.
-- No changes to `QuestionPasteBox`, dialogs, edge functions, or server handlers.
+- No backend/webhook changes. `n8n-system-prompt-list` still returns the full sorted list; filtering is purely client-side so we can iterate on the rule without redeploys.
+- No changes to prompt-forwarding logic in `n8n-process`.
+- No new prompt-management UI (create/edit/delete) — deferred.
 
 ## Verification
 
-- Toggle preview device: mobile (394px), tablet (768px), desktop (1280px) — confirm no button is clipped or hidden without a fallback entry in the More menu.
-- Select a cell → format group appears in the correct slot for each breakpoint.
-- Select rows → selection strip lays out cleanly on all sizes.
+- Open the Prompt selector: only "PROD RAG" prompts appear, count reads `N of 123`.
+- Toggle "Show all": full 123-prompt list returns; toggle state survives a reload.
+- Select a non-PROD prompt, toggle filter back on: the active prompt remains selected and visible at the top of the list.
+- Run a question: agent webhook still receives `system_prompt_id`, `system_prompt`, `system_prompt_name`, `model` unchanged.
