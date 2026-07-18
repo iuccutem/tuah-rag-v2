@@ -14,6 +14,7 @@ type Prompt = {
   temperature: number | null;
   max_tokens: number | null;
   is_active: boolean | null;
+  user_id: string | null;
   created_at: string | null;
   updated_at: string | null;
 };
