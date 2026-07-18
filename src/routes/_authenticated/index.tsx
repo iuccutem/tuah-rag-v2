@@ -260,10 +260,34 @@ export function DashboardPage() {
     localStorage.setItem(PROMPT_SHOW_ALL_KEY, promptShowAll ? "1" : "0");
   }, [promptShowAll]);
   const PROMPT_USER_KEY = "ragBuilder.promptUserId";
+  const PROMPT_USER_DEFAULT_KEY = "ragBuilder.promptUserDefaultApplied";
+  const DEFAULT_USER_EMAIL = "osgoh88@gmail.com";
+  const DEFAULT_USER_NAME = "Goh";
   const [promptUserId, setPromptUserId] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem(PROMPT_USER_KEY) ?? "";
   });
+  const [userFilterOpen, setUserFilterOpen] = useState(false);
+  // Auto-select the default user (Goh) on first load if nothing is saved.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (promptUsers.length === 0) return;
+    if (localStorage.getItem(PROMPT_USER_DEFAULT_KEY) === "1") return;
+    if (localStorage.getItem(PROMPT_USER_KEY)) {
+      localStorage.setItem(PROMPT_USER_DEFAULT_KEY, "1");
+      return;
+    }
+    const match =
+      promptUsers.find(
+        (u) => (u.email ?? "").toLowerCase() === DEFAULT_USER_EMAIL,
+      ) ??
+      promptUsers.find(
+        (u) => u.name.toLowerCase() === DEFAULT_USER_NAME.toLowerCase(),
+      );
+    if (match) setPromptUserId(match.id);
+    localStorage.setItem(PROMPT_USER_DEFAULT_KEY, "1");
+  }, [promptUsers]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (promptUserId) localStorage.setItem(PROMPT_USER_KEY, promptUserId);
