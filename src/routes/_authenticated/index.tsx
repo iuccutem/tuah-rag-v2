@@ -1692,7 +1692,7 @@ export function DashboardPage() {
               Prompt
             </span>
             <Select value={systemPromptId} onValueChange={setSystemPromptId}>
-              <SelectTrigger className="h-7 min-w-[9rem] max-w-[14rem] border-0 bg-transparent px-1 text-[13px] shadow-none focus:ring-0">
+              <SelectTrigger className="h-7 min-w-[7rem] max-w-[9rem] sm:min-w-[9rem] sm:max-w-[14rem] border-0 bg-transparent px-1 text-[13px] shadow-none focus:ring-0">
                 <SelectValue
                   placeholder={promptsQuery.isLoading ? "Loading…" : "Select prompt"}
                 />
