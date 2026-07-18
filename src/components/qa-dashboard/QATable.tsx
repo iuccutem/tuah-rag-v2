@@ -261,7 +261,8 @@ export function QATable({
                 const rowId = row.id ?? row.question ?? "";
                 const checked = selectedRowIds.has(rowId);
                 return (
-                  <tr key={`${row.id ?? rIdx}-${rIdx}`}>
+                  <tr key={`${row.id ?? rIdx}-${rIdx}`} className="group">
+
                     <RowNumberCell
                       n={rIdx + 2}
                       active={rowActive}
