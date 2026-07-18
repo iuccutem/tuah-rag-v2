@@ -1842,6 +1842,80 @@ export function DashboardPage() {
                         placeholder="Search prompts…"
                         className="h-7 w-full rounded border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary"
                       />
+                      {promptUsers.length > 0 && (
+                        <details
+                          className="group mt-1"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
+                          <summary className="flex h-7 cursor-pointer list-none items-center justify-between rounded border border-border bg-background px-2 text-xs outline-none hover:border-primary/60">
+                            <span className="truncate">
+                              {selectedPromptUser
+                                ? `User: ${selectedPromptUser.name}`
+                                : "Filter by user"}
+                            </span>
+                            <span className="ml-2 shrink-0 text-[10px] text-muted-foreground">
+                              {selectedPromptUser ? "change" : `${promptUsers.length}`}
+                            </span>
+                          </summary>
+                          <div className="mt-1 rounded border border-border bg-popover p-1">
+                            <input
+                              type="text"
+                              value={promptUserSearch}
+                              onChange={(e) => setPromptUserSearch(e.target.value)}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              onPointerDown={(e) => e.stopPropagation()}
+                              placeholder="Search users…"
+                              className="h-7 w-full rounded border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary"
+                            />
+                            <div className="mt-1 max-h-40 overflow-auto">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setPromptUserId("");
+                                }}
+                                className={`flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs hover:bg-muted ${
+                                  promptUserId === "" ? "bg-muted font-medium" : ""
+                                }`}
+                              >
+                                <span>All users</span>
+                                {promptUserId === "" && (
+                                  <span className="text-[10px] text-muted-foreground">
+                                    selected
+                                  </span>
+                                )}
+                              </button>
+                              {filteredPromptUsers.length === 0 ? (
+                                <div className="px-2 py-2 text-[11px] text-muted-foreground">
+                                  No users match.
+                                </div>
+                              ) : (
+                                filteredPromptUsers.map((u) => (
+                                  <button
+                                    key={u.id}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setPromptUserId(u.id);
+                                    }}
+                                    className={`flex w-full flex-col rounded px-2 py-1 text-left text-xs hover:bg-muted ${
+                                      promptUserId === u.id ? "bg-muted font-medium" : ""
+                                    }`}
+                                  >
+                                    <span className="truncate">{u.name}</span>
+                                    {u.email && u.email !== u.name && (
+                                      <span className="truncate text-[10px] text-muted-foreground">
+                                        {u.email}
+                                      </span>
+                                    )}
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        </details>
+                      )}
                       <div className="mt-1 flex items-center justify-between gap-2">
                         <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer select-none">
                           <input
