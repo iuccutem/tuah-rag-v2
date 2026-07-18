@@ -338,6 +338,7 @@ export function DashboardPage() {
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["vector-list"] });
     queryClient.invalidateQueries({ queryKey: ["system-prompt-list"] });
+    queryClient.invalidateQueries({ queryKey: ["prompt-users"] });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
