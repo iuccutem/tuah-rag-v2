@@ -2049,7 +2049,7 @@ export function DashboardPage() {
 
             {selection?.mode === "cell" && (
               <TooltipProvider delayDuration={100}>
-                <div className="flex items-center gap-1">
+                <div className="order-last w-full sm:order-none sm:w-auto flex items-center justify-center gap-1 sm:border-l sm:border-border sm:pl-1.5 sm:ml-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
