@@ -1738,9 +1738,22 @@ export function DashboardPage() {
                         placeholder="Search prompts…"
                         className="h-7 w-full rounded border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary"
                       />
-                      <div className="mt-1 text-[10px] text-muted-foreground">
-                        {filteredPrompts.length} of {prompts.length}
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={promptShowAll}
+                            onChange={(e) => setPromptShowAll(e.target.checked)}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            className="h-3 w-3 accent-primary"
+                          />
+                          Show all
+                        </label>
+                        <div className="text-[10px] text-muted-foreground">
+                          {searchedPrompts.length} of {prompts.length}
+                        </div>
                       </div>
+
                     </div>
                     <div className="max-h-[22rem] overflow-auto">
                       {filteredPrompts.length === 0 ? (
