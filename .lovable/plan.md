@@ -1,28 +1,48 @@
-## Goal
-Pass the currently selected system prompt along with each question when triggering the agent, so the n8n webhook uses the prompt the user picked in the toolbar.
+# Responsive Toolbar Rearrangement
 
-## Changes
+Rework only the layout/visibility of the dashboard toolbar in `src/routes/_authenticated/index.tsx` (WorkspaceBar, ~lines 1558–2163) so it adapts cleanly to phone, tablet, and desktop. No handlers, state, or functionality change — every existing action stays reachable.
 
-### 1. Frontend — `src/routes/_authenticated/index.tsx`
-- Extend `extraProcessBody` to include the selected prompt fields whenever a prompt is chosen:
-  - `system_prompt_id`: `selectedPrompt.id`
-  - `system_prompt`: `selectedPrompt.system_prompt` (full text)
-  - `system_prompt_name`: `selectedPrompt.name`
-  - `model`: `selectedPrompt.model` (if present)
-- Keep existing `vector_id` behavior. Result: both the "Run selected rows" flow (line ~1290) and the `QuestionPasteBox` "Run Text Chat" flow automatically forward the prompt because both already spread `extraProcessBody`.
+## Breakpoints
 
-### 2. Edge function — `supabase/functions/n8n-process/index.ts`
-- Parse and forward the new optional fields to the upstream n8n webhook:
-  - `system_prompt_id`, `system_prompt`, `system_prompt_name`, `model`
-- Only include each field when it's a non-empty string. No change to auth, CORS, or response shape.
+- Mobile: `<640px` (default)
+- Tablet: `sm` 640–1023px
+- Desktop: `lg` ≥1024px
 
-### 3. Express handler — `server/src/handlers/n8n-process.ts`
-- Mirror the same additive field passthrough so the self-hosted server behaves identically.
+## Row structure
 
-## Not changed
-- `n8n-run` (question insert) is untouched — the prompt is only relevant for agent processing.
-- No UI changes; the existing prompt selector is the single source of truth.
-- No schema or storage changes.
+Split the current single wrap-row into two visually grouped rows that collapse on small screens:
 
-## Open question
-Do you want the full `system_prompt` text sent every call, or just the `system_prompt_id` (so n8n looks it up itself)? Default in this plan: send both, since it's cheap and lets the n8n workflow choose.
+```text
+Row 1 (context):   [Sheet chip] [Vector chip] [Prompt chip + Eye/Info]
+Row 2 (actions):   [Search] [Dates] [Refresh]   ......   [Cell-format group] [Run] [Import] [Export] [More]
+```
+
+On desktop (`lg`) both rows can merge back into a single flex row (as today) via `lg:flex-row lg:flex-wrap`. On tablet/mobile they stack.
+
+## Per-element responsive rules
+
+- **Sheet / Vector / Prompt chips**: keep as-is; tighten `max-w` on mobile (`max-w-[7rem] sm:max-w-[12rem] lg:max-w-[14rem]`) so all three fit one row on tablet.
+- **Search**: full width on mobile (`w-full sm:w-auto`), fixed width on tablet+ (unchanged).
+- **Date filter / Refresh**: icon-only on mobile (hide the "Dates" label already gated by `sm:inline` — keep).
+- **Run Questions (primary)**: always visible; label already collapses to "Run" under `sm`.
+- **Import / Export**: currently `hidden sm:flex` with duplicate entries inside More menu for mobile. Keep that pattern — no change needed, they already adapt.
+- **Cell-format group** (Highlight / Mark error / Clear formatting, only when a cell is selected):
+  - Mobile (`<sm`): render as a compact floating group that wraps to its own line above the primary actions (`w-full order-first sm:order-none sm:w-auto`), so the primary Run button stays reachable.
+  - Tablet (`sm`–`lg`): inline before the More button, icon-only (current behaviour).
+  - Desktop (`lg+`): inline with a subtle divider (`border-l pl-1.5 ml-1`) to visually separate from Run/Import/Export.
+  - Tooltip labels unchanged.
+- **More menu (⋮)**: always visible; already contains mobile duplicates of Import/Export and sheet actions — keep.
+- **Selection strip** (row 2166+): already uses `flex-wrap`; add `justify-between` on `sm+` and stack action buttons full-width on mobile (`w-full sm:w-auto`).
+
+## Technical notes
+
+- All changes are Tailwind class edits inside `src/routes/_authenticated/index.tsx`. No new components, no logic edits, no import changes.
+- Reuse existing tokens (no hardcoded colors).
+- Preserve every `onClick`, `disabled`, `title`, and `aria-label`.
+- No changes to `QuestionPasteBox`, dialogs, edge functions, or server handlers.
+
+## Verification
+
+- Toggle preview device: mobile (394px), tablet (768px), desktop (1280px) — confirm no button is clipped or hidden without a fallback entry in the More menu.
+- Select a cell → format group appears in the correct slot for each breakpoint.
+- Select rows → selection strip lays out cleanly on all sizes.
