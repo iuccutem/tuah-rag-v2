@@ -1857,7 +1857,7 @@ export function DashboardPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search…"
-              className="h-7 w-28 min-w-0 bg-transparent text-[13px] focus:outline-none sm:w-44"
+              className="h-7 w-full min-w-0 bg-transparent text-[13px] focus:outline-none sm:w-44"
             />
             {searchQuery ? (
               <button
