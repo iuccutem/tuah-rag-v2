@@ -1568,7 +1568,7 @@ export function DashboardPage() {
                 className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-border bg-background px-2.5 text-[13px] font-medium hover:bg-muted"
               >
                 <SheetIcon className="h-4 w-4 shrink-0 text-primary" />
-                <span className="truncate max-w-[9rem] sm:max-w-[14rem]">
+                <span className="truncate max-w-[7rem] sm:max-w-[12rem] lg:max-w-[14rem]">
                   {activeTable ? formatTableLabel(activeTable) : "No sheet"}
                 </span>
                 <span className="hidden sm:inline shrink-0 text-[11px] text-muted-foreground tabular-nums">
