@@ -388,7 +388,11 @@ export function DashboardPage() {
     return payload;
   };
   const [insertOpen, setInsertOpen] = useState(false);
+  const [copyingRowIds, setCopyingRowIds] = useState<Set<string | number>>(new Set());
+  const [confirmOverwriteRowId, setConfirmOverwriteRowId] = useState<string | number | null>(null);
+  const confirmOverwriteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -1049,6 +1053,50 @@ export function DashboardPage() {
       return false;
     }
   };
+
+
+  const handleCopyWebToAnswer = async (row: QARow) => {
+    const source = (row.web ?? "").trim();
+    if (!source) return;
+    const rowId = row.id;
+    if (rowId == null || rowId === "") {
+      toast.error("This row has no id and cannot be saved.");
+      return;
+    }
+    const existing = (row.telegram_whatsapp ?? "").trim();
+    // Two-step confirm when overwriting a non-empty answer
+    if (existing.length > 0 && confirmOverwriteRowId !== rowId) {
+      setConfirmOverwriteRowId(rowId);
+      if (confirmOverwriteTimerRef.current)
+        clearTimeout(confirmOverwriteTimerRef.current);
+      confirmOverwriteTimerRef.current = setTimeout(() => {
+        setConfirmOverwriteRowId((cur) => (cur === rowId ? null : cur));
+      }, 2000);
+      return;
+    }
+    if (confirmOverwriteTimerRef.current) {
+      clearTimeout(confirmOverwriteTimerRef.current);
+      confirmOverwriteTimerRef.current = null;
+    }
+    setConfirmOverwriteRowId(null);
+    const col = QA_COLUMNS.find((c) => c.key === "telegram_whatsapp");
+    if (!col) return;
+    setCopyingRowIds((prev) => {
+      const next = new Set(prev);
+      next.add(rowId);
+      return next;
+    });
+    try {
+      await handleEditCell(row, col, row.web ?? "");
+    } finally {
+      setCopyingRowIds((prev) => {
+        const next = new Set(prev);
+        next.delete(rowId);
+        return next;
+      });
+    }
+  };
+
 
 
 
@@ -2321,7 +2369,11 @@ export function DashboardPage() {
           onToggleRow={toggleRow}
           onSelectAll={selectAllRows}
           onEditCell={handleEditCell}
+          onCopyWebToAnswer={handleCopyWebToAnswer}
+          copyingRowIds={copyingRowIds}
+          confirmOverwriteRowId={confirmOverwriteRowId}
         />
+
 
       </div>
 
