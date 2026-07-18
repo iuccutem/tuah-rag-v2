@@ -404,6 +404,45 @@ function EmptySheetRow({ n }: { n: number }) {
   );
 }
 
+function CopyToAnswerButton({
+  busy,
+  armed,
+  onClick,
+}: {
+  busy: boolean;
+  armed: boolean;
+  onClick: () => void;
+}) {
+  const label = armed ? "Click again to overwrite" : "Copy to Expected Answer";
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      disabled={busy}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className={`absolute right-0 top-1/2 z-20 flex h-5 w-5 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border shadow-sm transition-all duration-150 ${
+        armed
+          ? "border-amber-400 bg-amber-50 text-amber-700 opacity-100 ring-2 ring-amber-300/60 dark:bg-amber-950 dark:text-amber-300"
+          : "border-border bg-background text-muted-foreground opacity-0 hover:scale-110 hover:border-primary hover:bg-primary hover:text-primary-foreground group-hover:opacity-100"
+      } ${busy ? "cursor-wait opacity-100" : ""}`}
+    >
+      {busy ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : armed ? (
+        <Check className="h-3 w-3" />
+      ) : (
+        <ArrowRight className="h-3 w-3" />
+      )}
+    </button>
+  );
+}
+
+
+
 function EditableCell({
   column,
   initial,
