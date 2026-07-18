@@ -1568,7 +1568,7 @@ export function DashboardPage() {
                 className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-border bg-background px-2.5 text-[13px] font-medium hover:bg-muted"
               >
                 <SheetIcon className="h-4 w-4 shrink-0 text-primary" />
-                <span className="truncate max-w-[9rem] sm:max-w-[14rem]">
+                <span className="truncate max-w-[7rem] sm:max-w-[12rem] lg:max-w-[14rem]">
                   {activeTable ? formatTableLabel(activeTable) : "No sheet"}
                 </span>
                 <span className="hidden sm:inline shrink-0 text-[11px] text-muted-foreground tabular-nums">
@@ -1692,7 +1692,7 @@ export function DashboardPage() {
               Prompt
             </span>
             <Select value={systemPromptId} onValueChange={setSystemPromptId}>
-              <SelectTrigger className="h-7 min-w-[9rem] max-w-[14rem] border-0 bg-transparent px-1 text-[13px] shadow-none focus:ring-0">
+              <SelectTrigger className="h-7 min-w-[7rem] max-w-[9rem] sm:min-w-[9rem] sm:max-w-[14rem] border-0 bg-transparent px-1 text-[13px] shadow-none focus:ring-0">
                 <SelectValue
                   placeholder={promptsQuery.isLoading ? "Loading…" : "Select prompt"}
                 />
@@ -1850,14 +1850,14 @@ export function DashboardPage() {
 
 
           {/* Search */}
-          <div className="flex h-9 min-w-0 items-center gap-1.5 rounded-md border border-border bg-background px-2 focus-within:ring-1 focus-within:ring-primary">
+          <div className="flex h-9 min-w-0 flex-1 sm:flex-none items-center gap-1.5 rounded-md border border-border bg-background px-2 focus-within:ring-1 focus-within:ring-primary">
             <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search…"
-              className="h-7 w-28 min-w-0 bg-transparent text-[13px] focus:outline-none sm:w-44"
+              className="h-7 w-full min-w-0 bg-transparent text-[13px] focus:outline-none sm:w-44"
             />
             {searchQuery ? (
               <button
@@ -1943,7 +1943,7 @@ export function DashboardPage() {
           </button>
 
           {/* Primary actions */}
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
             <Dialog open={insertOpen} onOpenChange={setInsertOpen}>
               <button
                 type="button"
@@ -2049,7 +2049,7 @@ export function DashboardPage() {
 
             {selection?.mode === "cell" && (
               <TooltipProvider delayDuration={100}>
-                <div className="flex items-center gap-1">
+                <div className="order-last w-full sm:order-none sm:w-auto flex items-center justify-center gap-1 sm:border-l sm:border-border sm:pl-1.5 sm:ml-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
