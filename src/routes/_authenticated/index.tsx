@@ -1850,7 +1850,7 @@ export function DashboardPage() {
 
 
           {/* Search */}
-          <div className="flex h-9 min-w-0 items-center gap-1.5 rounded-md border border-border bg-background px-2 focus-within:ring-1 focus-within:ring-primary">
+          <div className="flex h-9 min-w-0 flex-1 sm:flex-none items-center gap-1.5 rounded-md border border-border bg-background px-2 focus-within:ring-1 focus-within:ring-primary">
             <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <input
               type="text"
