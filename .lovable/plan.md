@@ -1,44 +1,46 @@
-## Why the filter isn't showing
+## Changes
 
-The user webhook is now working (edge function returns ~25 users). The filter code is in place, but it's rendered as a collapsed `<details>` element **inside** the Prompt `SelectContent` popover. Two problems:
+### 1. Default user filter to "Goh" (osgoh88@gmail.com)
 
-1. `<details>`/`<summary>` toggle clicks don't reliably work inside a Radix Select popover — Radix intercepts pointer events, so the summary often just closes the Prompt dropdown instead of expanding.
-2. Even when it works, it starts collapsed, so at a glance it looks like nothing was added.
+In `src/routes/_authenticated/index.tsx`, when the users query resolves and `localStorage` has no saved `ragBuilder.promptUserId`, auto-select the user whose `email === "osgoh88@gmail.com"` (fallback: `name === "Goh"`). If neither is found, leave as "All users". Persist the auto-picked id like a normal user choice so subsequent loads are stable, and the user can still switch to "All users" or anyone else.
 
-## Fix
+### 2. Move the user filter back inside the Prompt chip — polished layout
 
-Move the user filter out of the Prompt dropdown and give it its own always-visible toolbar chip next to the **Prompt** chip, matching the styling of the existing Sheet / Vector / Prompt chips.
+Remove the standalone toolbar "User" chip added last turn. Rebuild the filter inside the Prompt `SelectContent` popover as a compact, always-visible header (not a `<details>`), rendered above the prompt search bar. Because Radix Select intercepts pointer events on nested triggers, use an inline expandable panel driven by React state (`userFilterOpen`) rather than nesting another Popover.
+
+Layout inside the Prompt dropdown:
 
 ```text
-[Sheet ▾]  [Vector ▾]  [Prompt ▾] [i]  [User ▾]
-                                         └── searchable popover:
-                                             ┌─────────────────────────┐
-                                             │ [ Search users…      ]  │
-                                             │ • All users             │
-                                             │ • Adminstrator          │
-                                             │ • Alicia                │
-                                             │ … (25)                  │
-                                             └─────────────────────────┘
+┌────────────────────────────────────────────┐
+│  User  [ Goh                    ▾ ]  (×)   │  ← header row, always visible
+│  ─────────────────────────────────────     │
+│  ▸ when expanded:                          │
+│     [ Search users…                    ]   │
+│     • All users                            │
+│     • Adminstrator                         │
+│     • Goh                             ✓    │
+│     …                     12 of 25         │
+│  ─────────────────────────────────────     │
+│  [ Search prompts…                     ]   │  ← existing
+│  ☐ Show all (ignore PROD RAG)              │  ← existing
+│  12 of 123                                 │
+├────────────────────────────────────────────┤
+│  … prompt items …                          │
+└────────────────────────────────────────────┘
 ```
 
-- **Chip trigger**: small pill labeled `User` with the selected name (or "All users"), truncated. Hidden when `promptUsers.length === 0` or the query errored.
-- **Popover**: shadcn `Popover` + a small `Command`-style list (already used elsewhere) — search box, "All users" reset row, then the alphabetized users. Clicking a user sets `promptUserId` and closes the popover. This is a real Popover, not nested in the Select, so clicks work normally.
-- **Filter logic**: unchanged — the existing `matchesUser` / `visiblePrompts` derivation already filters the Prompt list by `promptUserId`, and the auto-reset effect already re-snaps `systemPromptId` when the filtered list changes.
-- **Persistence**: unchanged — still stored in `localStorage` under `ragBuilder.promptUserId`.
+Details:
+- **Header row**: `Users` icon, label `User`, current selection name (truncated) in a chip. Clicking the chip toggles the inline list. A small `×` clears back to "All users" (only shown when a user is selected).
+- **Expandable list**: uses `onPointerDown`/`onMouseDown` `stopPropagation` on all interactive elements so clicks aren't swallowed by Radix Select; buttons call `setPromptUserId(...)` and collapse the panel. Since we're not nesting a Radix trigger, the Select popover stays open and clicks work reliably.
+- **Hidden entirely** when `promptUsers.length === 0` (webhook empty/errored).
+- **State**: reuse existing `promptUserId`, `promptUserSearch`, `filteredPromptUsers`, `selectedPromptUser`. Add one new local `userFilterOpen` boolean.
 
-## Cleanup inside the Prompt dropdown
-
-Remove the `<details>`-based filter block from `SelectContent` (lines ~1845–1918 in `src/routes/_authenticated/index.tsx`). Keep the prompt search input and the "Show all" checkbox / count row exactly as they are today.
-
-## Files touched
+### Files touched
 
 - `src/routes/_authenticated/index.tsx`
-  - Remove the in-popover `<details>` user filter.
-  - Add a new toolbar chip + Popover for the user filter, placed immediately after the Prompt chip's Info button.
-  - No changes to state, queries, or filter logic — only UI relocation.
+  - Add `userFilterOpen` state.
+  - Add mount effect: if no `localStorage` value for `ragBuilder.promptUserId`, pick the Goh user from `promptUsersQuery.data.users` once available.
+  - Remove the standalone toolbar user-filter chip added last turn.
+  - Insert the new in-popover user-filter header + expandable panel at the top of the Prompt `SelectContent`.
 
-## Not changed
-
-- Edge functions (`n8n-prompt-users`, `n8n-system-prompt-list`) — already correct.
-- Prompt normalizer (`user_id` mapping) — already correct.
-- Run/export pipeline — untouched.
+No backend, query, or filter-logic changes — this is purely a UI relocation plus a default-selection effect.
