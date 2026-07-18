@@ -208,6 +208,7 @@ export function DashboardPage() {
     description: string | null;
     system_prompt: string;
     is_active: boolean | null;
+    user_id: string | null;
     updated_at: string | null;
   };
   const promptsQuery = useQuery({
@@ -227,6 +228,25 @@ export function DashboardPage() {
     refetchOnWindowFocus: true,
   });
 
+  type PromptUser = { id: string; name: string; email: string | null };
+  const promptUsersQuery = useQuery({
+    queryKey: ["prompt-users"],
+    queryFn: async () => {
+      const res = await apiFetch(`/n8n-prompt-users?ts=${Date.now()}`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error(`Failed (${res.status})`);
+      return (await res.json()) as {
+        users: PromptUser[];
+        error: string | null;
+      };
+    },
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+  });
+  const promptUsers = promptUsersQuery.data?.users ?? [];
+
   const prompts = promptsQuery.data?.prompts ?? [];
   const [promptSearch, setPromptSearch] = useState("");
   const PROMPT_SHOW_ALL_KEY = "ragBuilder.promptShowAll";
@@ -238,21 +258,54 @@ export function DashboardPage() {
     if (typeof window === "undefined") return;
     localStorage.setItem(PROMPT_SHOW_ALL_KEY, promptShowAll ? "1" : "0");
   }, [promptShowAll]);
+  const PROMPT_USER_KEY = "ragBuilder.promptUserId";
+  const [promptUserId, setPromptUserId] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(PROMPT_USER_KEY) ?? "";
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (promptUserId) localStorage.setItem(PROMPT_USER_KEY, promptUserId);
+    else localStorage.removeItem(PROMPT_USER_KEY);
+  }, [promptUserId]);
+  // Reset user filter if the stored id is no longer in the list.
+  useEffect(() => {
+    if (!promptUserId || promptUsers.length === 0) return;
+    if (!promptUsers.some((u) => u.id === promptUserId)) setPromptUserId("");
+  }, [promptUserId, promptUsers]);
+  const [promptUserSearch, setPromptUserSearch] = useState("");
+  const filteredPromptUsers = promptUserSearch.trim()
+    ? promptUsers.filter((u) =>
+        (u.name + " " + (u.email ?? ""))
+          .toLowerCase()
+          .includes(promptUserSearch.trim().toLowerCase()),
+      )
+    : promptUsers;
+  const selectedPromptUser =
+    promptUsers.find((u) => u.id === promptUserId) ?? null;
+
   const PROMPT_FILTER = "prod rag";
-  const prodPrompts = prompts.filter((p) =>
-    p.name.toLowerCase().includes(PROMPT_FILTER),
+  const matchesUser = (p: SystemPrompt) =>
+    !promptUserId || p.user_id === promptUserId;
+  const prodPrompts = prompts.filter(
+    (p) => p.name.toLowerCase().includes(PROMPT_FILTER) && matchesUser(p),
   );
+  const scopedPromptsRaw = promptShowAll
+    ? prompts.filter(matchesUser)
+    : prodPrompts;
   useEffect(() => {
     if (prompts.length === 0) return;
     const current = prompts.find((p) => p.id === systemPromptId);
     const currentIsProd =
       current && current.name.toLowerCase().includes(PROMPT_FILTER);
-    if (currentIsProd) return;
-    const firstProd = prodPrompts[0] ?? prompts[0];
+    const currentMatchesUser = current && matchesUser(current);
+    if (currentIsProd && currentMatchesUser) return;
+    const firstProd = prodPrompts[0] ?? scopedPromptsRaw[0] ?? prompts[0];
     if (firstProd && firstProd.id !== systemPromptId) {
       setSystemPromptId(firstProd.id);
     }
-  }, [systemPromptId, prompts, prodPrompts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [systemPromptId, prompts, prodPrompts, promptUserId]);
   const selectedPrompt = prompts.find((p) => p.id === systemPromptId) ?? null;
   const extraProcessBody = (() => {
     const body: Record<string, unknown> = {};
@@ -268,7 +321,7 @@ export function DashboardPage() {
   const previewPrompt =
     (previewPromptId ? prompts.find((p) => p.id === previewPromptId) : null) ??
     selectedPrompt;
-  const scopedPrompts = promptShowAll ? prompts : prodPrompts;
+  const scopedPrompts = scopedPromptsRaw;
   const searchedPrompts = promptSearch.trim()
     ? scopedPrompts.filter((p) =>
         p.name.toLowerCase().includes(promptSearch.trim().toLowerCase()),
@@ -276,6 +329,7 @@ export function DashboardPage() {
     : scopedPrompts;
   const selectionHiddenByFilter = false;
   const filteredPrompts = searchedPrompts;
+
 
 
   const navigate = useNavigate();
