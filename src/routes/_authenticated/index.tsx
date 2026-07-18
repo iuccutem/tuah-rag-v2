@@ -1558,8 +1558,7 @@ export function DashboardPage() {
       <div
         className="shrink-0 border-b border-border bg-card"
       >
-        <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center gap-2 px-3 py-2">
-        <div className="flex flex-wrap items-center gap-2 lg:contents">
+        <div className="flex flex-wrap items-center gap-2 px-3 py-2">
           {/* Sheet context chip */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
