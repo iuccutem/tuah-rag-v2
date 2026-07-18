@@ -1850,7 +1850,7 @@ export function DashboardPage() {
                   placeholder={promptsQuery.isLoading ? "Loading…" : "Select prompt"}
                 />
               </SelectTrigger>
-              <SelectContent className="max-w-[24rem]">
+              <SelectContent className="w-[22rem] max-w-[calc(100vw-2rem)]">
                 {prompts.length === 0 ? (
                   <div className="px-2 py-1.5 text-xs text-muted-foreground">
                     {promptsQuery.data?.error ?? "No system prompts found."}
