@@ -2369,7 +2369,11 @@ export function DashboardPage() {
           onToggleRow={toggleRow}
           onSelectAll={selectAllRows}
           onEditCell={handleEditCell}
+          onCopyWebToAnswer={handleCopyWebToAnswer}
+          copyingRowIds={copyingRowIds}
+          confirmOverwriteRowId={confirmOverwriteRowId}
         />
+
 
       </div>
 
