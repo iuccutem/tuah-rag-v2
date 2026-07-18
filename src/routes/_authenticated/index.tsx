@@ -1055,6 +1055,50 @@ export function DashboardPage() {
   };
 
 
+  const handleCopyWebToAnswer = async (row: QARow) => {
+    const source = (row.web ?? "").trim();
+    if (!source) return;
+    const rowId = row.id;
+    if (rowId == null || rowId === "") {
+      toast.error("This row has no id and cannot be saved.");
+      return;
+    }
+    const existing = (row.telegram_whatsapp ?? "").trim();
+    // Two-step confirm when overwriting a non-empty answer
+    if (existing.length > 0 && confirmOverwriteRowId !== rowId) {
+      setConfirmOverwriteRowId(rowId);
+      if (confirmOverwriteTimerRef.current)
+        clearTimeout(confirmOverwriteTimerRef.current);
+      confirmOverwriteTimerRef.current = setTimeout(() => {
+        setConfirmOverwriteRowId((cur) => (cur === rowId ? null : cur));
+      }, 2000);
+      return;
+    }
+    if (confirmOverwriteTimerRef.current) {
+      clearTimeout(confirmOverwriteTimerRef.current);
+      confirmOverwriteTimerRef.current = null;
+    }
+    setConfirmOverwriteRowId(null);
+    const col = QA_COLUMNS.find((c) => c.key === "telegram_whatsapp");
+    if (!col) return;
+    setCopyingRowIds((prev) => {
+      const next = new Set(prev);
+      next.add(rowId);
+      return next;
+    });
+    try {
+      await handleEditCell(row, col, row.web ?? "");
+    } finally {
+      setCopyingRowIds((prev) => {
+        const next = new Set(prev);
+        next.delete(rowId);
+        return next;
+      });
+    }
+  };
+
+
+
 
 
   const applyFormat = (patch: CellFormat | null) => {
