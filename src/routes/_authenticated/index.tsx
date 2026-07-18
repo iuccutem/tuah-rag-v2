@@ -260,10 +260,34 @@ export function DashboardPage() {
     localStorage.setItem(PROMPT_SHOW_ALL_KEY, promptShowAll ? "1" : "0");
   }, [promptShowAll]);
   const PROMPT_USER_KEY = "ragBuilder.promptUserId";
+  const PROMPT_USER_DEFAULT_KEY = "ragBuilder.promptUserDefaultApplied";
+  const DEFAULT_USER_EMAIL = "osgoh88@gmail.com";
+  const DEFAULT_USER_NAME = "Goh";
   const [promptUserId, setPromptUserId] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem(PROMPT_USER_KEY) ?? "";
   });
+  const [userFilterOpen, setUserFilterOpen] = useState(false);
+  // Auto-select the default user (Goh) on first load if nothing is saved.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (promptUsers.length === 0) return;
+    if (localStorage.getItem(PROMPT_USER_DEFAULT_KEY) === "1") return;
+    if (localStorage.getItem(PROMPT_USER_KEY)) {
+      localStorage.setItem(PROMPT_USER_DEFAULT_KEY, "1");
+      return;
+    }
+    const match =
+      promptUsers.find(
+        (u) => (u.email ?? "").toLowerCase() === DEFAULT_USER_EMAIL,
+      ) ??
+      promptUsers.find(
+        (u) => u.name.toLowerCase() === DEFAULT_USER_NAME.toLowerCase(),
+      );
+    if (match) setPromptUserId(match.id);
+    localStorage.setItem(PROMPT_USER_DEFAULT_KEY, "1");
+  }, [promptUsers]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (promptUserId) localStorage.setItem(PROMPT_USER_KEY, promptUserId);
@@ -1834,6 +1858,134 @@ export function DashboardPage() {
                 ) : (
                   <>
                     <div className="sticky top-0 z-10 border-b bg-popover px-2 py-1.5">
+                      {promptUsers.length > 0 && (
+                        <div className="mb-1.5 rounded-md border border-border/60 bg-muted/30 p-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              User
+                            </span>
+                            <button
+                              type="button"
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setUserFilterOpen((v) => !v);
+                              }}
+                              className={
+                                "ml-auto flex h-6 min-w-0 flex-1 items-center justify-between gap-1 rounded border px-1.5 text-[11px] " +
+                                (promptUserId
+                                  ? "border-primary/40 bg-primary/10 text-foreground"
+                                  : "border-border bg-background text-muted-foreground hover:text-foreground")
+                              }
+                            >
+                              <span className="truncate">
+                                {selectedPromptUser ? selectedPromptUser.name : "All users"}
+                              </span>
+                              <ChevronDown
+                                className={
+                                  "h-3 w-3 shrink-0 opacity-60 transition-transform " +
+                                  (userFilterOpen ? "rotate-180" : "")
+                                }
+                              />
+                            </button>
+                            {promptUserId && (
+                              <button
+                                type="button"
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setPromptUserId("");
+                                }}
+                                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                                aria-label="Clear user filter"
+                                title="Clear user filter"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                          {userFilterOpen && (
+                            <div className="mt-1.5">
+                              <input
+                                type="text"
+                                value={promptUserSearch}
+                                onChange={(e) => setPromptUserSearch(e.target.value)}
+                                onKeyDown={(e) => e.stopPropagation()}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                placeholder="Search users…"
+                                className="h-6 w-full rounded border border-border bg-background px-2 text-[11px] outline-none focus:ring-1 focus:ring-primary"
+                              />
+                              <div className="mt-1 max-h-40 overflow-auto rounded border border-border/60 bg-background">
+                                <button
+                                  type="button"
+                                  onPointerDown={(e) => e.stopPropagation()}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setPromptUserId("");
+                                    setUserFilterOpen(false);
+                                  }}
+                                  className={
+                                    "flex w-full items-center justify-between rounded px-2 py-1 text-left text-[11px] hover:bg-muted " +
+                                    (promptUserId === "" ? "bg-muted font-medium" : "")
+                                  }
+                                >
+                                  <span>All users</span>
+                                  {promptUserId === "" && (
+                                    <Check className="h-3 w-3 text-primary" />
+                                  )}
+                                </button>
+                                {filteredPromptUsers.length === 0 ? (
+                                  <div className="px-2 py-2 text-[11px] text-muted-foreground">
+                                    No users match.
+                                  </div>
+                                ) : (
+                                  filteredPromptUsers.map((u) => (
+                                    <button
+                                      key={u.id}
+                                      type="button"
+                                      onPointerDown={(e) => e.stopPropagation()}
+                                      onMouseDown={(e) => e.preventDefault()}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setPromptUserId(u.id);
+                                        setUserFilterOpen(false);
+                                      }}
+                                      className={
+                                        "flex w-full items-center justify-between gap-2 rounded px-2 py-1 text-left text-[11px] hover:bg-muted " +
+                                        (promptUserId === u.id ? "bg-muted font-medium" : "")
+                                      }
+                                    >
+                                      <span className="flex min-w-0 flex-col">
+                                        <span className="truncate">{u.name}</span>
+                                        {u.email && u.email !== u.name && (
+                                          <span className="truncate text-[10px] text-muted-foreground">
+                                            {u.email}
+                                          </span>
+                                        )}
+                                      </span>
+                                      {promptUserId === u.id && (
+                                        <Check className="h-3 w-3 shrink-0 text-primary" />
+                                      )}
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                              <div className="mt-1 text-right text-[10px] text-muted-foreground">
+                                {filteredPromptUsers.length} of {promptUsers.length}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <input
                         type="text"
                         value={promptSearch}
@@ -1934,95 +2086,7 @@ export function DashboardPage() {
             </TooltipProvider>
           </div>
 
-          {/* User filter chip */}
-          {promptUsers.length > 0 && (
-            <div
-              className={
-                "flex h-9 min-w-0 items-center gap-1.5 rounded-md border px-2 text-[13px] " +
-                (promptUserId
-                  ? "border-primary/40 bg-primary/10"
-                  : "border-border bg-muted/30")
-              }
-              title={
-                selectedPromptUser
-                  ? `Filter: ${selectedPromptUser.name}`
-                  : "Filter prompts by user"
-              }
-            >
-              <Users className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                User
-              </span>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex h-7 min-w-[6rem] max-w-[9rem] sm:min-w-[8rem] sm:max-w-[12rem] items-center justify-between gap-1 rounded px-1 text-[13px] hover:bg-muted/40"
-                  >
-                    <span className="truncate">
-                      {selectedPromptUser ? selectedPromptUser.name : "All users"}
-                    </span>
-                    <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-64 p-2">
-                  <input
-                    type="text"
-                    value={promptUserSearch}
-                    onChange={(e) => setPromptUserSearch(e.target.value)}
-                    placeholder="Search users…"
-                    autoFocus
-                    className="mb-1 h-7 w-full rounded border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary"
-                  />
-                  <div className="max-h-64 overflow-auto">
-                    <button
-                      type="button"
-                      onClick={() => setPromptUserId("")}
-                      className={`flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs hover:bg-muted ${
-                        promptUserId === "" ? "bg-muted font-medium" : ""
-                      }`}
-                    >
-                      <span>All users</span>
-                      {promptUserId === "" && (
-                        <Check className="h-3 w-3 text-primary" />
-                      )}
-                    </button>
-                    {filteredPromptUsers.length === 0 ? (
-                      <div className="px-2 py-2 text-[11px] text-muted-foreground">
-                        No users match.
-                      </div>
-                    ) : (
-                      filteredPromptUsers.map((u) => (
-                        <button
-                          key={u.id}
-                          type="button"
-                          onClick={() => setPromptUserId(u.id)}
-                          className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1 text-left text-xs hover:bg-muted ${
-                            promptUserId === u.id ? "bg-muted font-medium" : ""
-                          }`}
-                        >
-                          <span className="flex min-w-0 flex-col">
-                            <span className="truncate">{u.name}</span>
-                            {u.email && u.email !== u.name && (
-                              <span className="truncate text-[10px] text-muted-foreground">
-                                {u.email}
-                              </span>
-                            )}
-                          </span>
-                          {promptUserId === u.id && (
-                            <Check className="h-3 w-3 shrink-0 text-primary" />
-                          )}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                  <div className="mt-1 border-t pt-1 text-right text-[10px] text-muted-foreground">
-                    {filteredPromptUsers.length} of {promptUsers.length}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          )}
+
 
 
           <Dialog
