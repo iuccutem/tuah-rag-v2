@@ -1765,7 +1765,12 @@ export function DashboardPage() {
                           <div key={p.id} className="flex items-center gap-1 pr-1">
                             <SelectItem value={p.id} className="flex-1">
                               <div className="flex flex-col">
-                                <span className="truncate">{p.name}</span>
+                                <span className="truncate">
+                                  {p.name}
+                                  {selectionHiddenByFilter && p.id === selectedPrompt?.id && (
+                                    <span className="ml-1 text-[10px] text-muted-foreground">(hidden by filter)</span>
+                                  )}
+                                </span>
                                 {p.model && (
                                   <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                                     {p.model}
@@ -1773,6 +1778,7 @@ export function DashboardPage() {
                                 )}
                               </div>
                             </SelectItem>
+
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
