@@ -271,7 +271,10 @@ export function QATable({
                         onSelectionChange({ mode: "row", row: rIdx });
                       }}
                     />
-                    <td className="sticky left-[40px] z-10 w-8 cursor-pointer border-r border-b border-[var(--sheets-grid)] bg-card text-center">
+                    <td
+                      onClick={() => onToggleRow(rowId)}
+                      className="sticky left-[40px] z-10 w-8 cursor-pointer border-r border-b border-[var(--sheets-grid)] bg-card text-center"
+                    >
                       <input
                         type="checkbox"
                         className="h-3.5 w-3.5 cursor-pointer accent-primary"

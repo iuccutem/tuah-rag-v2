@@ -1,12 +1,8 @@
-Restrict row selection toggling to the checkbox cell only.
+Update the table interaction so clicking anywhere inside the checkbox/tickbox cell selects or unselects that row.
 
-Current behavior: clicking any data cell or row number schedules a row selection toggle. User wants only the tickbox (checkbox) cell to toggle selection.
-
-Changes in `src/components/qa-dashboard/QATable.tsx`:
-1. Remove `pendingToggleRef`, `scheduleRowToggle`, and `cancelPendingToggle` logic.
-2. Remove the `onClick` handler from data cells that calls `scheduleRowToggle`.
-3. Keep the checkbox cell's `onChange` as the only toggle path.
-4. Keep row-number cell `onClick` for selecting the row mode only, but remove `onToggleRow` from it.
-5. Ensure double-click to edit still works without the toggle cancellation logic.
-
-No changes to toolbar, export, prompts, or other functionality.
+Steps:
+1. In `src/components/qa-dashboard/QATable.tsx`, update the checkbox column `<td>` for real data rows to call `onToggleRow(rowId)` when the cell itself is clicked.
+2. Prevent double toggling by keeping the checkbox input click from bubbling to the cell, while its `onChange` continues to toggle when the checkbox itself is clicked.
+3. Leave normal data cells unchanged: they only select the active cell and do not toggle the row.
+4. Leave row number cells unchanged: they only select row mode and do not toggle the checkbox.
+5. Verify that clicking the checkbox cell background and the checkbox itself both toggle the row exactly once.
