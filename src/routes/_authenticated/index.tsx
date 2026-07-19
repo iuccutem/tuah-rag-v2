@@ -2974,6 +2974,32 @@ export function DashboardPage() {
               })
             )}
           </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--sheets-grid)] bg-muted/20 px-3 py-2 text-[12px]">
+            <div className="min-w-0">
+              <div className="font-medium text-foreground">Production RAG concurrency</div>
+              <div className="text-muted-foreground">
+                Max parallel webhook calls (1–{RAG_CONCURRENCY_MAX}). Lower it if the webhook times out.
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={RAG_CONCURRENCY_MIN}
+                max={RAG_CONCURRENCY_MAX}
+                value={ragConcurrency}
+                disabled={exportingRag}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10);
+                  if (!Number.isFinite(n)) return;
+                  setRagConcurrency(
+                    Math.min(RAG_CONCURRENCY_MAX, Math.max(RAG_CONCURRENCY_MIN, n)),
+                  );
+                }}
+                className="h-8 w-16 rounded-md border border-input bg-background px-2 text-center text-sm"
+              />
+              <span className="text-muted-foreground">parallel</span>
+            </div>
+          </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <Button
               variant="ghost"
