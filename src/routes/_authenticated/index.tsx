@@ -654,14 +654,14 @@ export function DashboardPage() {
           } catch (err2) {
             const msg = err2 instanceof Error ? err2.message : String(err2);
             throw new Error(
-              `Batch ${i + 1} of ${batches.length} failed after retry (${merged.length} / ${inputRows.length} rows completed): ${msg}`,
+              `Generation failed after retry (${merged.length} / ${inputRows.length} rows completed): ${msg}`,
             );
           }
         }
         merged.push(...rows);
         if (i < batches.length - 1) {
           toast.loading(
-            `Generating batch ${i + 2} / ${batches.length} (${merged.length} / ${inputRows.length} rows done)…`,
+            `Generating… (${merged.length} / ${inputRows.length})`,
             { id: tId },
           );
         }
