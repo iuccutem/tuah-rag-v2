@@ -89,6 +89,7 @@ import {
 import { QA_COLUMNS, cellRef } from "@/components/qa-dashboard/qa-columns";
 import { QuestionPasteBox } from "@/components/qa-dashboard/QuestionPasteBox";
 import { ExcelImportBox } from "@/components/qa-dashboard/ExcelImportBox";
+import { assembleDataset, buildDatasetHints } from "@/lib/rag-schema";
 
 
 
