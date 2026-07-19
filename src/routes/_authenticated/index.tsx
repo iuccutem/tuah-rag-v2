@@ -606,7 +606,7 @@ export function DashboardPage() {
     if (exportingJson) return;
     const previewRows = exportPreview.rows;
     if (previewRows.length === 0) return;
-    const JSON_BATCH_SIZE = 5;
+    const JSON_BATCH_SIZE = 1;
     setExportingJson(true);
 
     const inputRows = previewRows.map((r) => ({
