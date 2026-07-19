@@ -70,6 +70,24 @@ export function QATable({
   const cellRefs = useRef<Map<string, HTMLTableCellElement>>(new Map());
   const cellKey = (r: number, c: number) => `${r}:${c}`;
 
+  // Defer row-selection toggle slightly so a double-click (edit) can cancel it.
+  const pendingToggleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleRowToggle = (id: string | number) => {
+    if (pendingToggleRef.current) {
+      clearTimeout(pendingToggleRef.current);
+    }
+    pendingToggleRef.current = setTimeout(() => {
+      pendingToggleRef.current = null;
+      onToggleRow(id);
+    }, 180);
+  };
+  const cancelPendingToggle = () => {
+    if (pendingToggleRef.current) {
+      clearTimeout(pendingToggleRef.current);
+      pendingToggleRef.current = null;
+    }
+  };
+
   const isCellSelected = (r: number, c: number) =>
     selection?.mode === "cell" && selection.row === r && selection.col === c;
   const isRowActive = (r: number) =>
@@ -266,9 +284,10 @@ export function QATable({
                     <RowNumberCell
                       n={rIdx + 2}
                       active={rowActive}
-                      onClick={() =>
-                        onSelectionChange({ mode: "row", row: rIdx })
-                      }
+                      onClick={() => {
+                        onSelectionChange({ mode: "row", row: rIdx });
+                        onToggleRow(rowId);
+                      }}
                     />
                     <td className="sticky left-[40px] z-10 w-8 cursor-pointer border-r border-b border-[var(--sheets-grid)] bg-card text-center">
                       <input
@@ -296,14 +315,16 @@ export function QATable({
                             if (el) cellRefs.current.set(k, el);
                             else cellRefs.current.delete(k);
                           }}
-                          onClick={() =>
+                          onClick={() => {
                             onSelectionChange({
                               mode: "cell",
                               row: rIdx,
                               col: cIdx,
-                            })
-                          }
+                            });
+                            scheduleRowToggle(rowId);
+                          }}
                           onDoubleClick={() => {
+                            cancelPendingToggle();
                             if (canEdit)
                               setEditing({ row: rIdx, col: cIdx });
                           }}
