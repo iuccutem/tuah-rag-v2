@@ -719,17 +719,51 @@ export function DashboardPage() {
         : `Building production RAG… batch 1 / ${batches.length} (0 / ${inputRows.length} rows done)`,
     );
 
+    const validateOutgoing = (payload: Record<string, unknown>) => {
+      const missing: string[] = [];
+      if (!payload.table || typeof payload.table !== "string") missing.push("table");
+      if (typeof payload.batch_index !== "number" || Number.isNaN(payload.batch_index as number))
+        missing.push("batch_index");
+      if (typeof payload.batch_total !== "number" || !(payload.batch_total as number))
+        missing.push("batch_total");
+      if (!Array.isArray(payload.rows) || (payload.rows as unknown[]).length === 0)
+        missing.push("rows");
+      const ds = payload.dataset as Record<string, unknown> | undefined;
+      if (!ds || typeof ds !== "object") missing.push("dataset");
+      else {
+        for (const k of [
+          "dataset_id",
+          "name",
+          "organization",
+          "languages",
+          "source_scope",
+          "generated_at",
+          "generated_timezone",
+        ]) {
+          const v = ds[k];
+          if (v === undefined || v === null || v === "") missing.push(`dataset.${k}`);
+          else if (Array.isArray(v) && v.length === 0 && k !== "source_scope") missing.push(`dataset.${k}`);
+        }
+      }
+      return missing;
+    };
+
     const runBatch = async (batch: typeof inputRows, index: number) => {
+      const outgoing: Record<string, unknown> = {
+        table: tableName,
+        rows: batch,
+        dataset: datasetHints,
+        batch_index: index,
+        batch_total: batches.length,
+      };
+      const missing = validateOutgoing(outgoing);
+      if (missing.length > 0) {
+        throw new Error(`Incomplete payload — missing: ${missing.join(", ")}`);
+      }
       const res = await apiFetch("/n8n-rag-build", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          table: tableName,
-          rows: batch,
-          dataset: datasetHints,
-          batch_index: index,
-          batch_total: batches.length,
-        }),
+        body: JSON.stringify(outgoing),
       });
       const payload = (await res.json().catch(() => ({}))) as {
         rows?: unknown;
@@ -738,8 +772,12 @@ export function DashboardPage() {
       if (!res.ok || !Array.isArray(payload.rows)) {
         throw new Error(payload.error || `RAG build failed (${res.status})`);
       }
+      if ((payload.rows as unknown[]).length === 0) {
+        throw new Error("Webhook returned 0 records for this batch.");
+      }
       return payload.rows as unknown[];
     };
+
 
     try {
       const merged: unknown[] = [];
