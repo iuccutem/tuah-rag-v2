@@ -693,7 +693,7 @@ export function DashboardPage() {
 
 
   const runRagPipeline = async (
-    inputRows: Array<{ id: string; question: string; telegram_whatsapp: string; url: string }>,
+    inputRows: Array<{ id: string | number | null; question: string; telegram_whatsapp: string; url: string }>,
     ctx: {
       tableName: string;
       tableTag: ReturnType<typeof buildTableTag>;
