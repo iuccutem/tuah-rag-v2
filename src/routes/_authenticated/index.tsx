@@ -697,7 +697,7 @@ export function DashboardPage() {
     if (exportingRag) return;
     const previewRows = exportPreview.rows;
     if (previewRows.length === 0) return;
-    const RAG_BATCH_SIZE = 5;
+    const RAG_BATCH_SIZE = 3;
     setExportingRag(true);
 
     const inputRows = previewRows.map((r) => ({
