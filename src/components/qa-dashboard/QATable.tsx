@@ -303,10 +303,8 @@ export function QATable({
                               row: rIdx,
                               col: cIdx,
                             });
-                            scheduleRowToggle(rowId);
                           }}
                           onDoubleClick={() => {
-                            cancelPendingToggle();
                             if (canEdit)
                               setEditing({ row: rIdx, col: cIdx });
                           }}
