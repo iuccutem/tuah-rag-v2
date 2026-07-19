@@ -692,28 +692,21 @@ export function DashboardPage() {
   };
 
 
-  const confirmExportRag = async () => {
-    if (exportingRag) return;
-    const previewRows = exportPreview.rows;
-    if (previewRows.length === 0) return;
-    const RAG_BATCH_SIZE = 1;
+  const runRagPipeline = async (
+    inputRows: Array<{ id: string; question: string; telegram_whatsapp: string; url: string }>,
+    ctx: {
+      tableName: string;
+      tableTag: ReturnType<typeof buildTableTag>;
+      datasetHints: ReturnType<typeof buildDatasetHints>;
+      previewRows: typeof exportPreview.rows;
+    },
+    opts: { isRetry?: boolean } = {},
+  ) => {
+    if (inputRows.length === 0) return;
     setExportingRag(true);
-
-    const inputRows = previewRows.map((r) => ({
-      id: r.id,
-      question: r.question,
-      telegram_whatsapp: r.expected_answer,
-      url: r.url,
-    }));
-    const batches: (typeof inputRows)[] = [];
-    for (let i = 0; i < inputRows.length; i += RAG_BATCH_SIZE) {
-      batches.push(inputRows.slice(i, i + RAG_BATCH_SIZE));
-    }
-    const tableName = activeTable || "all";
-    const tableTag = buildTableTag();
-    const datasetHints = buildDatasetHints({ tableTag, rows: previewRows });
+    const total = inputRows.length;
     const tId = toast.loading(
-      `Building production RAG for ${inputRows.length} row${inputRows.length === 1 ? "" : "s"}… (0 / ${inputRows.length})`,
+      `${opts.isRetry ? "Retrying" : "Building"} production RAG for ${total} row${total === 1 ? "" : "s"}… (0 / ${total})`,
     );
 
     const validateOutgoing = (payload: Record<string, unknown>) => {
@@ -745,13 +738,13 @@ export function DashboardPage() {
       return missing;
     };
 
-    const runBatch = async (batch: typeof inputRows, index: number) => {
+    const callOnce = async (row: typeof inputRows[number], index: number) => {
       const outgoing: Record<string, unknown> = {
-        table: tableName,
-        rows: batch,
-        dataset: datasetHints,
+        table: ctx.tableName,
+        rows: [row],
+        dataset: ctx.datasetHints,
         batch_index: index,
-        batch_total: batches.length,
+        batch_total: total,
       };
       const missing = validateOutgoing(outgoing);
       if (missing.length > 0) {
@@ -770,102 +763,161 @@ export function DashboardPage() {
         throw new Error(payload.error || `RAG build failed (${res.status})`);
       }
       if ((payload.rows as unknown[]).length === 0) {
-        throw new Error("Webhook returned 0 records for this batch.");
+        throw new Error("Webhook returned 0 records.");
       }
       return payload.rows as unknown[];
     };
 
+    let done = 0;
+    let failing = 0;
+    const updateProgress = () => {
+      toast.loading(
+        `Building production RAG… (${done} / ${total}${failing ? `, failing ${failing}` : ""})`,
+        { id: tId },
+      );
+    };
 
-    try {
-      const merged: unknown[] = [];
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
-        let rows: unknown[];
+    type RowResult =
+      | { ok: true; index: number; rows: unknown[] }
+      | { ok: false; index: number; row: typeof inputRows[number]; error: string };
+
+    const runOneWithRetry = async (
+      row: typeof inputRows[number],
+      index: number,
+    ): Promise<RowResult> => {
+      let lastErr: unknown;
+      let countedFailing = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          rows = await runBatch(batch, i);
+          const rows = await callOnce(row, index);
+          if (countedFailing) {
+            failing = Math.max(0, failing - 1);
+          }
+          done += 1;
+          updateProgress();
+          return { ok: true, index, rows };
         } catch (err) {
-          // Retry once after a short delay.
-          await new Promise((r) => setTimeout(r, 2000));
-          try {
-            rows = await runBatch(batch, i);
-          } catch (err2) {
-            const msg = err2 instanceof Error ? err2.message : String(err2);
-            throw new Error(
-              `Production RAG failed after retry (${merged.length} / ${inputRows.length} rows completed): ${msg}`,
-            );
+          lastErr = err;
+          if (!countedFailing) {
+            failing += 1;
+            countedFailing = true;
+            updateProgress();
+          }
+          if (attempt < 3) {
+            await new Promise((r) => setTimeout(r, attempt * 1000));
           }
         }
-        merged.push(...rows);
-        if (i < batches.length - 1) {
-          toast.loading(
-            `Building production RAG… (${merged.length} / ${inputRows.length})`,
-            { id: tId },
+      }
+      return {
+        ok: false,
+        index,
+        row,
+        error: lastErr instanceof Error ? lastErr.message : String(lastErr),
+      };
+    };
+
+    try {
+      const results = await Promise.all(inputRows.map((r, i) => runOneWithRetry(r, i)));
+
+      const successes = results.filter((r): r is Extract<RowResult, { ok: true }> => r.ok);
+      const failures = results.filter((r): r is Extract<RowResult, { ok: false }> => !r.ok);
+      successes.sort((a, b) => a.index - b.index);
+      const merged: unknown[] = successes.flatMap((s) => s.rows);
+
+      toast.dismiss(tId);
+
+      if (merged.length > 0) {
+        const { payload, legacyDetected } = await assembleDataset({
+          hints: ctx.datasetHints,
+          tableTag: ctx.tableTag,
+          records: merged,
+        });
+        const json = JSON.stringify(payload, null, 2);
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${ctx.datasetHints.dataset_id}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        if (legacyDetected) {
+          toast.warning(
+            `Downloaded ${merged.length} record${merged.length === 1 ? "" : "s"} — some are not in v2.0.0 shape. Update the n8n agent prompt.`,
           );
         }
       }
 
-      const { payload, legacyDetected } = await assembleDataset({
-        hints: datasetHints,
-        tableTag,
-        records: merged,
-      });
-
-      toast.dismiss(tId);
-      const json = JSON.stringify(payload, null, 2);
-      const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${datasetHints.dataset_id}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      if (legacyDetected) {
-        toast.warning(
-          `Downloaded ${merged.length} record${merged.length === 1 ? "" : "s"} — some are not in v2.0.0 shape. Update the n8n agent prompt.`,
-        );
-      } else {
+      if (failures.length === 0) {
         toast.success(
           `Production RAG v2.0.0 ready (${merged.length} record${merged.length === 1 ? "" : "s"}).`,
         );
+        setExportPreview({ open: false, rows: [] });
+      } else {
+        const failedRows = failures.map((f) => f.row);
+        const firstMsg = failures[0].error;
+        toast.error(
+          <div className="space-y-2 min-w-[18rem]">
+            <div className="font-medium">
+              {failures.length} row{failures.length === 1 ? "" : "s"} failed after 3 attempts
+            </div>
+            <p className="text-xs text-muted-foreground break-words">
+              {merged.length > 0
+                ? `Downloaded ${merged.length} successful record${merged.length === 1 ? "" : "s"}. `
+                : "No records were built. "}
+              First error: {firstMsg}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8"
+                onClick={() => {
+                  toast.dismiss();
+                  void runRagPipeline(failedRows, ctx, { isRetry: true });
+                }}
+              >
+                <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                Retry failed rows
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8"
+                onClick={() => toast.dismiss()}
+              >
+                Dismiss
+              </Button>
+            </div>
+          </div>,
+          { duration: Infinity },
+        );
       }
-      setExportPreview({ open: false, rows: [] });
     } catch (e) {
       toast.dismiss(tId);
       const msg = e instanceof Error ? e.message : String(e);
-      const is520 =
-        msg.includes("520") ||
-        msg.toLowerCase().includes("gateway") ||
-        msg.toLowerCase().includes("timeout");
-      if (is520) {
-        toast.error(
-          <div className="space-y-2 min-w-[16rem]">
-            <div className="font-medium">Webhook timed out (520)</div>
-            <p className="text-sm text-muted-foreground">
-              The RAG builder took too long to respond. This usually happens when the agent is overloaded or the gateway timeout is hit. Wait a few seconds, then retry.
-            </p>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8"
-              onClick={() => {
-                toast.dismiss();
-                confirmExportRag();
-              }}
-            >
-              <RotateCcw className="mr-1 h-3.5 w-3.5" />
-              Retry
-            </Button>
-          </div>,
-          { duration: 10000 },
-        );
-      } else {
-        toast.error(msg || "Failed to build RAG.");
-      }
+      toast.error(msg || "Failed to build RAG.");
     } finally {
       setExportingRag(false);
     }
+  };
+
+  const confirmExportRag = async () => {
+    if (exportingRag) return;
+    const previewRows = exportPreview.rows;
+    if (previewRows.length === 0) return;
+
+    const inputRows = previewRows.map((r) => ({
+      id: r.id,
+      question: r.question,
+      telegram_whatsapp: r.expected_answer,
+      url: r.url,
+    }));
+    const tableName = activeTable || "all";
+    const tableTag = buildTableTag();
+    const datasetHints = buildDatasetHints({ tableTag, rows: previewRows });
+    await runRagPipeline(inputRows, { tableName, tableTag, datasetHints, previewRows });
   };
 
 
