@@ -621,9 +621,7 @@ export function DashboardPage() {
     }
     const tableName = activeTable || "all";
     const tId = toast.loading(
-      batches.length === 1
-        ? `Generating ${inputRows.length} row${inputRows.length === 1 ? "" : "s"}…`
-        : `Generating batch 1 / ${batches.length} (0 / ${inputRows.length} rows done)…`,
+      `Generating ${inputRows.length} row${inputRows.length === 1 ? "" : "s"}… (0 / ${inputRows.length})`,
     );
 
     const runBatch = async (batch: typeof inputRows) => {
