@@ -1,17 +1,12 @@
-Make row selection easier by allowing clicks on any data cell (or row number) to toggle the row checkbox, instead of forcing users to aim for the small checkbox input.
+Restrict row selection toggling to the checkbox cell only.
 
-## Changes
+Current behavior: clicking any data cell or row number schedules a row selection toggle. User wants only the tickbox (checkbox) cell to toggle selection.
 
-### 1. `src/components/qa-dashboard/QATable.tsx`
-- Add a small click-timeout guard so a single click on a data cell toggles the row selection, but a double-click (which enters edit mode) cancels the pending toggle.
-- Keep the existing checkbox column for visual feedback and as an explicit control.
-- Make the row-number cell also toggle the row selection when clicked.
-- Ensure internal controls (`CopyToAnswerButton`, checkbox inputs) still call `stopPropagation()` so they don't double-toggle.
+Changes in `src/components/qa-dashboard/QATable.tsx`:
+1. Remove `pendingToggleRef`, `scheduleRowToggle`, and `cancelPendingToggle` logic.
+2. Remove the `onClick` handler from data cells that calls `scheduleRowToggle`.
+3. Keep the checkbox cell's `onChange` as the only toggle path.
+4. Keep row-number cell `onClick` for selecting the row mode only, but remove `onToggleRow` from it.
+5. Ensure double-click to edit still works without the toggle cancellation logic.
 
-### 2. Verification
-- Run a typecheck/build to confirm no regressions.
-- Optionally verify with a quick Playwright screenshot that clicking a cell ticks the row.
-
-## Notes
-- No changes to business logic, exports, webhooks, or backend.
-- This only changes how the row checkbox is toggled in the spreadsheet UI.
+No changes to toolbar, export, prompts, or other functionality.
