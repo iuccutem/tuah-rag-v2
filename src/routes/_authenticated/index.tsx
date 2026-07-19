@@ -712,9 +712,7 @@ export function DashboardPage() {
     const tableTag = buildTableTag();
     const datasetHints = buildDatasetHints({ tableTag, rows: previewRows });
     const tId = toast.loading(
-      batches.length === 1
-        ? `Building production RAG for ${inputRows.length} row${inputRows.length === 1 ? "" : "s"}…`
-        : `Building production RAG… batch 1 / ${batches.length} (0 / ${inputRows.length} rows done)`,
+      `Building production RAG for ${inputRows.length} row${inputRows.length === 1 ? "" : "s"}… (0 / ${inputRows.length})`,
     );
 
     const validateOutgoing = (payload: Record<string, unknown>) => {
