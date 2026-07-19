@@ -15,6 +15,30 @@ Deno.serve(async (req) => {
     return json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
+  // Diagnostic: log what the client actually sent so we can confirm
+  // dataset/batch metadata is arriving at the edge function.
+  try {
+    const b = body as Record<string, unknown>;
+    const outgoing = JSON.stringify(body);
+    console.log("[n8n-rag-build] incoming body diagnostics", {
+      keys: b && typeof b === "object" ? Object.keys(b) : null,
+      has_dataset: !!(b && typeof b === "object" && b.dataset),
+      dataset_id:
+        b && typeof b === "object" && b.dataset && typeof b.dataset === "object"
+          ? (b.dataset as Record<string, unknown>).dataset_id
+          : null,
+      batch_index: (b as { batch_index?: unknown })?.batch_index,
+      batch_total: (b as { batch_total?: unknown })?.batch_total,
+      rows_length: Array.isArray((b as { rows?: unknown })?.rows)
+        ? ((b as { rows: unknown[] }).rows).length
+        : null,
+      outgoing_bytes: outgoing.length,
+    });
+  } catch (e) {
+    console.log("[n8n-rag-build] diagnostics failed", String(e));
+  }
+
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
