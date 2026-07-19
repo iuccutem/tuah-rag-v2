@@ -59,7 +59,10 @@ Deno.serve(async (req) => {
     const text = await res.text();
     if (!res.ok) {
       return json(
-        { error: `Webhook ${res.status}: ${text.slice(0, 500) || res.statusText}` },
+        {
+          error: `Webhook ${res.status}: ${text.slice(0, 500) || res.statusText}`,
+          upstream_status: res.status,
+        },
         { status: 502 },
       );
     }

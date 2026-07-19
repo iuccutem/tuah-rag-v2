@@ -35,6 +35,7 @@ import {
   Eye,
   X,
   Users,
+  RotateCcw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -832,7 +833,36 @@ export function DashboardPage() {
       setExportPreview({ open: false, rows: [] });
     } catch (e) {
       toast.dismiss(tId);
-      toast.error(e instanceof Error ? e.message : "Failed to build RAG.");
+      const msg = e instanceof Error ? e.message : String(e);
+      const is520 =
+        msg.includes("520") ||
+        msg.toLowerCase().includes("gateway") ||
+        msg.toLowerCase().includes("timeout");
+      if (is520) {
+        toast.error(
+          <div className="space-y-2 min-w-[16rem]">
+            <div className="font-medium">Webhook timed out (520)</div>
+            <p className="text-sm text-muted-foreground">
+              The RAG builder took too long to respond. This usually happens when the agent is overloaded or the gateway timeout is hit. Wait a few seconds, then retry.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8"
+              onClick={() => {
+                toast.dismiss();
+                confirmExportRag();
+              }}
+            >
+              <RotateCcw className="mr-1 h-3.5 w-3.5" />
+              Retry
+            </Button>
+          </div>,
+          { duration: 10000 },
+        );
+      } else {
+        toast.error(msg || "Failed to build RAG.");
+      }
     } finally {
       setExportingRag(false);
     }
