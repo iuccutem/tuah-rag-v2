@@ -89,6 +89,7 @@ import {
 import { QA_COLUMNS, cellRef } from "@/components/qa-dashboard/qa-columns";
 import { QuestionPasteBox } from "@/components/qa-dashboard/QuestionPasteBox";
 import { ExcelImportBox } from "@/components/qa-dashboard/ExcelImportBox";
+import { assembleDataset, buildDatasetHints } from "@/lib/rag-schema";
 
 
 
@@ -710,17 +711,25 @@ export function DashboardPage() {
       batches.push(inputRows.slice(i, i + RAG_BATCH_SIZE));
     }
     const tableName = activeTable || "all";
+    const tableTag = buildTableTag();
+    const datasetHints = buildDatasetHints({ tableTag, rows: previewRows });
     const tId = toast.loading(
       batches.length === 1
         ? `Building production RAG for ${inputRows.length} row${inputRows.length === 1 ? "" : "s"}…`
         : `Building production RAG… batch 1 / ${batches.length} (0 / ${inputRows.length} rows done)`,
     );
 
-    const runBatch = async (batch: typeof inputRows) => {
+    const runBatch = async (batch: typeof inputRows, index: number) => {
       const res = await apiFetch("/n8n-rag-build", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ table: tableName, rows: batch }),
+        body: JSON.stringify({
+          table: tableName,
+          rows: batch,
+          dataset: datasetHints,
+          batch_index: index,
+          batch_total: batches.length,
+        }),
       });
       const payload = (await res.json().catch(() => ({}))) as {
         rows?: unknown;
@@ -738,12 +747,12 @@ export function DashboardPage() {
         const batch = batches[i];
         let rows: unknown[];
         try {
-          rows = await runBatch(batch);
+          rows = await runBatch(batch, i);
         } catch (err) {
           // Retry once after a short delay.
           await new Promise((r) => setTimeout(r, 2000));
           try {
-            rows = await runBatch(batch);
+            rows = await runBatch(batch, i);
           } catch (err2) {
             const msg = err2 instanceof Error ? err2.message : String(err2);
             throw new Error(
@@ -760,20 +769,32 @@ export function DashboardPage() {
         }
       }
 
+      const { payload, legacyDetected } = await assembleDataset({
+        hints: datasetHints,
+        tableTag,
+        records: merged,
+      });
+
       toast.dismiss(tId);
-      const json = JSON.stringify(merged, null, 2);
+      const json = JSON.stringify(payload, null, 2);
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${buildTableTag()}_rag_${buildStamp()}.json`;
+      a.download = `${datasetHints.dataset_id}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast.success(
-        `Production RAG ready (${merged.length} record${merged.length === 1 ? "" : "s"}).`,
-      );
+      if (legacyDetected) {
+        toast.warning(
+          `Downloaded ${merged.length} record${merged.length === 1 ? "" : "s"} — some are not in v2.0.0 shape. Update the n8n agent prompt.`,
+        );
+      } else {
+        toast.success(
+          `Production RAG v2.0.0 ready (${merged.length} record${merged.length === 1 ? "" : "s"}).`,
+        );
+      }
       setExportPreview({ open: false, rows: [] });
     } catch (e) {
       toast.dismiss(tId);
@@ -2840,7 +2861,7 @@ export function DashboardPage() {
                 onClick={confirmExportRag}
                 disabled={exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting}
                 className="gap-2"
-                title="Send rows to the RAG builder webhook and download the production RAG JSON."
+                title="Send rows to the RAG builder and download a v2.0.0 dataset (bilingual, source-grounded, retrieval-tested)."
               >
                 {exportingRag ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 {exportingRag ? "Building…" : "Production RAG"}

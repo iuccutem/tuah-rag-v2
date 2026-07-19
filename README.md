@@ -148,6 +148,10 @@ All server-side secrets (`N8N_WEBHOOK_USER`, `N8N_WEBHOOK_PASSWORD`, `N8N_JWT_SE
 `SUPABASE_SERVICE_ROLE_KEY`) live as **Edge Function secrets** in
 Lovable Cloud — see [`docs/environment.md`](./docs/environment.md) for the full matrix.
 
+The n8n agent that powers the **Production RAG** export must emit Schema v2.0.0
+records. See [`docs/rag-builder-agent-prompt.md`](./docs/rag-builder-agent-prompt.md)
+for the system and user prompts to paste into the Agent node.
+
 ### 3. Run the dev server
 
 ```bash
