@@ -606,7 +606,7 @@ export function DashboardPage() {
     if (exportingJson) return;
     const previewRows = exportPreview.rows;
     if (previewRows.length === 0) return;
-    const JSON_BATCH_SIZE = 5;
+    const JSON_BATCH_SIZE = 1;
     setExportingJson(true);
 
     const inputRows = previewRows.map((r) => ({
@@ -621,9 +621,7 @@ export function DashboardPage() {
     }
     const tableName = activeTable || "all";
     const tId = toast.loading(
-      batches.length === 1
-        ? `Generating ${inputRows.length} row${inputRows.length === 1 ? "" : "s"}…`
-        : `Generating batch 1 / ${batches.length} (0 / ${inputRows.length} rows done)…`,
+      `Generating ${inputRows.length} row${inputRows.length === 1 ? "" : "s"}… (0 / ${inputRows.length})`,
     );
 
     const runBatch = async (batch: typeof inputRows) => {
@@ -656,14 +654,14 @@ export function DashboardPage() {
           } catch (err2) {
             const msg = err2 instanceof Error ? err2.message : String(err2);
             throw new Error(
-              `Batch ${i + 1} of ${batches.length} failed after retry (${merged.length} / ${inputRows.length} rows completed): ${msg}`,
+              `Generation failed after retry (${merged.length} / ${inputRows.length} rows completed): ${msg}`,
             );
           }
         }
         merged.push(...rows);
         if (i < batches.length - 1) {
           toast.loading(
-            `Generating batch ${i + 2} / ${batches.length} (${merged.length} / ${inputRows.length} rows done)…`,
+            `Generating… (${merged.length} / ${inputRows.length})`,
             { id: tId },
           );
         }
@@ -697,7 +695,7 @@ export function DashboardPage() {
     if (exportingRag) return;
     const previewRows = exportPreview.rows;
     if (previewRows.length === 0) return;
-    const RAG_BATCH_SIZE = 3;
+    const RAG_BATCH_SIZE = 1;
     setExportingRag(true);
 
     const inputRows = previewRows.map((r) => ({
@@ -714,9 +712,7 @@ export function DashboardPage() {
     const tableTag = buildTableTag();
     const datasetHints = buildDatasetHints({ tableTag, rows: previewRows });
     const tId = toast.loading(
-      batches.length === 1
-        ? `Building production RAG for ${inputRows.length} row${inputRows.length === 1 ? "" : "s"}…`
-        : `Building production RAG… batch 1 / ${batches.length} (0 / ${inputRows.length} rows done)`,
+      `Building production RAG for ${inputRows.length} row${inputRows.length === 1 ? "" : "s"}… (0 / ${inputRows.length})`,
     );
 
     const validateOutgoing = (payload: Record<string, unknown>) => {
@@ -794,14 +790,14 @@ export function DashboardPage() {
           } catch (err2) {
             const msg = err2 instanceof Error ? err2.message : String(err2);
             throw new Error(
-              `Batch ${i + 1} of ${batches.length} failed after retry (${merged.length} / ${inputRows.length} rows completed): ${msg}`,
+              `Production RAG failed after retry (${merged.length} / ${inputRows.length} rows completed): ${msg}`,
             );
           }
         }
         merged.push(...rows);
         if (i < batches.length - 1) {
           toast.loading(
-            `Building production RAG… batch ${i + 2} / ${batches.length} (${merged.length} / ${inputRows.length} rows done)`,
+            `Building production RAG… (${merged.length} / ${inputRows.length})`,
             { id: tId },
           );
         }
