@@ -269,7 +269,6 @@ export function QATable({
                       active={rowActive}
                       onClick={() => {
                         onSelectionChange({ mode: "row", row: rIdx });
-                        onToggleRow(rowId);
                       }}
                     />
                     <td className="sticky left-[40px] z-10 w-8 cursor-pointer border-r border-b border-[var(--sheets-grid)] bg-card text-center">
