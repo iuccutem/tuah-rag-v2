@@ -97,7 +97,7 @@ export function buildDatasetHints(params: {
   rows: Array<{ url?: string | null }>;
 }): DatasetHints {
   const stamp = yymmddKL();
-  const id = `${slugForDataset(params.tableTag)}_${stamp}_v2.0.0`;
+  const id = `${slugForDataset(params.tableTag)}_rag_${stamp}`;
   return {
     dataset_id: id,
     name: `${prettyDatasetName(params.tableTag)} Production RAG`,
