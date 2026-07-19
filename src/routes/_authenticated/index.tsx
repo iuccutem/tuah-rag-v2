@@ -453,6 +453,21 @@ export function DashboardPage() {
       url: string;
     }>;
   }>({ open: false, rows: [] });
+  const RAG_CONCURRENCY_KEY = "rag-builder:rag-concurrency";
+  const RAG_CONCURRENCY_MIN = 1;
+  const RAG_CONCURRENCY_MAX = 20;
+  const RAG_CONCURRENCY_DEFAULT = 5;
+  const [ragConcurrency, setRagConcurrency] = useState<number>(() => {
+    if (typeof window === "undefined") return RAG_CONCURRENCY_DEFAULT;
+    const raw = window.localStorage.getItem(RAG_CONCURRENCY_KEY);
+    const n = raw ? parseInt(raw, 10) : NaN;
+    if (!Number.isFinite(n)) return RAG_CONCURRENCY_DEFAULT;
+    return Math.min(RAG_CONCURRENCY_MAX, Math.max(RAG_CONCURRENCY_MIN, n));
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(RAG_CONCURRENCY_KEY, String(ragConcurrency));
+  }, [ragConcurrency]);
   const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
   const [pendingChannel, setPendingChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -817,7 +832,22 @@ export function DashboardPage() {
     };
 
     try {
-      const results = await Promise.all(inputRows.map((r, i) => runOneWithRetry(r, i)));
+      const limit = Math.min(
+        RAG_CONCURRENCY_MAX,
+        Math.max(RAG_CONCURRENCY_MIN, ragConcurrency || RAG_CONCURRENCY_DEFAULT),
+      );
+      const results: RowResult[] = new Array(inputRows.length);
+      let cursor = 0;
+      const worker = async () => {
+        while (true) {
+          const i = cursor++;
+          if (i >= inputRows.length) return;
+          results[i] = await runOneWithRetry(inputRows[i], i);
+        }
+      };
+      await Promise.all(
+        Array.from({ length: Math.min(limit, inputRows.length) }, () => worker()),
+      );
 
       const successes = results.filter((r): r is Extract<RowResult, { ok: true }> => r.ok);
       const failures = results.filter((r): r is Extract<RowResult, { ok: false }> => !r.ok);
@@ -2943,6 +2973,32 @@ export function DashboardPage() {
                 );
               })
             )}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--sheets-grid)] bg-muted/20 px-3 py-2 text-[12px]">
+            <div className="min-w-0">
+              <div className="font-medium text-foreground">Production RAG concurrency</div>
+              <div className="text-muted-foreground">
+                Max parallel webhook calls (1–{RAG_CONCURRENCY_MAX}). Lower it if the webhook times out.
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={RAG_CONCURRENCY_MIN}
+                max={RAG_CONCURRENCY_MAX}
+                value={ragConcurrency}
+                disabled={exportingRag}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10);
+                  if (!Number.isFinite(n)) return;
+                  setRagConcurrency(
+                    Math.min(RAG_CONCURRENCY_MAX, Math.max(RAG_CONCURRENCY_MIN, n)),
+                  );
+                }}
+                className="h-8 w-16 rounded-md border border-input bg-background px-2 text-center text-sm"
+              />
+              <span className="text-muted-foreground">parallel</span>
+            </div>
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <Button
