@@ -453,6 +453,21 @@ export function DashboardPage() {
       url: string;
     }>;
   }>({ open: false, rows: [] });
+  const RAG_CONCURRENCY_KEY = "rag-builder:rag-concurrency";
+  const RAG_CONCURRENCY_MIN = 1;
+  const RAG_CONCURRENCY_MAX = 20;
+  const RAG_CONCURRENCY_DEFAULT = 5;
+  const [ragConcurrency, setRagConcurrency] = useState<number>(() => {
+    if (typeof window === "undefined") return RAG_CONCURRENCY_DEFAULT;
+    const raw = window.localStorage.getItem(RAG_CONCURRENCY_KEY);
+    const n = raw ? parseInt(raw, 10) : NaN;
+    if (!Number.isFinite(n)) return RAG_CONCURRENCY_DEFAULT;
+    return Math.min(RAG_CONCURRENCY_MAX, Math.max(RAG_CONCURRENCY_MIN, n));
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(RAG_CONCURRENCY_KEY, String(ragConcurrency));
+  }, [ragConcurrency]);
   const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
   const [pendingChannel, setPendingChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
   const [registerOpen, setRegisterOpen] = useState(false);
