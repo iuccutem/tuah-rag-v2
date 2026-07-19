@@ -832,7 +832,22 @@ export function DashboardPage() {
     };
 
     try {
-      const results = await Promise.all(inputRows.map((r, i) => runOneWithRetry(r, i)));
+      const limit = Math.min(
+        RAG_CONCURRENCY_MAX,
+        Math.max(RAG_CONCURRENCY_MIN, ragConcurrency || RAG_CONCURRENCY_DEFAULT),
+      );
+      const results: RowResult[] = new Array(inputRows.length);
+      let cursor = 0;
+      const worker = async () => {
+        while (true) {
+          const i = cursor++;
+          if (i >= inputRows.length) return;
+          results[i] = await runOneWithRetry(inputRows[i], i);
+        }
+      };
+      await Promise.all(
+        Array.from({ length: Math.min(limit, inputRows.length) }, () => worker()),
+      );
 
       const successes = results.filter((r): r is Extract<RowResult, { ok: true }> => r.ok);
       const failures = results.filter((r): r is Extract<RowResult, { ok: false }> => !r.ok);
