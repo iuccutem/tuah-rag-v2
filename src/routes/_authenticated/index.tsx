@@ -2861,7 +2861,7 @@ export function DashboardPage() {
                 onClick={confirmExportRag}
                 disabled={exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting}
                 className="gap-2"
-                title="Send rows to the RAG builder webhook and download the production RAG JSON."
+                title="Send rows to the RAG builder and download a v2.0.0 dataset (bilingual, source-grounded, retrieval-tested)."
               >
                 {exportingRag ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 {exportingRag ? "Building…" : "Production RAG"}
