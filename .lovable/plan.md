@@ -1,20 +1,18 @@
 ## Goal
-Include a `generated_at` timestamp in the two **Export RAW** outputs — JSON and Excel — so every exported record carries the generation time.
+Use the user's table name as-is for RAW export filenames — no forced `_faq` suffix. Only append `_DDMMYY.<ext>`.
 
-## Changes
-1. **Frontend (`src/routes/_authenticated/index.tsx`)**
-   - Import `nowKLIso` from `@/lib/rag-schema`.
-   - In `confirmExportJson` (JSON export):
-     - Compute `generatedAt = nowKLIso()` once when export starts.
-     - After merging returned rows, map each row to include `generated_at: generatedAt` before stringifying and downloading.
-   - In `exportXlsx` (Excel export):
-     - Compute `generatedAt = nowKLIso()` once when export starts.
-     - Add a "Generated At" column to the worksheet and set its value to `generatedAt` for every exported row.
+## Change
+In `src/routes/_authenticated/index.tsx`:
+
+1. `buildExportBase()` (line 616-619): return `buildTableTag()` unchanged — drop the `/_(faq|qna|rag)$/` check and the `_faq` fallback.
+2. `exportXlsx()` (line 1775): remove the same `/_(faq|qna|rag)$/` check; set `baseName = tableTag` directly. Filename becomes `${tableTag}_${stamp}.xlsx`.
+
+Result:
+- Table `faix_faq` → `faix_faq_200726.json` / `.xlsx`
+- Table `hotline` → `hotline_200726.json` / `.xlsx`
+- Table `some_qna` → `some_qna_200726.json` / `.xlsx`
+
+Scope limited to **Export RAW** (JSON + Excel). Production RAG export (which uses `datasetHints.dataset_id`) is unchanged.
 
 ## Verification
-- Run a typecheck/build to confirm the import and code changes compile.
-- Optionally verify via the UI that exported JSON and Excel files contain the `generated_at` field/column.
-
-## Notes
-- Uses the existing Kuala-Lumpur timezone ISO helper already used by the Production RAG export, keeping timestamps consistent across export types.
-- No backend/Edge Function changes are required; the timestamp is injected client-side after the webhook returns the rows.
+Build/typecheck passes; export a table named `hotline` and confirm filenames omit `_faq`.
