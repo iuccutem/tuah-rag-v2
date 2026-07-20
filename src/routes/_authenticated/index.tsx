@@ -1769,8 +1769,7 @@ export function DashboardPage() {
         .replace(/-/g, "_")
         .replace(/[^a-zA-Z0-9_]/g, "_");
       a.href = url;
-      const baseName = /_(faq|qna|rag)$/.test(tableTag) ? tableTag : `${tableTag}_faq`;
-      a.download = `${baseName}_${stamp}.xlsx`;
+      a.download = `${tableTag}_${stamp}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
