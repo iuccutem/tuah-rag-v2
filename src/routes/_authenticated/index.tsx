@@ -624,6 +624,7 @@ export function DashboardPage() {
     if (previewRows.length === 0) return;
     const JSON_BATCH_SIZE = 1;
     setExportingJson(true);
+    const generatedAt = nowKLIso();
 
     const inputRows = previewRows.map((r) => ({
       id: r.id,
