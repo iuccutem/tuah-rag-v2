@@ -90,7 +90,7 @@ import {
 import { QA_COLUMNS, cellRef } from "@/components/qa-dashboard/qa-columns";
 import { QuestionPasteBox } from "@/components/qa-dashboard/QuestionPasteBox";
 import { ExcelImportBox } from "@/components/qa-dashboard/ExcelImportBox";
-import { assembleDataset, buildDatasetHints } from "@/lib/rag-schema";
+import { assembleDataset, buildDatasetHints, nowKLIso } from "@/lib/rag-schema";
 
 
 
@@ -624,6 +624,7 @@ export function DashboardPage() {
     if (previewRows.length === 0) return;
     const JSON_BATCH_SIZE = 1;
     setExportingJson(true);
+    const generatedAt = nowKLIso();
 
     const inputRows = previewRows.map((r) => ({
       id: r.id,
@@ -684,7 +685,12 @@ export function DashboardPage() {
       }
 
       toast.dismiss(tId);
-      const json = JSON.stringify(merged, null, 2);
+      const stampedRows = merged.map((row) =>
+        row && typeof row === "object"
+          ? { ...(row as Record<string, unknown>), generated_at: generatedAt }
+          : row,
+      );
+      const json = JSON.stringify(stampedRows, null, 2);
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1669,6 +1675,7 @@ export function DashboardPage() {
 
   const exportXlsx = async () => {
     setExporting(true);
+    const generatedAt = nowKLIso();
     try {
       const wb = new ExcelJS.Workbook();
       wb.created = new Date();
@@ -1685,11 +1692,14 @@ export function DashboardPage() {
       ];
       const ws = wb.addWorksheet("RAG Evaluation Builder");
 
-      ws.columns = QA_COLUMNS.map((c) => ({
-        header: c.label,
-        key: c.key as string,
-        width: Math.max(14, Math.min(60, c.label.length + 20)),
-      }));
+      ws.columns = [
+        ...QA_COLUMNS.map((c) => ({
+          header: c.label,
+          key: c.key as string,
+          width: Math.max(14, Math.min(60, c.label.length + 20)),
+        })),
+        { header: "Generated At", key: "generated_at", width: 28 },
+      ];
 
       ws.getRow(1).font = { bold: true };
       ws.getRow(1).alignment = { vertical: "middle" };
@@ -1714,6 +1724,7 @@ export function DashboardPage() {
         QA_COLUMNS.forEach((c) => {
           rowValues[c.key as string] = c.raw(row);
         });
+        rowValues.generated_at = generatedAt;
         const addedRow = ws.addRow(rowValues);
         addedRow.alignment = { wrapText: true, vertical: "top" };
 
