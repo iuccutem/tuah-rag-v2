@@ -685,7 +685,12 @@ export function DashboardPage() {
       }
 
       toast.dismiss(tId);
-      const json = JSON.stringify(merged, null, 2);
+      const stampedRows = merged.map((row) =>
+        row && typeof row === "object"
+          ? { ...(row as Record<string, unknown>), generated_at: generatedAt }
+          : row,
+      );
+      const json = JSON.stringify(stampedRows, null, 2);
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
