@@ -1724,6 +1724,7 @@ export function DashboardPage() {
         QA_COLUMNS.forEach((c) => {
           rowValues[c.key as string] = c.raw(row);
         });
+        rowValues.generated_at = generatedAt;
         const addedRow = ws.addRow(rowValues);
         addedRow.alignment = { wrapText: true, vertical: "top" };
 
