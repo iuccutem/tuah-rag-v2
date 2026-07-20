@@ -613,10 +613,7 @@ export function DashboardPage() {
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
   };
-  const buildExportBase = () => {
-    const tag = buildTableTag();
-    return /_(faq|qna|rag)$/.test(tag) ? tag : `${tag}_faq`;
-  };
+  const buildExportBase = () => buildTableTag();
 
   const confirmExportJson = async () => {
     if (exportingJson) return;
@@ -1772,8 +1769,7 @@ export function DashboardPage() {
         .replace(/-/g, "_")
         .replace(/[^a-zA-Z0-9_]/g, "_");
       a.href = url;
-      const baseName = /_(faq|qna|rag)$/.test(tableTag) ? tableTag : `${tableTag}_faq`;
-      a.download = `${baseName}_${stamp}.xlsx`;
+      a.download = `${tableTag}_${stamp}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
