@@ -1675,6 +1675,7 @@ export function DashboardPage() {
 
   const exportXlsx = async () => {
     setExporting(true);
+    const generatedAt = nowKLIso();
     try {
       const wb = new ExcelJS.Workbook();
       wb.created = new Date();
