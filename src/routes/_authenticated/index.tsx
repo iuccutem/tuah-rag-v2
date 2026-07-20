@@ -1692,11 +1692,14 @@ export function DashboardPage() {
       ];
       const ws = wb.addWorksheet("RAG Evaluation Builder");
 
-      ws.columns = QA_COLUMNS.map((c) => ({
-        header: c.label,
-        key: c.key as string,
-        width: Math.max(14, Math.min(60, c.label.length + 20)),
-      }));
+      ws.columns = [
+        ...QA_COLUMNS.map((c) => ({
+          header: c.label,
+          key: c.key as string,
+          width: Math.max(14, Math.min(60, c.label.length + 20)),
+        })),
+        { header: "Generated At", key: "generated_at", width: 28 },
+      ];
 
       ws.getRow(1).font = { bold: true };
       ws.getRow(1).alignment = { vertical: "middle" };
