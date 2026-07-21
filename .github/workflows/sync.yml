@@ -4,14 +4,15 @@ on:
     branches: [ main ]
 jobs:
   sync:
+    if: github.repository == 'EF361/tuah-rag-a565f215' # 👈 Add this line here!
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: false # 👈 Add this line to stop it from forcing the bot login
+          persist-credentials: false
 
       - name: Push Updates
         run: |
-          git remote add team https://x-access-token:${{ secrets.TEAM_TOKEN }}@github.com/iuccutem/tuah-rag-v2.git
+          git remote add team https://x-access-token:${{ secrets.TEAM_TOKEN }}@://github.com
           git push team main --force
