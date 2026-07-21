@@ -14,5 +14,5 @@ jobs:
 
       - name: Push Updates
         run: |
-          git remote add team https://x-access-token:${{ secrets.TEAM_TOKEN }}@://github.com
+          git remote add team https://x-access-token:${{ secrets.TEAM_TOKEN }}@://github.com/iuccutem/tuah-rag-v2.git
           git push team main --force
