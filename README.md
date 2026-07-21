@@ -1,130 +1,107 @@
-<div align="center">
+# RAG Evaluation Builder
 
-# 🧠 RAG Evaluation Builder
+A spreadsheet-style workspace for curating Q&A knowledge across faculties and messaging channels, backed by an n8n agent pipeline and the Lovable AI Gateway.
 
-### A spreadsheet-style workspace for curating Q&A knowledge across faculties and messaging channels — powered by AI.
-
-[![React 18](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
-[![TanStack Router](https://img.shields.io/badge/TanStack_Router-1.x-FF4154?logo=react&logoColor=white)](https://tanstack.com/router)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v3-38BDF8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![Supabase](https://img.shields.io/badge/Lovable_Cloud-Supabase-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
-[![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
-[![License](https://img.shields.io/badge/license-MIT-blue)](#license)
-
-[Live Preview](https://tuah-rag.lovable.app) · [Custom Domain](https://rag.ainibot.com) · [Docs](./docs)
-
-![RAG Evaluation Builder hero screenshot](./docs/screenshots/hero.png)
-
-</div>
+[Live preview](https://tuah-rag.lovable.app) · [Custom domain](https://rag.ainibot.com) · [Docs](./docs)
 
 ---
 
-## 📑 Table of Contents
+## Table of contents
 
-- [About](#-about)
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Screenshots](#-screenshots)
-- [Installation](#-installation)
-- [Usage](#-usage)
-- [Project Structure](#-project-structure)
-- [Documentation](#-documentation)
-- [License](#-license)
-
----
-
-## 🚀 About
-
-**RAG Evaluation Builder** is an internal tool for the UTeM team to build, review, and export
-Retrieval-Augmented Generation (RAG) knowledge bases. It provides an Excel-like
-interface backed by an n8n agent pipeline, with one-click answer generation across
-**Web Chat** and **Telegram/WhatsApp** channels.
-
-The system supports multiple Q&A sheets (faculties / departments), bulk Excel
-import, per-row AI processing, flag/highlight tooling, and a single-click
-**RAG JSON export** that translates Malay → English and auto-generates intent
-and metadata for each entry.
+- [About](#about)
+- [Features](#features)
+- [Tech stack](#tech-stack)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Project structure](#project-structure)
+- [Documentation](#documentation)
+- [License](#license)
 
 ---
 
-## ✨ Features
+## About
 
-### 📊 Spreadsheet workspace
-- Excel-style multi-cell selection, copy/paste, fill, and inline editing
-- Per-cell formatting (highlight, flag) persisted across the table
-- Resizable columns, mobile-friendly layout, dark-mode ready
+**RAG Evaluation Builder** is the internal UTeM tool for building, reviewing, and exporting Retrieval-Augmented Generation (RAG) knowledge bases. It presents an Excel-like interface backed by an n8n agent pipeline, with one-click answer generation across **Web Chat** and **Telegram/WhatsApp** channels, and a single-click **Production RAG** export that produces a Schema v2.0.0 dataset ready to ingest into a retriever.
 
-### 🗂️ Multi-sheet management
-- Create, **rename**, and **delete** Q&A sheets (`qatest-*` tables) via tab UI
-- Each sheet is an isolated table in the backend
-- Full-screen loading overlay while the n8n pipeline provisions / mutates tables
-
-### 🧩 Import & paste
-- **Import Excel** — `.xlsx`, `.xls`, `.csv` with column-picker preview and duplicate detection
-- **Paste questions** — multi-line paste box that inserts one question per line
-- Both paths route through the same n8n insert webhook
-
-### 🤖 AI answer pipeline
-- One-click **Run Web** / **Run WA-TG** per row or in bulk
-- Pipeline orchestrated through self-hosted **n8n** webhooks, proxied by **Supabase Edge Functions** so credentials never reach the browser
-- Per-row email / flag / delete actions
-
-### 🌐 RAG JSON export with translation
-- Uses the **Lovable AI Gateway** (Gemini 3 Flash) to:
-  - Translate Malay → natural English (preserving acronyms, URLs, proper nouns)
-  - Generate dotted-slug **intent** (e.g. `staff.director`)
-  - Generate topical **metadata** tags
-  - Auto-extract the first URL from each answer
-- Output schema: `{ lang, intent, question, answer, metadata, url }`
-
-### 🔐 Auth & roles
-- Email/password auth via Lovable Cloud
-- Admin role gating with security-definer `has_role()` function
-- Admin-only user registration from inside the dashboard
+The app is a pure Vite + React SPA. All server-side work runs in **Supabase Edge Functions** on Lovable Cloud (with an optional Express mirror in `server/` for the university self-host).
 
 ---
 
-## 🛠️ Tech Stack
+## Features
+
+### Spreadsheet workspace
+- Excel-style multi-cell selection, copy/paste, fill, and inline editing.
+- Per-cell **highlight** and **mark error** formatting persisted with the row.
+- Format icons (highlight / mark error / clear formatting) appear in the toolbar only when a cell is selected, each with a tooltip.
+- One-click **copy arrow** appears on row hover between *Text Chat* and *Expected Answer* to promote the generated chat answer into the expected answer through the save webhook.
+- Resizable columns, mobile-friendly toolbar, dark theme throughout the dashboard.
+
+### Multi-sheet management
+- Create, **rename**, and **delete** Q&A sheets (`qatest-*` tables) via the tab bar.
+- Sheet names accept letters, digits, and underscores (e.g. `audit_faq`).
+- Each sheet is an isolated table in the backend; a full-screen overlay is shown while the n8n pipeline provisions or mutates a table.
+
+### Import & paste
+- **Import Excel** — `.xlsx`, `.xls`, `.csv` with three-parser fallback (ExcelJS → alternate parser → SheetJS). If auto-detection fails the UI drops into a manual column-picker with duplicate detection.
+- **Paste questions** — multi-line paste box that inserts one question per line through the same insert webhook.
+
+### AI answer pipeline
+- One-click **Run Web** / **Run WA-TG** per row or in bulk.
+- Pipeline orchestrated through self-hosted **n8n** webhooks, proxied by Supabase Edge Functions so credentials never reach the browser.
+- Per-row **email**, **flag**, and **delete** actions.
+- **Unselect all** button sits alongside Delete in the selection toolbar for fast navigation.
+
+### System Prompt selector
+- Chip in the toolbar lists prompts fetched from the n8n prompt registry with search, sort, and full-text preview (eye icon → "View the full prompt").
+- Defaults to user **Goh** (`osgoh88@gmail.com`) and the **PROD RAG** naming filter; toggle **Show all** (persisted in `localStorage`) to see every prompt.
+- The **filter by user** control lives inside the Prompt chip popover.
+- When running a question, the selected prompt's `system_prompt_id`, `system_prompt`, `system_prompt_name`, and `model` are forwarded to the agent webhook.
+
+### Unified Export dialog
+Everything ships through one **Export** button that opens a preview dialog with two paths:
+
+- **Export RAW**
+  - **Export JSON** — every row includes a `generated_at` timestamp (Asia/Kuala_Lumpur).
+  - **Export Excel** — carries highlight and mark-error styling, and adds a `Generated At` column.
+  - Filenames follow `<tableName>_DDMMYY.{json,xlsx}` — the sheet name is used as-is, so users control the prefix (e.g. `audit_faq_210726.json`, `hotline_210726.xlsx`).
+- **Export Final RAG**
+  - Sends the selected rows through the `n8n-rag-build` proxy to the production RAG webhook.
+  - Client-side **worker pool** with a configurable concurrency (1–20, default 5, persisted).
+  - Each row gets up to **3 automatic retries** with progressive backoff; persistent failures surface a **Retry failed rows** button.
+  - Output is validated against the v2.0.0 schema in [`src/lib/rag-schema.ts`](./src/lib/rag-schema.ts).
+
+### Auth & roles
+- Email/password auth via Lovable Cloud with a redesigned SaaS-style **RAG Builder** sign-in page at `/auth`.
+- Admin role gating with a `SECURITY DEFINER` `has_role()` function; roles live in a dedicated `user_roles` table.
+- Admin-only user registration from inside the dashboard, gated server-side in the `admin-users` edge function.
+
+---
+
+## Tech stack
 
 | Layer | Technology |
 |---|---|
-| **Framework** | [React 18](https://react.dev) SPA on [Vite 5](https://vitejs.dev) |
-| **Routing** | [@tanstack/react-router](https://tanstack.com/router) (file-based, no SSR) |
-| **UI** | [Tailwind CSS v3](https://tailwindcss.com), [shadcn/ui](https://ui.shadcn.com), [Radix UI](https://www.radix-ui.com), [lucide-react](https://lucide.dev) |
-| **Data layer** | [TanStack Query 5](https://tanstack.com/query) |
-| **Backend** | [Lovable Cloud](https://lovable.dev) (Supabase) — Postgres, Auth, RLS, **Edge Functions (Deno)** |
-| **AI** | [Lovable AI Gateway](https://lovable.dev) (Gemini 3 Flash) via Vercel [AI SDK](https://sdk.vercel.ai) |
-| **Workflow engine** | [n8n](https://n8n.io) — agent webhooks for Q&A processing |
-| **Spreadsheet I/O** | [exceljs](https://github.com/exceljs/exceljs) |
-| **Forms & validation** | [react-hook-form](https://react-hook-form.com), [zod](https://zod.dev) |
-| **Optional self-host API** | Node/Express in [`server/`](./server) — only for the university deploy |
+| Framework | [React 18](https://react.dev) SPA on [Vite 5](https://vitejs.dev) |
+| Routing | [@tanstack/react-router](https://tanstack.com/router) (file-based, no SSR) |
+| UI | [Tailwind CSS v3](https://tailwindcss.com), [shadcn/ui](https://ui.shadcn.com), [Radix UI](https://www.radix-ui.com), [lucide-react](https://lucide.dev) |
+| Data layer | [TanStack Query 5](https://tanstack.com/query) |
+| Backend | [Lovable Cloud](https://lovable.dev) — Postgres, Auth, RLS, **Edge Functions (Deno)** |
+| AI | [Lovable AI Gateway](https://lovable.dev) (Gemini 3 Flash) via the Vercel [AI SDK](https://sdk.vercel.ai) |
+| Workflow engine | [n8n](https://n8n.io) — agent webhooks for Q&A processing and RAG build |
+| Spreadsheet I/O | [exceljs](https://github.com/exceljs/exceljs), [sheetjs](https://sheetjs.com) fallback |
+| Forms & validation | [react-hook-form](https://react-hook-form.com), [zod](https://zod.dev) |
+| Optional self-host API | Node/Express in [`server/`](./server) — only for the university deploy |
 
 ---
 
-## 📸 Screenshots
-
-> Drop your screenshots into `docs/screenshots/` using the filenames below.
-
-| | |
-|---|---|
-| ![Dashboard](./docs/screenshots/dashboard.png) | ![Multi-sheet tabs](./docs/screenshots/sheets.png) |
-| **Spreadsheet dashboard** | **Multi-sheet tabs with rename/delete** |
-| ![Excel import](./docs/screenshots/import.png) | ![RAG export](./docs/screenshots/export.png) |
-| **Excel import with column picker** | **RAG JSON export (AI-translated)** |
-
----
-
-## 📦 Installation
+## Installation
 
 ### Prerequisites
-
 - [Bun](https://bun.sh) ≥ 1.0 (or npm/pnpm)
 - A Lovable Cloud project (Supabase URL + publishable key)
-- Access to the n8n agent instance (Basic-auth credentials + JWT secret) — configured as Edge Function secrets
+- Access to the n8n agent instance (Basic auth + JWT secret), configured as Edge Function secrets
 
 ### 1. Clone & install
-
 ```bash
 git clone <repo-url> rag-builder
 cd rag-builder
@@ -133,62 +110,51 @@ bun install
 
 ### 2. Environment variables
 
-Only browser-visible values live in `.env` at the project root:
+Only browser-visible values live in `.env`:
 
 ```env
-# Lovable Cloud (browser — publishable/anon key is safe to ship)
 VITE_SUPABASE_URL=https://<project>.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=<publishable-anon-key>
 
-# Optional: base path when hosted under a sub-path (e.g. /rag-builder/)
+# Optional — base path when hosted under a sub-path (e.g. /rag-builder/)
 VITE_BASE_PATH=/
 ```
 
-All server-side secrets (`N8N_WEBHOOK_USER`, `N8N_WEBHOOK_PASSWORD`, `N8N_JWT_SECRET`,
-`SUPABASE_SERVICE_ROLE_KEY`) live as **Edge Function secrets** in
-Lovable Cloud — see [`docs/environment.md`](./docs/environment.md) for the full matrix.
+Server-side secrets (`N8N_WEBHOOK_USER`, `N8N_WEBHOOK_PASSWORD`, `N8N_JWT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`) live as **Edge Function secrets** in Lovable Cloud — see [`docs/environment.md`](./docs/environment.md) for the full matrix.
 
-The n8n agent that powers the **Production RAG** export must emit Schema v2.0.0
-records. See [`docs/rag-builder-agent-prompt.md`](./docs/rag-builder-agent-prompt.md)
-for the system and user prompts to paste into the Agent node.
+The n8n agent behind **Export Final RAG** must emit Schema v2.0.0 records. See [`docs/rag-builder-agent-prompt.md`](./docs/rag-builder-agent-prompt.md) for the system and user prompts to paste into the Agent node.
 
 ### 3. Run the dev server
-
 ```bash
 bun run dev
 ```
-
-App is served at **http://localhost:8080**.
+Served at **http://localhost:8080**.
 
 ### 4. Build for production
-
 ```bash
 bun run build              # standard build (VITE_BASE_PATH=/)
 bun run build:prod         # university self-host build (VITE_BASE_PATH=/rag-builder/)
 ```
 
-Output is a static Vite bundle. See [`docs/deployment.md`](./docs/deployment.md) for
-Lovable hosting and the optional self-hosted Express API in [`server/`](./server/README.md).
+Output is a static Vite bundle in `dist/`. See [`docs/deployment.md`](./docs/deployment.md) for Lovable hosting and the optional self-hosted Express API in [`server/`](./server/README.md).
 
 ---
 
-## 🧭 Usage
+## Usage
 
 1. **Sign in** at `/auth` with an account provisioned by an admin.
-2. **Pick or create a sheet** from the tab bar at the bottom — each tab is an isolated `qatest-*` table.
-3. **Add questions** in any of three ways:
-   - Paste multi-line questions into the **Paste box**
-   - Click **Import Excel** and pick the column that contains questions
-   - Type directly into the **Question** column
-4. **Generate answers** by selecting rows and clicking **Run Web** or **Run WA/TG**. The n8n agent fills in the answer column.
-5. **Curate** — highlight, flag, edit, or delete rows. All changes are persisted.
-6. **Export** — click **Export RAG JSON** to download an AI-formatted, English-translated dataset ready to ingest into your retriever.
+2. **Pick or create a sheet** from the tab bar — each tab is an isolated `qatest-*` table.
+3. **Pick a System Prompt** from the toolbar chip (defaults to Goh / PROD RAG). The chosen prompt is forwarded to every subsequent Run.
+4. **Add questions** by pasting, importing an Excel/CSV file (with manual column-picker fallback), or typing directly.
+5. **Generate answers** with **Run Web** or **Run WA/TG** on selected rows.
+6. **Curate** — highlight cells, mark errors, copy chat answers into expected answers via the row-hover arrow, edit or delete rows.
+7. **Export** — open the **Export** dialog, then pick **Export RAW** (JSON / Excel with `generated_at`) or **Export Final RAG** (parallel v2.0.0 build with configurable concurrency and per-row retries).
 
 For deeper workflows, see [`docs/usage.md`](./docs/usage.md).
 
 ---
 
-## 🗂️ Project Structure
+## Project structure
 
 ```
 src/
@@ -198,23 +164,35 @@ src/
 │   ├── auth.tsx                    # Sign-in
 │   └── _authenticated/
 │       ├── route.tsx               # Auth gate
-│       └── index.tsx               # Main dashboard
+│       └── index.tsx               # Main dashboard (toolbar, Export dialog, Prompt chip)
 ├── components/
-│   ├── qa-dashboard/               # QATable, columns, paste & import boxes
+│   ├── qa-dashboard/               # QATable, columns, paste & import boxes, cell renderers
 │   └── ui/                         # shadcn/ui primitives
 ├── lib/
-│   └── api.ts                      # apiFetch() → routes /api/* to edge functions
+│   ├── api.ts                      # apiFetch() → routes /api/* to edge functions
+│   └── rag-schema.ts               # v2.0.0 RAG payload validation + hashing
 ├── integrations/supabase/          # Auto-generated client
 └── styles.css                      # Tailwind theme tokens
 
 supabase/functions/                 # Deno edge functions (backend)
 ├── _shared/{cors,n8n-jwt}.ts
+├── admin-users/                    # Uses SUPABASE_SERVICE_ROLE_KEY
 ├── n8n-tables/                     # List sheets
-├── n8n-vector-list/                # List vector store entries
 ├── n8n-qa/                         # List rows
-├── n8n-{create,rename,delete}-table/
-├── n8n-{run,process,dev-process,flag,delete,email,export}/
-└── admin-users/                    # Uses SUPABASE_SERVICE_ROLE_KEY
+├── n8n-vector-list/                # List vector store entries
+├── n8n-create-table/               # Create sheet
+├── n8n-rename-table/               # Rename sheet
+├── n8n-delete-table/               # Delete sheet
+├── n8n-run/                        # Run Web / Run WA-TG
+├── n8n-process/                    # Row-level processing (system prompt aware)
+├── n8n-dev-process/                # Dev-only processing variant
+├── n8n-flag/                       # Flag row
+├── n8n-delete/                     # Delete row
+├── n8n-email/                      # Email row
+├── n8n-export/                     # AI-assisted RAW export helper
+├── n8n-rag-build/                  # Production RAG builder proxy
+├── n8n-system-prompt-list/         # Prompt registry
+└── n8n-prompt-users/               # Prompt owner filter
 
 server/                             # Optional Express API for self-hosted deploy
 └── src/handlers/                   # Mirrors the edge functions above
@@ -224,18 +202,19 @@ docs/                               # Long-form documentation
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 | Doc | What's inside |
 |---|---|
-| [`docs/architecture.md`](./docs/architecture.md) | System diagram, data flow, n8n agent contract |
+| [`docs/architecture.md`](./docs/architecture.md) | System diagram, data flow, n8n agent contract, export pipeline |
 | [`docs/environment.md`](./docs/environment.md) | All env vars (browser vs edge vs self-host) |
 | [`docs/usage.md`](./docs/usage.md) | End-user workflows in depth |
 | [`docs/deployment.md`](./docs/deployment.md) | Lovable publish + university self-host |
+| [`docs/rag-builder-agent-prompt.md`](./docs/rag-builder-agent-prompt.md) | System / user prompts for the Production RAG agent (Schema v2.0.0) |
 | [`server/README.md`](./server/README.md) | Optional Node/Express API for self-hosting |
 
 ---
 
-## 📄 License
+## License
 
 MIT © UTeM RAG Team
