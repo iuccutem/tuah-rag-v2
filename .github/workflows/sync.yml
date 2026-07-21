@@ -4,7 +4,7 @@ on:
     branches: [ main ]
 jobs:
   sync:
-    if: github.repository == 'EF361/tuah-rag-a565f215' # 👈 Add this line here!
+    if: github.repository == 'EF361/tuah-rag-a565f215'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
