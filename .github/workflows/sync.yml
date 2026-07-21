@@ -1,0 +1,16 @@
+name: Sync to Team Repo
+on:
+  push:
+    branches: [ main ]
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push Updates
+        run: |
+          git remote add team https://x-access-token:${{ secrets.TEAM_TOKEN }}@github.com/iuccutem/tuah-rag-v2.git
+          git push team main --force
+
