@@ -9,8 +9,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false # 👈 Add this line to stop it from forcing the bot login
+
       - name: Push Updates
         run: |
           git remote add team https://x-access-token:${{ secrets.TEAM_TOKEN }}@github.com/iuccutem/tuah-rag-v2.git
           git push team main --force
-
