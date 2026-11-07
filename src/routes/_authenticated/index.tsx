@@ -57,14 +57,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-
-
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -78,7 +71,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
-
 import {
   QATable,
   formatKey,
@@ -91,8 +83,7 @@ import { QA_COLUMNS, cellRef } from "@/components/qa-dashboard/qa-columns";
 import { QuestionPasteBox } from "@/components/qa-dashboard/QuestionPasteBox";
 import { ExcelImportBox } from "@/components/qa-dashboard/ExcelImportBox";
 import { assembleDataset, buildDatasetHints, nowKLIso } from "@/lib/rag-schema";
-
-
+import { BUILT_IN_SKILLS, isBuiltInSkillId } from "@/lib/builtin-skills";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
@@ -142,9 +133,7 @@ function belongsTo(name: string, dev: boolean): boolean {
   return isDevTable(name) === dev;
 }
 function formatTableLabel(raw: string): string {
-  const stripped = raw
-    .replace(/^qatest-/i, "")
-    .replace(/^dev-/i, "");
+  const stripped = raw.replace(/^qatest-/i, "").replace(/^dev-/i, "");
   if (!stripped) return raw;
   return stripped.charAt(0).toUpperCase() + stripped.slice(1);
 }
@@ -190,7 +179,6 @@ export function DashboardPage() {
         ? `No vector stores available${vectorsQuery.data?.error ? `: ${vectorsQuery.data.error}` : "."}`
         : "Select a vector store first."
     : null;
-  
 
   // System prompt selector
   const PROMPT_STORAGE_KEY = "rag-system-prompt-id";
@@ -213,6 +201,7 @@ export function DashboardPage() {
     is_active: boolean | null;
     user_id: string | null;
     updated_at: string | null;
+    is_builtin?: boolean;
   };
   const promptsQuery = useQuery({
     queryKey: ["system-prompt-list"],
@@ -250,7 +239,7 @@ export function DashboardPage() {
   });
   const promptUsers = promptUsersQuery.data?.users ?? [];
 
-  const prompts = promptsQuery.data?.prompts ?? [];
+  const prompts = [...(promptsQuery.data?.prompts ?? []), ...BUILT_IN_SKILLS];
   const [promptSearch, setPromptSearch] = useState("");
   const PROMPT_SHOW_ALL_KEY = "ragBuilder.promptShowAll";
   const [promptShowAll, setPromptShowAll] = useState<boolean>(() => {
@@ -280,12 +269,8 @@ export function DashboardPage() {
       return;
     }
     const match =
-      promptUsers.find(
-        (u) => (u.email ?? "").toLowerCase() === DEFAULT_USER_EMAIL,
-      ) ??
-      promptUsers.find(
-        (u) => u.name.toLowerCase() === DEFAULT_USER_NAME.toLowerCase(),
-      );
+      promptUsers.find((u) => (u.email ?? "").toLowerCase() === DEFAULT_USER_EMAIL) ??
+      promptUsers.find((u) => u.name.toLowerCase() === DEFAULT_USER_NAME.toLowerCase());
     if (match) setPromptUserId(match.id);
     localStorage.setItem(PROMPT_USER_DEFAULT_KEY, "1");
   }, [promptUsers]);
@@ -308,23 +293,19 @@ export function DashboardPage() {
           .includes(promptUserSearch.trim().toLowerCase()),
       )
     : promptUsers;
-  const selectedPromptUser =
-    promptUsers.find((u) => u.id === promptUserId) ?? null;
+  const selectedPromptUser = promptUsers.find((u) => u.id === promptUserId) ?? null;
 
   const PROMPT_FILTER = "prod rag";
   const matchesUser = (p: SystemPrompt) =>
-    !promptUserId || p.user_id === promptUserId;
+    p.is_builtin || !promptUserId || p.user_id === promptUserId;
   const prodPrompts = prompts.filter(
     (p) => p.name.toLowerCase().includes(PROMPT_FILTER) && matchesUser(p),
   );
-  const scopedPromptsRaw = promptShowAll
-    ? prompts.filter(matchesUser)
-    : prodPrompts;
+  const scopedPromptsRaw = promptShowAll ? prompts.filter(matchesUser) : prodPrompts;
   useEffect(() => {
     if (prompts.length === 0) return;
     const current = prompts.find((p) => p.id === systemPromptId);
-    const currentIsProd =
-      current && current.name.toLowerCase().includes(PROMPT_FILTER);
+    const currentIsProd = current && current.name.toLowerCase().includes(PROMPT_FILTER);
     const currentMatchesUser = current && matchesUser(current);
     if (currentIsProd && currentMatchesUser) return;
     const firstProd = prodPrompts[0] ?? scopedPromptsRaw[0] ?? prompts[0];
@@ -338,7 +319,7 @@ export function DashboardPage() {
     const body: Record<string, unknown> = {};
     if (vectorId) body.vector_id = vectorId;
     if (selectedPrompt) {
-      body.system_prompt_id = selectedPrompt.id;
+      if (!isBuiltInSkillId(selectedPrompt.id)) body.system_prompt_id = selectedPrompt.id;
       if (selectedPrompt.system_prompt) body.system_prompt = selectedPrompt.system_prompt;
       if (selectedPrompt.name) body.system_prompt_name = selectedPrompt.name;
       if (selectedPrompt.model) body.model = selectedPrompt.model;
@@ -346,18 +327,13 @@ export function DashboardPage() {
     return Object.keys(body).length > 0 ? body : undefined;
   })();
   const previewPrompt =
-    (previewPromptId ? prompts.find((p) => p.id === previewPromptId) : null) ??
-    selectedPrompt;
+    (previewPromptId ? prompts.find((p) => p.id === previewPromptId) : null) ?? selectedPrompt;
   const scopedPrompts = scopedPromptsRaw;
   const searchedPrompts = promptSearch.trim()
-    ? scopedPrompts.filter((p) =>
-        p.name.toLowerCase().includes(promptSearch.trim().toLowerCase()),
-      )
+    ? scopedPrompts.filter((p) => p.name.toLowerCase().includes(promptSearch.trim().toLowerCase()))
     : scopedPrompts;
   const selectionHiddenByFilter = false;
   const filteredPrompts = searchedPrompts;
-
-
 
   const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
@@ -377,12 +353,8 @@ export function DashboardPage() {
     queryFn: fetchTables,
     refetchOnWindowFocus: false,
   });
-  const allTables = (tablesQuery.data?.tables ?? []).filter((t) =>
-    t.startsWith(TABLE_PREFIX),
-  );
-  const tables = allTables
-    .filter((t) => belongsTo(t, isDev))
-    .sort((a, b) => a.localeCompare(b));
+  const allTables = (tablesQuery.data?.tables ?? []).filter((t) => t.startsWith(TABLE_PREFIX));
+  const tables = allTables.filter((t) => belongsTo(t, isDev)).sort((a, b) => a.localeCompare(b));
   const oppositeTables = allTables.filter((t) => belongsTo(t, !isDev));
 
   // Set the first table as the active one on initial load / after env switch.
@@ -428,18 +400,14 @@ export function DashboardPage() {
     })();
   }, [isDev, tablesQuery.isLoading, tables.length]);
 
-
-  const { data, isLoading, isFetching, refetch, dataUpdatedAt, error } =
-    useQuery({
-      queryKey: ["qa-rows", activeTable],
-      queryFn: () => fetchRows(activeTable),
-      enabled: !!activeTable,
-      refetchOnWindowFocus: false,
-      refetchInterval: 3000,
-      refetchIntervalInBackground: false,
-    });
-
-
+  const { data, isLoading, isFetching, refetch, dataUpdatedAt, error } = useQuery({
+    queryKey: ["qa-rows", activeTable],
+    queryFn: () => fetchRows(activeTable),
+    enabled: !!activeTable,
+    refetchOnWindowFocus: false,
+    refetchInterval: 3000,
+    refetchIntervalInBackground: false,
+  });
 
   const [exporting, setExporting] = useState(false);
   const [exportingJson, setExportingJson] = useState(false);
@@ -468,8 +436,12 @@ export function DashboardPage() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(RAG_CONCURRENCY_KEY, String(ragConcurrency));
   }, [ragConcurrency]);
-  const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
-  const [pendingChannel, setPendingChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(null);
+  const [runningChannel, setRunningChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(
+    null,
+  );
+  const [pendingChannel, setPendingChannel] = useState<"web" | "telegram_whatsapp" | "both" | null>(
+    null,
+  );
   const [registerOpen, setRegisterOpen] = useState(false);
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
@@ -497,10 +469,16 @@ export function DashboardPage() {
   const [newSheetName, setNewSheetName] = useState("");
   const [creatingSheet, setCreatingSheet] = useState(false);
   const [excelImportOpen, setExcelImportOpen] = useState(false);
-  const [renameOpen, setRenameOpen] = useState<{ open: boolean; from: string }>({ open: false, from: "" });
+  const [renameOpen, setRenameOpen] = useState<{ open: boolean; from: string }>({
+    open: false,
+    from: "",
+  });
   const [renameValue, setRenameValue] = useState("");
   const [renaming, setRenaming] = useState(false);
-  const [deleteSheetConfirm, setDeleteSheetConfirm] = useState<{ open: boolean; name: string }>({ open: false, name: "" });
+  const [deleteSheetConfirm, setDeleteSheetConfirm] = useState<{ open: boolean; name: string }>({
+    open: false,
+    name: "",
+  });
   const [deletingSheet, setDeletingSheet] = useState(false);
 
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(new Set());
@@ -586,9 +564,7 @@ export function DashboardPage() {
       toast.error("Select rows to export.");
       return;
     }
-    const selected = filteredRows.filter((r) =>
-      selectedRowIds.has(r.id ?? r.question ?? ""),
-    );
+    const selected = filteredRows.filter((r) => selectedRowIds.has(r.id ?? r.question ?? ""));
     const previewRows = selected
       .filter((r) => (r.question ?? "").trim().length > 0)
       .map((r) => ({
@@ -674,10 +650,7 @@ export function DashboardPage() {
         }
         merged.push(...rows);
         if (i < batches.length - 1) {
-          toast.loading(
-            `Generating… (${merged.length} / ${inputRows.length})`,
-            { id: tId },
-          );
+          toast.loading(`Generating… (${merged.length} / ${inputRows.length})`, { id: tId });
         }
       }
 
@@ -697,9 +670,7 @@ export function DashboardPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast.success(
-        `Exported ${merged.length} row${merged.length === 1 ? "" : "s"}.`,
-      );
+      toast.success(`Exported ${merged.length} row${merged.length === 1 ? "" : "s"}.`);
       setExportPreview({ open: false, rows: [] });
     } catch (e) {
       toast.dismiss(tId);
@@ -709,9 +680,13 @@ export function DashboardPage() {
     }
   };
 
-
   const runRagPipeline = async (
-    inputRows: Array<{ id: string | number | null; question: string; telegram_whatsapp: string; url: string }>,
+    inputRows: Array<{
+      id: string | number | null;
+      question: string;
+      telegram_whatsapp: string;
+      url: string;
+    }>,
     ctx: {
       tableName: string;
       tableTag: ReturnType<typeof buildTableTag>;
@@ -750,13 +725,14 @@ export function DashboardPage() {
         ]) {
           const v = ds[k];
           if (v === undefined || v === null || v === "") missing.push(`dataset.${k}`);
-          else if (Array.isArray(v) && v.length === 0 && k !== "source_scope") missing.push(`dataset.${k}`);
+          else if (Array.isArray(v) && v.length === 0 && k !== "source_scope")
+            missing.push(`dataset.${k}`);
         }
       }
       return missing;
     };
 
-    const callOnce = async (row: typeof inputRows[number], index: number) => {
+    const callOnce = async (row: (typeof inputRows)[number], index: number) => {
       const outgoing: Record<string, unknown> = {
         table: ctx.tableName,
         rows: [row],
@@ -797,10 +773,10 @@ export function DashboardPage() {
 
     type RowResult =
       | { ok: true; index: number; rows: unknown[] }
-      | { ok: false; index: number; row: typeof inputRows[number]; error: string };
+      | { ok: false; index: number; row: (typeof inputRows)[number]; error: string };
 
     const runOneWithRetry = async (
-      row: typeof inputRows[number],
+      row: (typeof inputRows)[number],
       index: number,
     ): Promise<RowResult> => {
       let lastErr: unknown;
@@ -848,9 +824,7 @@ export function DashboardPage() {
           results[i] = await runOneWithRetry(inputRows[i], i);
         }
       };
-      await Promise.all(
-        Array.from({ length: Math.min(limit, inputRows.length) }, () => worker()),
-      );
+      await Promise.all(Array.from({ length: Math.min(limit, inputRows.length) }, () => worker()));
 
       const successes = results.filter((r): r is Extract<RowResult, { ok: true }> => r.ok);
       const failures = results.filter((r): r is Extract<RowResult, { ok: false }> => !r.ok);
@@ -914,12 +888,7 @@ export function DashboardPage() {
                 <RotateCcw className="mr-1 h-3.5 w-3.5" />
                 Retry failed rows
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8"
-                onClick={() => toast.dismiss()}
-              >
+              <Button size="sm" variant="ghost" className="h-8" onClick={() => toast.dismiss()}>
                 Dismiss
               </Button>
             </div>
@@ -952,10 +921,6 @@ export function DashboardPage() {
     const datasetHints = buildDatasetHints({ tableTag, rows: previewRows });
     await runRagPipeline(inputRows, { tableName, tableTag, datasetHints, previewRows });
   };
-
-
-
-
 
   const createSheet = async () => {
     const raw = newSheetName.trim();
@@ -1086,9 +1051,7 @@ export function DashboardPage() {
     try {
       // Step 1: Re-fetch tables first
       const tableResult = await tablesQuery.refetch();
-      const freshTables = (tableResult.data?.tables ?? []).filter((t) =>
-        belongsTo(t, isDev),
-      );
+      const freshTables = (tableResult.data?.tables ?? []).filter((t) => belongsTo(t, isDev));
 
       // Step 2: Verify active table; switch if no longer valid
       let targetTable = activeTable;
@@ -1113,18 +1076,13 @@ export function DashboardPage() {
     }
   };
 
-
   // Helpers to read a flag (server value, optionally overridden by an in-flight
   // optimistic toggle) and to merge DB-driven flags into the formats map that
   // QATable consumes for cell styling.
   const flagFields = ["question", "web", "telegram_whatsapp"] as const;
   type FlagCol = (typeof flagFields)[number];
 
-  const readFlag = (
-    row: QARow,
-    col: FlagCol,
-    kind: "error" | "highlight",
-  ): boolean => {
+  const readFlag = (row: QARow, col: FlagCol, kind: "error" | "highlight"): boolean => {
     const field = `${col}_${kind}`;
     const rowId = (row.id ?? row.question ?? "") as string | number;
     const optKey = `${rowId}::${field}`;
@@ -1304,7 +1262,6 @@ export function DashboardPage() {
     }
   };
 
-
   const handleCopyWebToAnswer = async (row: QARow) => {
     const source = (row.web ?? "").trim();
     if (!source) return;
@@ -1317,8 +1274,7 @@ export function DashboardPage() {
     // Two-step confirm when overwriting a non-empty answer
     if (existing.length > 0 && confirmOverwriteRowId !== rowId) {
       setConfirmOverwriteRowId(rowId);
-      if (confirmOverwriteTimerRef.current)
-        clearTimeout(confirmOverwriteTimerRef.current);
+      if (confirmOverwriteTimerRef.current) clearTimeout(confirmOverwriteTimerRef.current);
       confirmOverwriteTimerRef.current = setTimeout(() => {
         setConfirmOverwriteRowId((cur) => (cur === rowId ? null : cur));
       }, 2000);
@@ -1347,10 +1303,6 @@ export function DashboardPage() {
     }
   };
 
-
-
-
-
   const applyFormat = (patch: CellFormat | null) => {
     if (selection?.mode !== "cell") {
       toast.error("Select a cell first.");
@@ -1362,12 +1314,9 @@ export function DashboardPage() {
     const colKey = col.key as string;
 
     if (colKey !== "web" && colKey !== "telegram_whatsapp" && colKey !== "question") {
-      toast.error(
-        `Only "Question" and "Text Chat" cells can be flagged. Selected: ${col.label}.`,
-      );
+      toast.error(`Only "Question" and "Text Chat" cells can be flagged. Selected: ${col.label}.`);
       return;
     }
-
 
     const rowId = (row.id ?? "") as string | number;
     if (rowId === "" || rowId == null) {
@@ -1387,10 +1336,7 @@ export function DashboardPage() {
   };
 
   const existingQuestions = useMemo(
-    () =>
-      rows
-        .map((r) => (r.question ?? "").trim())
-        .filter((q) => q.length > 0),
+    () => rows.map((r) => (r.question ?? "").trim()).filter((q) => q.length > 0),
     [rows],
   );
 
@@ -1508,9 +1454,7 @@ export function DashboardPage() {
     }
   };
 
-  const postDelete = async (
-    items: Array<{ id: string | number | null; question: string }>,
-  ) => {
+  const postDelete = async (items: Array<{ id: string | number | null; question: string }>) => {
     const res = await apiFetch("/n8n-delete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1530,9 +1474,7 @@ export function DashboardPage() {
     };
   };
 
-  const deleteByItems = async (
-    items: Array<{ id: string | number | null; question: string }>,
-  ) => {
+  const deleteByItems = async (items: Array<{ id: string | number | null; question: string }>) => {
     const cleaned = items.map((i) => ({
       id: i.id ?? null,
       question: (i.question ?? "").trim() || "null",
@@ -1554,9 +1496,7 @@ export function DashboardPage() {
         // before hiding the loading overlay so the new table shows immediately.
         setDeletePhase("refreshing");
         const deletedIds = new Set(
-          cleaned
-            .map((item) => item.id)
-            .filter((id): id is string | number => id !== null),
+          cleaned.map((item) => item.id).filter((id): id is string | number => id !== null),
         );
         let refreshed = await refetch();
         if (refreshed.error) throw refreshed.error;
@@ -1584,10 +1524,6 @@ export function DashboardPage() {
     }
   };
 
-
-
-
-
   const runChannel = async (channel: "web" | "telegram_whatsapp" | "both") => {
     if (vectorDisabledReason) {
       toast.error(vectorDisabledReason);
@@ -1597,12 +1533,7 @@ export function DashboardPage() {
     const channels: Array<"web" | "telegram_whatsapp"> =
       channel === "both" ? ["web", "telegram_whatsapp"] : [channel];
     const label =
-      channel === "web"
-        ? "Text Chat"
-        : channel === "telegram_whatsapp"
-          ? "Text Chat"
-          : "Text Chat";
-
+      channel === "web" ? "Text Chat" : channel === "telegram_whatsapp" ? "Text Chat" : "Text Chat";
 
     // Collect selected questions to forward into the webhook.
     const selectedQuestions: string[] = [];
@@ -1620,7 +1551,12 @@ export function DashboardPage() {
     }
 
     try {
-      const results: Array<{ ch: "web" | "telegram_whatsapp"; question: string; ok: boolean; error?: string }> = [];
+      const results: Array<{
+        ch: "web" | "telegram_whatsapp";
+        question: string;
+        ok: boolean;
+        error?: string;
+      }> = [];
       for (const ch of channels) {
         for (const question of selectedQuestions) {
           const body: Record<string, unknown> = {
@@ -1648,7 +1584,9 @@ export function DashboardPage() {
         for (const r of results) {
           if (!r.ok) {
             const name = "Text Chat";
-            toast.error(`${name} · "${r.question.slice(0, 40)}": ${r.error ?? "Failed to trigger."}`);
+            toast.error(
+              `${name} · "${r.question.slice(0, 40)}": ${r.error ?? "Failed to trigger."}`,
+            );
           }
         }
       }
@@ -1659,8 +1597,7 @@ export function DashboardPage() {
     }
   };
 
-  const apiError =
-    data?.error ?? (error instanceof Error ? error.message : null);
+  const apiError = data?.error ?? (error instanceof Error ? error.message : null);
 
   const lastUpdated =
     dataUpdatedAt > 0
@@ -1711,9 +1648,7 @@ export function DashboardPage() {
 
       const rowsToExport =
         selectedRowIds.size > 0
-          ? filteredRows.filter((r) =>
-              selectedRowIds.has(r.id ?? r.question ?? ""),
-            )
+          ? filteredRows.filter((r) => selectedRowIds.has(r.id ?? r.question ?? ""))
           : filteredRows;
 
       rowsToExport.forEach((row) => {
@@ -1725,10 +1660,7 @@ export function DashboardPage() {
         const addedRow = ws.addRow(rowValues);
         addedRow.alignment = { wrapText: true, vertical: "top" };
 
-        const lookupKey =
-          row.id ??
-          filteredIndexById.get((row.question ?? "") as string) ??
-          0;
+        const lookupKey = row.id ?? filteredIndexById.get((row.question ?? "") as string) ?? 0;
 
         QA_COLUMNS.forEach((c, cIdx) => {
           const fmt = derivedFormats[formatKey(lookupKey, c.key as string)];
@@ -1765,9 +1697,7 @@ export function DashboardPage() {
       const pad = (n: number) => String(n).padStart(2, "0");
       const stamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(-2)}`;
       const rawTable = (activeTable || "all").replace(/^qatest-(dev-)?/, "");
-      const tableTag = rawTable
-        .replace(/-/g, "_")
-        .replace(/[^a-zA-Z0-9_]/g, "_");
+      const tableTag = rawTable.replace(/-/g, "_").replace(/[^a-zA-Z0-9_]/g, "_");
       a.href = url;
       a.download = `${tableTag}_${stamp}.xlsx`;
       document.body.appendChild(a);
@@ -1785,9 +1715,7 @@ export function DashboardPage() {
   return (
     <div className="flex h-screen min-h-screen flex-col bg-background text-foreground">
       {/* ============================== AppBar ============================== */}
-      <header
-        className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 h-12"
-      >
+      <header className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 h-12">
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
             <SheetIcon className="h-4 w-4 text-primary" />
@@ -1797,10 +1725,8 @@ export function DashboardPage() {
           </h1>
         </div>
 
-
         {/* Right cluster — desktop */}
         <div className="ml-auto hidden md:flex items-center gap-1">
-
           <button
             type="button"
             onClick={toggleTheme}
@@ -1853,7 +1779,6 @@ export function DashboardPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-
               <DropdownMenuItem onClick={toggleTheme}>
                 {theme === "dark" ? (
                   <Sun className="mr-2 h-4 w-4" />
@@ -1882,9 +1807,7 @@ export function DashboardPage() {
       </header>
 
       {/* ============================ WorkspaceBar ============================ */}
-      <div
-        className="shrink-0 border-b border-border bg-card"
-      >
+      <div className="shrink-0 border-b border-border bg-card">
         <div className="flex flex-wrap items-center gap-2 px-3 py-2">
           {/* Sheet context chip */}
           <DropdownMenu>
@@ -1928,7 +1851,9 @@ export function DashboardPage() {
                       }
                       title={t}
                     >
-                      <Check className={active ? "h-3.5 w-3.5 text-primary" : "h-3.5 w-3.5 opacity-0"} />
+                      <Check
+                        className={active ? "h-3.5 w-3.5 text-primary" : "h-3.5 w-3.5 opacity-0"}
+                      />
                       <span className="truncate">{formatTableLabel(t)}</span>
                     </button>
                     <button
@@ -1981,9 +1906,7 @@ export function DashboardPage() {
             </span>
             <Select value={vectorId} onValueChange={setVectorId}>
               <SelectTrigger className="h-7 min-w-[8rem] border-0 bg-transparent px-1 text-[13px] shadow-none focus:ring-0">
-                <SelectValue
-                  placeholder={vectorsQuery.isLoading ? "Loading…" : "Select store"}
-                />
+                <SelectValue placeholder={vectorsQuery.isLoading ? "Loading…" : "Select store"} />
               </SelectTrigger>
               <SelectContent>
                 {vectors.length === 0 ? (
@@ -2005,23 +1928,23 @@ export function DashboardPage() {
           <div
             className={
               "flex h-9 min-w-0 items-center gap-1.5 rounded-md border px-2 text-[13px] " +
-              (systemPromptId
-                ? "border-primary/40 bg-primary/10"
-                : "border-border bg-muted/30")
+              (systemPromptId ? "border-primary/40 bg-primary/10" : "border-border bg-muted/30")
             }
             title={
               promptsQuery.data?.error ??
-              (selectedPrompt ? `Prompt: ${selectedPrompt.name}` : "Select a system prompt")
+              (selectedPrompt
+                ? `${selectedPrompt.is_builtin ? "Skill" : "Prompt"}: ${selectedPrompt.name}`
+                : "Select a system prompt or skill")
             }
           >
             <Sparkles className="h-3.5 w-3.5 shrink-0" />
             <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Prompt
+              Prompt / Skill
             </span>
             <Select value={systemPromptId} onValueChange={setSystemPromptId}>
               <SelectTrigger className="h-7 min-w-[7rem] max-w-[9rem] sm:min-w-[9rem] sm:max-w-[14rem] border-0 bg-transparent px-1 text-[13px] shadow-none focus:ring-0">
                 <SelectValue
-                  placeholder={promptsQuery.isLoading ? "Loading…" : "Select prompt"}
+                  placeholder={promptsQuery.isLoading ? "Loading…" : "Select prompt or skill"}
                 />
               </SelectTrigger>
               <SelectContent className="w-[22rem] max-w-[calc(100vw-2rem)]">
@@ -2166,7 +2089,7 @@ export function DashboardPage() {
                         onChange={(e) => setPromptSearch(e.target.value)}
                         onKeyDown={(e) => e.stopPropagation()}
                         onPointerDown={(e) => e.stopPropagation()}
-                        placeholder="Search prompts…"
+                        placeholder="Search prompts and skills…"
                         className="h-7 w-full rounded border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary"
                       />
                       <div className="mt-1 flex items-center justify-between gap-2">
@@ -2184,13 +2107,10 @@ export function DashboardPage() {
                           {searchedPrompts.length} of {prompts.length}
                         </div>
                       </div>
-
                     </div>
                     <div className="max-h-[22rem] overflow-auto">
                       {filteredPrompts.length === 0 ? (
-                        <div className="px-2 py-3 text-xs text-muted-foreground">
-                          No matches.
-                        </div>
+                        <div className="px-2 py-3 text-xs text-muted-foreground">No matches.</div>
                       ) : (
                         filteredPrompts.map((p) => (
                           <div key={p.id} className="flex items-center gap-1 pr-1">
@@ -2199,12 +2119,19 @@ export function DashboardPage() {
                                 <span className="truncate">
                                   {p.name}
                                   {selectionHiddenByFilter && p.id === selectedPrompt?.id && (
-                                    <span className="ml-1 text-[10px] text-muted-foreground">(hidden by filter)</span>
+                                    <span className="ml-1 text-[10px] text-muted-foreground">
+                                      (hidden by filter)
+                                    </span>
                                   )}
                                 </span>
                                 {p.model && (
                                   <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                                     {p.model}
+                                  </span>
+                                )}
+                                {p.is_builtin && (
+                                  <span className="text-[10px] uppercase tracking-wide text-primary">
+                                    Built-in skill
                                   </span>
                                 )}
                               </div>
@@ -2250,18 +2177,15 @@ export function DashboardPage() {
                     }}
                     disabled={!selectedPrompt}
                     className="ml-0.5 inline-flex h-6 w-6 items-center justify-center rounded hover:bg-muted disabled:opacity-40"
-                    aria-label="Preview system prompt"
+                    aria-label="Preview system prompt or skill"
                   >
                     <Info className="h-3.5 w-3.5" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>Preview system prompt</TooltipContent>
+                <TooltipContent>Preview system prompt or skill</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
-
-
-
 
           <Dialog
             open={promptPreviewOpen}
@@ -2273,7 +2197,7 @@ export function DashboardPage() {
             <DialogContent className="max-w-3xl">
               <DialogHeader>
                 <DialogTitle className="truncate">
-                  {previewPrompt?.name ?? "System prompt"}
+                  {previewPrompt?.name ?? "System prompt or skill"}
                   {previewPrompt && selectedPrompt?.id === previewPrompt.id && (
                     <span className="ml-2 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-normal uppercase tracking-wide text-primary">
                       Selected
@@ -2281,9 +2205,7 @@ export function DashboardPage() {
                   )}
                 </DialogTitle>
                 <DialogDescription className="space-y-1">
-                  {previewPrompt?.description && (
-                    <div>{previewPrompt.description}</div>
-                  )}
+                  {previewPrompt?.description && <div>{previewPrompt.description}</div>}
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     {previewPrompt?.model && <span>Model: {previewPrompt.model}</span>}
                     {previewPrompt?.vector_store_id && (
@@ -2323,9 +2245,6 @@ export function DashboardPage() {
             </DialogContent>
           </Dialog>
 
-
-
-
           {/* Search */}
           <div className="flex h-9 min-w-0 flex-1 sm:flex-none items-center gap-1.5 rounded-md border border-border bg-background px-2 focus-within:ring-1 focus-within:ring-primary">
             <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -2360,20 +2279,12 @@ export function DashboardPage() {
                 <span className="hidden sm:inline">
                   {dateFrom || dateTo ? "Filtered" : "Dates"}
                 </span>
-                {(dateFrom || dateTo) && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                )}
+                {(dateFrom || dateTo) && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
               </button>
             </PopoverTrigger>
-            <PopoverContent
-              align="start"
-              sideOffset={6}
-              className="z-[100] w-64 space-y-2 p-3"
-            >
+            <PopoverContent align="start" sideOffset={6} className="z-[100] w-64 space-y-2 p-3">
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">
-                  From
-                </label>
+                <label className="text-[11px] font-medium text-muted-foreground">From</label>
                 <input
                   type="date"
                   value={dateFrom}
@@ -2382,9 +2293,7 @@ export function DashboardPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">
-                  To
-                </label>
+                <label className="text-[11px] font-medium text-muted-foreground">To</label>
                 <input
                   type="date"
                   value={dateTo}
@@ -2414,9 +2323,7 @@ export function DashboardPage() {
             title="Refresh"
             className="flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 hover:bg-muted disabled:opacity-50"
           >
-            <RefreshCw
-              className={refreshing || isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"}
-            />
+            <RefreshCw className={refreshing || isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
           </button>
 
           {/* Primary actions */}
@@ -2433,8 +2340,7 @@ export function DashboardPage() {
                   }
                 }}
                 disabled={
-                  selectedRowIds.size > 0 &&
-                  (runningChannel !== null || !!vectorDisabledReason)
+                  selectedRowIds.size > 0 && (runningChannel !== null || !!vectorDisabledReason)
                 }
                 title={
                   selectedRowIds.size > 0
@@ -2467,8 +2373,8 @@ export function DashboardPage() {
                     {isDev ? "Test questions (Development)" : "Insert questions"}
                   </DialogTitle>
                   <DialogDescription>
-                    Paste one question per line. Each row is added to the sheet,
-                    then the agent fills in the empty answers.
+                    Paste one question per line. Each row is added to the sheet, then the agent
+                    fills in the empty answers.
                   </DialogDescription>
                 </DialogHeader>
                 <QuestionPasteBox
@@ -2484,9 +2390,7 @@ export function DashboardPage() {
                       const result = await refetch();
                       if (result.error) throw result.error;
                     } catch (e) {
-                      toast.error(
-                        e instanceof Error ? e.message : "Failed to refresh table.",
-                      );
+                      toast.error(e instanceof Error ? e.message : "Failed to refresh table.");
                     } finally {
                       setInserting(false);
                     }
@@ -2625,9 +2529,7 @@ export function DashboardPage() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive"
-                      onClick={() =>
-                        setDeleteSheetConfirm({ open: true, name: activeTable })
-                      }
+                      onClick={() => setDeleteSheetConfirm({ open: true, name: activeTable })}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete current sheet
@@ -2703,7 +2605,6 @@ export function DashboardPage() {
         )}
       </div>
 
-
       {/* ============================ Formula bar ============================ */}
       <div className="hidden md:flex shrink-0 items-center gap-2 border-b border-border bg-card px-2 py-1">
         <div className="flex h-7 w-24 items-center justify-between rounded-sm border border-border bg-card px-2 text-[12px] text-foreground">
@@ -2741,7 +2642,6 @@ export function DashboardPage() {
         </div>
       ) : null}
 
-
       {/* Grid */}
       <div className="flex-1 min-w-0 w-full overflow-x-auto overflow-y-auto">
         <QATable
@@ -2758,10 +2658,7 @@ export function DashboardPage() {
           copyingRowIds={copyingRowIds}
           confirmOverwriteRowId={confirmOverwriteRowId}
         />
-
-
       </div>
-
 
       {/* Excel import dialog */}
       <Dialog open={excelImportOpen} onOpenChange={setExcelImportOpen}>
@@ -2769,8 +2666,8 @@ export function DashboardPage() {
           <DialogHeader>
             <DialogTitle>Import questions from Excel</DialogTitle>
             <DialogDescription>
-              Upload an .xlsx, .xls, or .csv file. Pick the column that holds
-              questions, then insert them into{" "}
+              Upload an .xlsx, .xls, or .csv file. Pick the column that holds questions, then insert
+              them into{" "}
               <span className="font-mono">
                 {activeTable ? formatTableLabel(activeTable) : "the active sheet"}
               </span>
@@ -2806,7 +2703,8 @@ export function DashboardPage() {
             <DialogTitle>Rename sheet</DialogTitle>
             <DialogDescription>
               Rename <span className="font-mono">{renameOpen.from}</span>. The{" "}
-              <span className="font-mono">{isDev ? DEV_PREFIX : TABLE_PREFIX}</span> prefix is added automatically.
+              <span className="font-mono">{isDev ? DEV_PREFIX : TABLE_PREFIX}</span> prefix is added
+              automatically.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
@@ -2826,7 +2724,12 @@ export function DashboardPage() {
               <div className="text-[12px] text-muted-foreground">
                 Will rename to:{" "}
                 <span className="font-mono text-foreground">
-                  {isDev ? DEV_PREFIX : TABLE_PREFIX}{renameValue.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "_")}
+                  {isDev ? DEV_PREFIX : TABLE_PREFIX}
+                  {renameValue
+                    .trim()
+                    .toLowerCase()
+                    .replace(/^qatest-(dev-)?/, "")
+                    .replace(/\s+/g, "_")}
                 </span>
               </div>
             )}
@@ -2840,7 +2743,11 @@ export function DashboardPage() {
               Cancel
             </Button>
             <Button onClick={renameSheet} disabled={renaming} className="gap-2">
-              {renaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+              {renaming ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Pencil className="h-4 w-4" />
+              )}
               {renaming ? "Renaming…" : "Rename"}
             </Button>
           </DialogFooter>
@@ -2860,8 +2767,8 @@ export function DashboardPage() {
             </DialogTitle>
             <DialogDescription>
               This will permanently delete the{" "}
-              <span className="font-mono">{deleteSheetConfirm.name}</span> table
-              and all its rows. This action cannot be undone.
+              <span className="font-mono">{deleteSheetConfirm.name}</span> table and all its rows.
+              This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -2872,8 +2779,17 @@ export function DashboardPage() {
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={deleteSheet} disabled={deletingSheet} className="gap-2">
-              {deletingSheet ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            <Button
+              variant="destructive"
+              onClick={deleteSheet}
+              disabled={deletingSheet}
+              className="gap-2"
+            >
+              {deletingSheet ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
               {deletingSheet ? "Deleting…" : "Delete sheet"}
             </Button>
           </DialogFooter>
@@ -2903,8 +2819,9 @@ export function DashboardPage() {
           <DialogHeader>
             <DialogTitle>New sheet</DialogTitle>
             <DialogDescription>
-              Enter a table name. It will be lowercased, spaces become dashes,
-              and a <span className="font-mono">{isDev ? DEV_PREFIX : TABLE_PREFIX}</span> prefix is added.
+              Enter a table name. It will be lowercased, spaces become dashes, and a{" "}
+              <span className="font-mono">{isDev ? DEV_PREFIX : TABLE_PREFIX}</span> prefix is
+              added.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
@@ -2923,16 +2840,32 @@ export function DashboardPage() {
             />
             {newSheetName.trim() && (
               <div className="text-[12px] text-muted-foreground">
-                Will create: <span className="font-mono text-foreground">{isDev ? DEV_PREFIX : TABLE_PREFIX}{newSheetName.trim().toLowerCase().replace(/^qatest-(dev-)?/, "").replace(/\s+/g, "_")}</span>
+                Will create:{" "}
+                <span className="font-mono text-foreground">
+                  {isDev ? DEV_PREFIX : TABLE_PREFIX}
+                  {newSheetName
+                    .trim()
+                    .toLowerCase()
+                    .replace(/^qatest-(dev-)?/, "")
+                    .replace(/\s+/g, "_")}
+                </span>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNewSheetOpen(false)} disabled={creatingSheet}>
+            <Button
+              variant="outline"
+              onClick={() => setNewSheetOpen(false)}
+              disabled={creatingSheet}
+            >
               Cancel
             </Button>
             <Button onClick={createSheet} disabled={creatingSheet} className="gap-2">
-              {creatingSheet ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {creatingSheet ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
               {creatingSheet ? "Creating…" : "Create"}
             </Button>
           </DialogFooter>
@@ -2948,12 +2881,17 @@ export function DashboardPage() {
       >
         <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Export ({exportPreview.rows.length} row{exportPreview.rows.length === 1 ? "" : "s"})</DialogTitle>
+            <DialogTitle>
+              Export ({exportPreview.rows.length} row{exportPreview.rows.length === 1 ? "" : "s"})
+            </DialogTitle>
             <DialogDescription>
               Review the selected rows below, then pick an export format.
               <span className="mt-1 block text-[12px] text-muted-foreground">
-                <strong>Raw data</strong> — download the sheet as-is (JSON or Excel) for backup or manual editing.<br />
-                <strong>Production RAG</strong> — send the rows to the RAG builder webhook and download the enriched, retrieval-ready JSON.
+                <strong>Raw data</strong> — download the sheet as-is (JSON or Excel) for backup or
+                manual editing.
+                <br />
+                <strong>Production RAG</strong> — send the rows to the RAG builder webhook and
+                download the enriched, retrieval-ready JSON.
               </span>
             </DialogDescription>
           </DialogHeader>
@@ -2964,17 +2902,35 @@ export function DashboardPage() {
               exportPreview.rows.map((r, i) => {
                 const hasAnswer = r.expected_answer.trim().length > 0;
                 return (
-                  <div key={i} className="rounded border border-[var(--sheets-grid)] bg-background p-3 text-[13px]">
-                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Question</div>
-                    <div className="mt-0.5 font-medium text-foreground break-words">{r.question}</div>
-                    <div className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Expected Answer</div>
+                  <div
+                    key={i}
+                    className="rounded border border-[var(--sheets-grid)] bg-background p-3 text-[13px]"
+                  >
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Question
+                    </div>
+                    <div className="mt-0.5 font-medium text-foreground break-words">
+                      {r.question}
+                    </div>
+                    <div className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Expected Answer
+                    </div>
                     {hasAnswer ? (
-                      <div className="mt-0.5 whitespace-pre-wrap break-words text-foreground/90">{r.expected_answer}</div>
+                      <div className="mt-0.5 whitespace-pre-wrap break-words text-foreground/90">
+                        {r.expected_answer}
+                      </div>
                     ) : (
-                      <div className="mt-0.5 text-[12px] italic text-amber-600 dark:text-amber-400">(no expected answer — output may be blank)</div>
+                      <div className="mt-0.5 text-[12px] italic text-amber-600 dark:text-amber-400">
+                        (no expected answer — output may be blank)
+                      </div>
                     )}
                     {r.url ? (
-                      <div className="mt-2 truncate text-[11px] text-muted-foreground" title={r.url}>{r.url}</div>
+                      <div
+                        className="mt-2 truncate text-[11px] text-muted-foreground"
+                        title={r.url}
+                      >
+                        {r.url}
+                      </div>
                     ) : null}
                   </div>
                 );
@@ -2985,7 +2941,8 @@ export function DashboardPage() {
             <div className="min-w-0">
               <div className="font-medium text-foreground">Production RAG concurrency</div>
               <div className="text-muted-foreground">
-                Max parallel webhook calls (1–{RAG_CONCURRENCY_MAX}). Lower it if the webhook times out.
+                Max parallel webhook calls (1–{RAG_CONCURRENCY_MAX}). Lower it if the webhook times
+                out.
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -3019,37 +2976,54 @@ export function DashboardPage() {
               <Button
                 variant="outline"
                 onClick={confirmExportJson}
-                disabled={exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting}
+                disabled={
+                  exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting
+                }
                 className="gap-2"
                 title="Download the selected rows as raw JSON (id, question, expected answer, url)."
               >
-                {exportingJson ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {exportingJson ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
                 {exportingJson ? "Sending…" : "Raw JSON"}
               </Button>
               <Button
                 variant="outline"
                 onClick={exportXlsx}
-                disabled={exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting}
+                disabled={
+                  exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting
+                }
                 className="gap-2"
                 title="Download the selected rows as an Excel workbook."
               >
-                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+                {exporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="h-4 w-4" />
+                )}
                 {exporting ? "Exporting…" : "Raw Excel"}
               </Button>
               <Button
                 onClick={confirmExportRag}
-                disabled={exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting}
+                disabled={
+                  exportPreview.rows.length === 0 || exportingJson || exportingRag || exporting
+                }
                 className="gap-2"
                 title="Send rows to the RAG builder and download a v2.0.0 dataset (bilingual, source-grounded, retrieval-tested)."
               >
-                {exportingRag ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {exportingRag ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
                 {exportingRag ? "Building…" : "Production RAG"}
               </Button>
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
 
       {/* Run confirmation dialog */}
       <Dialog
@@ -3065,7 +3039,6 @@ export function DashboardPage() {
               Re-run the Text Chat agent for {selectedRowIds.size} selected question
               {selectedRowIds.size === 1 ? "" : "s"}. Existing answers will be updated.
             </DialogDescription>
-
           </DialogHeader>
           {(() => {
             const qs = filteredRows
@@ -3079,7 +3052,9 @@ export function DashboardPage() {
                 ) : (
                   <ol className="list-decimal space-y-1 pl-5 text-[13px] text-foreground">
                     {qs.map((q, i) => (
-                      <li key={i} className="break-words">{q}</li>
+                      <li key={i} className="break-words">
+                        {q}
+                      </li>
                     ))}
                   </ol>
                 )}
@@ -3103,7 +3078,6 @@ export function DashboardPage() {
         </DialogContent>
       </Dialog>
 
-
       {/* Import → opposite environment dialog */}
       <Dialog
         open={importOpen}
@@ -3119,8 +3093,8 @@ export function DashboardPage() {
               {isDev ? "Production" : "Development"}
             </DialogTitle>
             <DialogDescription>
-              Only the question text is copied. Answers, URLs and channels stay
-              empty in the destination sheet and can be re-run there.
+              Only the question text is copied. Answers, URLs and channels stay empty in the
+              destination sheet and can be re-run there.
             </DialogDescription>
           </DialogHeader>
 
@@ -3131,8 +3105,8 @@ export function DashboardPage() {
               </label>
               {oppositeTables.length === 0 ? (
                 <div className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-[12px] text-yellow-900 dark:text-yellow-200">
-                  No sheets exist in {isDev ? "Production" : "Development"} yet.
-                  Create one there first, then try again.
+                  No sheets exist in {isDev ? "Production" : "Development"} yet. Create one there
+                  first, then try again.
                 </div>
               ) : (
                 <Select value={importTarget} onValueChange={setImportTarget}>
@@ -3153,29 +3127,18 @@ export function DashboardPage() {
 
           <div className="flex-1 min-h-0 overflow-auto rounded-md border border-[var(--sheets-grid)] bg-muted/30 p-2">
             {importQueue.length === 0 ? (
-              <p className="p-2 text-[12px] text-muted-foreground">
-                No questions in the queue.
-              </p>
+              <p className="p-2 text-[12px] text-muted-foreground">No questions in the queue.</p>
             ) : (
               <ul className="divide-y divide-border/60">
                 {importQueue.map((q, i) => (
-                  <li
-                    key={`${i}-${q}`}
-                    className="flex items-start gap-2 px-2 py-2 text-[13px]"
-                  >
+                  <li key={`${i}-${q}`} className="flex items-start gap-2 px-2 py-2 text-[13px]">
                     <span className="mt-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-background px-1.5 text-[10px] font-semibold text-muted-foreground tabular-nums">
                       {i + 1}
                     </span>
-                    <span className="flex-1 line-clamp-2 break-words text-foreground">
-                      {q}
-                    </span>
+                    <span className="flex-1 line-clamp-2 break-words text-foreground">{q}</span>
                     <button
                       type="button"
-                      onClick={() =>
-                        setImportQueue((prev) =>
-                          prev.filter((_, idx) => idx !== i),
-                        )
-                      }
+                      onClick={() => setImportQueue((prev) => prev.filter((_, idx) => idx !== i))}
                       disabled={importing}
                       title="Remove from import"
                       className="shrink-0 rounded p-1 text-muted-foreground hover:bg-background hover:text-destructive disabled:opacity-50"
@@ -3189,11 +3152,7 @@ export function DashboardPage() {
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setImportOpen(false)}
-              disabled={importing}
-            >
+            <Button variant="outline" onClick={() => setImportOpen(false)} disabled={importing}>
               Cancel
             </Button>
             <Button
@@ -3230,7 +3189,9 @@ export function DashboardPage() {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
-              <label className="text-[13px] font-medium" htmlFor="reg-email">Email</label>
+              <label className="text-[13px] font-medium" htmlFor="reg-email">
+                Email
+              </label>
               <Input
                 id="reg-email"
                 type="email"
@@ -3242,7 +3203,9 @@ export function DashboardPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[13px] font-medium" htmlFor="reg-password">Password</label>
+              <label className="text-[13px] font-medium" htmlFor="reg-password">
+                Password
+              </label>
               <Input
                 id="reg-password"
                 type="password"
@@ -3300,9 +3263,7 @@ export function DashboardPage() {
               <MessageSquare className="h-6 w-6 text-primary animate-pulse" />
             </div>
             <div className="text-center">
-              <p className="text-[15px] font-semibold text-foreground">
-                Running Text Chat agent…
-              </p>
+              <p className="text-[15px] font-semibold text-foreground">Running Text Chat agent…</p>
 
               <p className="mt-1 text-[13px] text-muted-foreground">
                 Please wait while the answers are being generated.
@@ -3315,9 +3276,7 @@ export function DashboardPage() {
 
       <Dialog
         open={deleteConfirm.open}
-        onOpenChange={(o) =>
-          !deleting && setDeleteConfirm((d) => ({ ...d, open: o }))
-        }
+        onOpenChange={(o) => !deleting && setDeleteConfirm((d) => ({ ...d, open: o }))}
       >
         <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -3327,16 +3286,15 @@ export function DashboardPage() {
               {deleteConfirm.items.length === 1 ? "" : "s"}?
             </DialogTitle>
             <DialogDescription>
-              This will remove the selected row{deleteConfirm.items.length === 1 ? "" : "s"} from the knowledge base. This action cannot be undone.
+              This will remove the selected row{deleteConfirm.items.length === 1 ? "" : "s"} from
+              the knowledge base. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-48 overflow-y-auto rounded-md border border-[var(--sheets-grid)] bg-muted/30 p-2 text-[13px]">
             <ul className="space-y-1">
               {deleteConfirm.items.slice(0, 20).map((it, i) => (
                 <li key={i} className="truncate">
-                  <span className="font-mono text-muted-foreground">
-                    #{it.id ?? "—"}
-                  </span>{" "}
+                  <span className="font-mono text-muted-foreground">#{it.id ?? "—"}</span>{" "}
                   {it.question}
                 </li>
               ))}
@@ -3355,11 +3313,7 @@ export function DashboardPage() {
             >
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={deleting}
-            >
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>
               {deleting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -3441,7 +3395,6 @@ export function DashboardPage() {
   );
 }
 
-
 function ToolbarButton({
   children,
   onClick,
@@ -3512,7 +3465,9 @@ function ToolbarAction({
       {icon}
       <span>{label}</span>
       {typeof badge === "number" ? (
-        <span className={`ml-0.5 rounded-full px-1.5 text-[10px] font-semibold tabular-nums ${toneClass}`}>
+        <span
+          className={`ml-0.5 rounded-full px-1.5 text-[10px] font-semibold tabular-nums ${toneClass}`}
+        >
           {badge}
         </span>
       ) : null}
