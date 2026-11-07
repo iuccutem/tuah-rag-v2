@@ -1,7 +1,15 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Loader2, LogIn, Sheet as SheetIcon, AlertCircle, Eye, EyeOff, Sun, Moon } from "lucide-react";
+import {
+  Loader2,
+  LogIn,
+  Sheet as SheetIcon,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Sun,
+  Moon,
+} from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -20,25 +28,43 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+function getSafeNextPath(): string {
+  const requested = new URLSearchParams(window.location.search).get("next");
+  if (!requested?.startsWith("/") || requested.startsWith("//")) return "/";
+  try {
+    const target = new URL(requested, window.location.origin);
+    return target.origin === window.location.origin
+      ? `${target.pathname}${target.search}${target.hash}`
+      : "/";
+  } catch {
+    return "/";
+  }
+}
+
+function continueAfterSignIn() {
+  window.location.assign(getSafeNextPath());
+}
+
 function AuthPage() {
-  const navigate = useNavigate();
   const { theme, toggle: toggleTheme } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({
-    open: false,
-    title: "",
-    message: "",
-  });
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>(
+    {
+      open: false,
+      title: "",
+      message: "",
+    },
+  );
 
   useEffect(() => {
     const check = async () => {
       const { data } = await supabase.auth.getUser();
       if (data.user) {
-        navigate({ to: "/" });
+        continueAfterSignIn();
       } else {
         setCheckingAuth(false);
       }
@@ -47,11 +73,11 @@ function AuthPage() {
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        navigate({ to: "/" });
+        continueAfterSignIn();
       }
     });
     return () => listener.subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +97,7 @@ function AuthPage() {
         password,
       });
       if (error) throw error;
-      navigate({ to: "/" });
+      continueAfterSignIn();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Authentication failed.";
       setErrorDialog({
@@ -118,7 +144,9 @@ function AuthPage() {
             <SheetIcon className="h-6 w-6 text-primary" />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">RAG Builder</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Build and evaluate your RAG knowledge base</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Build and evaluate your RAG knowledge base
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -168,7 +196,10 @@ function AuthPage() {
         </p>
       </div>
 
-      <Dialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog((d) => ({ ...d, open }))}>
+      <Dialog
+        open={errorDialog.open}
+        onOpenChange={(open) => setErrorDialog((d) => ({ ...d, open }))}
+      >
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
@@ -178,7 +209,10 @@ function AuthPage() {
             <DialogDescription>{errorDialog.message}</DialogDescription>
           </DialogHeader>
           <div className="flex justify-end">
-            <Button variant="outline" onClick={() => setErrorDialog((d) => ({ ...d, open: false }))}>
+            <Button
+              variant="outline"
+              onClick={() => setErrorDialog((d) => ({ ...d, open: false }))}
+            >
               OK
             </Button>
           </div>
