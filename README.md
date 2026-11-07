@@ -16,6 +16,7 @@ The **rag-builder** system provides a unified platform to manage RAG workflows. 
 - **Admin dashboard**: Includes UI components for controlling important operations, e.g., `src/components/qa-dashboard/ExcelImportBox.tsx`.
 - **File handling for QA**: Process Excel files using libraries like `exceljs` to streamline imports (`src/components/qa-dashboard/ExcelImportBox.tsx`).
 - **Supabase integration**: Backend relies on Supabase with dedicated functions in `supabase/functions/` for operations like table creation and RAG data management.
+- **Authenticated MCP connector**: ChatGPT and other MCP clients can query verified Studio sources through the read-only [Supabase MCP endpoint](docs/mcp-connector.md).
 - **Rich UI toolkit**: Implements modern UI with Radix components for features like accordions, tabs, and notifications (`src/components/ui`).
 - **TypeScript-first design**: Ensures type safety across components, functions, and APIs. 
 - **Custom hooks**: Abstracts repeated logic, e.g., `src/hooks/use-mobile.tsx` and `src/hooks/use-theme.ts`.

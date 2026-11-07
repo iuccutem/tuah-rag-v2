@@ -91,6 +91,7 @@ import { QA_COLUMNS, cellRef } from "@/components/qa-dashboard/qa-columns";
 import { QuestionPasteBox } from "@/components/qa-dashboard/QuestionPasteBox";
 import { ExcelImportBox } from "@/components/qa-dashboard/ExcelImportBox";
 import { assembleDataset, buildDatasetHints, nowKLIso } from "@/lib/rag-schema";
+import { BUILT_IN_SKILLS, isBuiltInSkillId } from "@/lib/builtin-skills";
 
 
 
@@ -213,6 +214,7 @@ export function DashboardPage() {
     is_active: boolean | null;
     user_id: string | null;
     updated_at: string | null;
+    is_builtin?: boolean;
   };
   const promptsQuery = useQuery({
     queryKey: ["system-prompt-list"],
@@ -250,7 +252,7 @@ export function DashboardPage() {
   });
   const promptUsers = promptUsersQuery.data?.users ?? [];
 
-  const prompts = promptsQuery.data?.prompts ?? [];
+  const prompts = [...(promptsQuery.data?.prompts ?? []), ...BUILT_IN_SKILLS];
   const [promptSearch, setPromptSearch] = useState("");
   const PROMPT_SHOW_ALL_KEY = "ragBuilder.promptShowAll";
   const [promptShowAll, setPromptShowAll] = useState<boolean>(() => {
@@ -313,7 +315,7 @@ export function DashboardPage() {
 
   const PROMPT_FILTER = "prod rag";
   const matchesUser = (p: SystemPrompt) =>
-    !promptUserId || p.user_id === promptUserId;
+    p.is_builtin || !promptUserId || p.user_id === promptUserId;
   const prodPrompts = prompts.filter(
     (p) => p.name.toLowerCase().includes(PROMPT_FILTER) && matchesUser(p),
   );
@@ -338,7 +340,7 @@ export function DashboardPage() {
     const body: Record<string, unknown> = {};
     if (vectorId) body.vector_id = vectorId;
     if (selectedPrompt) {
-      body.system_prompt_id = selectedPrompt.id;
+      if (!isBuiltInSkillId(selectedPrompt.id)) body.system_prompt_id = selectedPrompt.id;
       if (selectedPrompt.system_prompt) body.system_prompt = selectedPrompt.system_prompt;
       if (selectedPrompt.name) body.system_prompt_name = selectedPrompt.name;
       if (selectedPrompt.model) body.model = selectedPrompt.model;
@@ -2011,17 +2013,19 @@ export function DashboardPage() {
             }
             title={
               promptsQuery.data?.error ??
-              (selectedPrompt ? `Prompt: ${selectedPrompt.name}` : "Select a system prompt")
+              (selectedPrompt
+                ? `${selectedPrompt.is_builtin ? "Skill" : "Prompt"}: ${selectedPrompt.name}`
+                : "Select a system prompt or skill")
             }
           >
             <Sparkles className="h-3.5 w-3.5 shrink-0" />
             <span className="hidden sm:inline text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Prompt
+              Prompt / Skill
             </span>
             <Select value={systemPromptId} onValueChange={setSystemPromptId}>
               <SelectTrigger className="h-7 min-w-[7rem] max-w-[9rem] sm:min-w-[9rem] sm:max-w-[14rem] border-0 bg-transparent px-1 text-[13px] shadow-none focus:ring-0">
                 <SelectValue
-                  placeholder={promptsQuery.isLoading ? "Loading…" : "Select prompt"}
+                  placeholder={promptsQuery.isLoading ? "Loading…" : "Select prompt or skill"}
                 />
               </SelectTrigger>
               <SelectContent className="w-[22rem] max-w-[calc(100vw-2rem)]">
@@ -2166,7 +2170,7 @@ export function DashboardPage() {
                         onChange={(e) => setPromptSearch(e.target.value)}
                         onKeyDown={(e) => e.stopPropagation()}
                         onPointerDown={(e) => e.stopPropagation()}
-                        placeholder="Search prompts…"
+                        placeholder="Search prompts and skills…"
                         className="h-7 w-full rounded border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary"
                       />
                       <div className="mt-1 flex items-center justify-between gap-2">
@@ -2205,6 +2209,11 @@ export function DashboardPage() {
                                 {p.model && (
                                   <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                                     {p.model}
+                                  </span>
+                                )}
+                                {p.is_builtin && (
+                                  <span className="text-[10px] uppercase tracking-wide text-primary">
+                                    Built-in skill
                                   </span>
                                 )}
                               </div>
@@ -2250,12 +2259,12 @@ export function DashboardPage() {
                     }}
                     disabled={!selectedPrompt}
                     className="ml-0.5 inline-flex h-6 w-6 items-center justify-center rounded hover:bg-muted disabled:opacity-40"
-                    aria-label="Preview system prompt"
+                    aria-label="Preview system prompt or skill"
                   >
                     <Info className="h-3.5 w-3.5" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>Preview system prompt</TooltipContent>
+                <TooltipContent>Preview system prompt or skill</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
@@ -2273,7 +2282,7 @@ export function DashboardPage() {
             <DialogContent className="max-w-3xl">
               <DialogHeader>
                 <DialogTitle className="truncate">
-                  {previewPrompt?.name ?? "System prompt"}
+                  {previewPrompt?.name ?? "System prompt or skill"}
                   {previewPrompt && selectedPrompt?.id === previewPrompt.id && (
                     <span className="ml-2 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-normal uppercase tracking-wide text-primary">
                       Selected

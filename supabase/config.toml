@@ -1,1 +1,12 @@
 project_id = "oqrovjnbwxqtuvnvyzol"
+
+[auth]
+site_url = "https://studio.ainibot.com"
+
+[auth.oauth_server]
+enabled = true
+authorization_url_path = "/oauth/consent"
+allow_dynamic_registration = true
+
+[functions.mcp]
+verify_jwt = false
